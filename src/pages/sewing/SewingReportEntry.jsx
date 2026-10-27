@@ -404,6 +404,16 @@ export const SewingReportEntry = () => {
 
               <button
                 type="button"
+                onClick={() => {
+                  triggerAutosave(lines);
+                  toast.success('Changes saved to database.');
+                }}
+                className="px-3 py-1.5 text-xs font-bold rounded bg-slate-600 text-white hover:bg-slate-700 transition-colors cursor-pointer shadow-sm"
+              >
+                Save All Changes
+              </button>
+              <button
+                type="button"
                 onClick={handleSubmitAllFilled}
                 className="px-3 py-1.5 text-xs font-bold rounded bg-[#0F8B8D] text-white hover:bg-[#0b6d6f] transition-colors cursor-pointer shadow-sm"
               >
