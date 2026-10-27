@@ -350,22 +350,19 @@ export const SewingReportEntry = () => {
         <div className={`p-6 rounded-2xl border shadow-sm ${
           isDark ? 'bg-[#103A40] border-white/25 text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'
         }`}>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-current/20">
-            <div>
-              <h2 className="text-xl font-extrabold tracking-wide uppercase">{companyName}</h2>
-              <p className="text-xs text-[#475569] dark:text-slate-300 mt-0.5">
-                Raj Place, Singair Road, Padma Moor (Rishipara), Hemayetpur, Savar, Dhaka-1213
+          <div className="flex items-center justify-between gap-4 pb-4 border-b border-current/20">
+            <div className="flex flex-col gap-1">
+              <h2 className={`text-xl font-extrabold ${isDark ? 'text-white' : 'text-[#0F172A]'}`}>
+                Welcome back, {profile?.full_name || 'Admin'}!
+              </h2>
+              <h1 className="text-3xl font-black uppercase tracking-wider text-[#0F8B8D] dark:text-[#2BA5B5]">
+                HOURLY PRODUCTION REPORT
+              </h1>
+              <p className="text-sm text-[#475569] dark:text-slate-300">
+                {companyName} · {factoryUnit.toUpperCase()} UNIT · {date}
               </p>
             </div>
             <div className="text-right flex items-center gap-4 justify-end">
-              <div>
-                <h1 className="text-lg font-black uppercase tracking-wider text-[#0F8B8D] dark:text-[#2BA5B5]">
-                  HOURLY PRODUCTION REPORT
-                </h1>
-                <p className="text-xs font-bangla text-[#475569] dark:text-slate-300 mt-0.5">
-                  ঘণ্টাভিত্তিক প্রোডাকশন রিপোর্ট (পার-আওয়ার লক মডেল)
-                </p>
-              </div>
               <button
                 type="button"
                 onClick={() => setShowHistoryDrawer(true)}
@@ -531,7 +528,7 @@ export const SewingReportEntry = () => {
                             value={line.buyerName}
                             onChange={(e) => handleLineChange(lineIdx, 'buyerName', e.target.value)}
                             className={`w-full px-2 py-1.5 text-xs rounded border text-center font-bold outline-none ${
-                              isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
+                              isDark ? 'bg-[#12383E] border-[#1E293B] text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'
                             }`}
                           />
                         </td>
