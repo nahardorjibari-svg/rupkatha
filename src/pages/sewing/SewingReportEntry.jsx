@@ -214,10 +214,12 @@ export const SewingReportEntry = () => {
   }, [date, factoryUnit, reportId, userName, loadReportData]);
 
   const handleLineChange = (lineIndex, field, value) => {
-    const updated = [...lines];
-    updated[lineIndex][field] = value;
-    setLines(updated);
-    triggerAutosave(updated);
+    setLines(prevLines => {
+      const updatedLines = [...prevLines];
+      updatedLines[lineIndex] = { ...updatedLines[lineIndex], [field]: value };
+      triggerAutosave(updatedLines);
+      return updatedLines;
+    });
   };
 
   const handleHourChange = (lineIndex, hourIndex, field, value, hourNo) => {
@@ -231,10 +233,16 @@ export const SewingReportEntry = () => {
       setAdminWarnedSession(true);
     }
 
-    const updated = [...lines];
-    updated[lineIndex].hours[hourIndex][field] = value;
-    setLines(updated);
-    triggerAutosave(updated);
+    setLines(prevLines => {
+      const updatedLines = [...prevLines];
+      const updatedLine = { ...updatedLines[lineIndex] };
+      const updatedHours = [...updatedLine.hours];
+      updatedHours[hourIndex] = { ...updatedHours[hourIndex], [field]: value };
+      updatedLine.hours = updatedHours;
+      updatedLines[lineIndex] = updatedLine;
+      triggerAutosave(updatedLines);
+      return updatedLines;
+    });
   };
 
   // Check if an hour has data across any line
