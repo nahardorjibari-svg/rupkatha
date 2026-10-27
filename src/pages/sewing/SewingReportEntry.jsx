@@ -180,38 +180,35 @@ export const SewingReportEntry = () => {
   }, [loadReportData]);
 
   const saveTimeoutRef = useRef(null);
-  const triggerAutosave = useCallback((updatedLines) => {
-    setIsDirty(true);
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-
-    saveTimeoutRef.current = setTimeout(async () => {
-      try {
-        setSaving(true);
-        const res = await saveSewingReport({
-          reportDate: date,
-          factoryUnit,
-          lines: updatedLines,
-          createdByName: userName,
-        });
-        if (res?.reportId && !reportId) {
-          setReportId(res.reportId);
-          const locks = await fetchHourLocks(res.reportId);
-          setHourLocks(locks);
-        }
-        setLastSaved(new Date());
-        setIsDirty(false);
-      } catch (err) {
-        if (err?.message?.includes('RLS') || err?.message?.includes('locked')) {
-          toast.error('This hour is submitted and locked. Changes reverted.');
-          loadReportData();
-        } else {
-          console.error('Autosave error:', err);
-        }
-      } finally {
-        setSaving(false);
+  const handleSaveAll = async (updatedLines) => {
+    try {
+      setSaving(true);
+      const res = await saveSewingReport({
+        reportDate: date,
+        factoryUnit,
+        lines: updatedLines || lines,
+        createdByName: userName,
+      });
+      if (res?.reportId && !reportId) {
+        setReportId(res.reportId);
+        const locks = await fetchHourLocks(res.reportId);
+        setHourLocks(locks);
       }
-    }, 1500);
-  }, [date, factoryUnit, reportId, userName, loadReportData]);
+      setLastSaved(new Date());
+      setIsDirty(false);
+      toast.success('Changes saved to database.');
+    } catch (err) {
+      if (err?.message?.includes('RLS') || err?.message?.includes('locked')) {
+        toast.error('This hour is submitted and locked. Changes reverted.');
+        loadReportData();
+      } else {
+        console.error('Save error:', err);
+        toast.error('Failed to save data.');
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleLineChange = (lineIndex, field, value) => {
     setLines(prevLines => {
@@ -412,10 +409,7 @@ export const SewingReportEntry = () => {
 
               <button
                 type="button"
-                onClick={() => {
-                  triggerAutosave(lines);
-                  toast.success('Changes saved to database.');
-                }}
+                onClick={() => handleSaveAll(lines)}
                 className="px-3 py-1.5 text-xs font-bold rounded bg-slate-600 text-white hover:bg-slate-700 transition-colors cursor-pointer shadow-sm"
               >
                 Save All Changes
