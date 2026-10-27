@@ -177,7 +177,7 @@ export const SewingReportEntry = () => {
       }
     });
     return () => unsubscribe();
-  }, [loadReportData, isDirty]);
+  }, [loadReportData]);
 
   const saveTimeoutRef = useRef(null);
   const triggerAutosave = useCallback((updatedLines) => {
