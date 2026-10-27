@@ -198,12 +198,12 @@ export const SewingReportEntry = () => {
       setIsDirty(false);
       toast.success('Changes saved to database.');
     } catch (err) {
+      console.error('Save error detailed:', err);
       if (err?.message?.includes('RLS') || err?.message?.includes('locked')) {
         toast.error('This hour is submitted and locked. Changes reverted.');
         loadReportData();
       } else {
-        console.error('Save error:', err);
-        toast.error('Failed to save data.');
+        toast.error(`Failed to save data: ${err?.message || 'Unknown error'}`);
       }
     } finally {
       setSaving(false);
