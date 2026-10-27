@@ -217,7 +217,7 @@ export const SewingReportEntry = () => {
     setLines(prevLines => {
       const updatedLines = [...prevLines];
       updatedLines[lineIndex] = { ...updatedLines[lineIndex], [field]: value };
-      triggerAutosave(updatedLines);
+      setIsDirty(true);
       return updatedLines;
     });
   };
@@ -240,7 +240,7 @@ export const SewingReportEntry = () => {
       updatedHours[hourIndex] = { ...updatedHours[hourIndex], [field]: value };
       updatedLine.hours = updatedHours;
       updatedLines[lineIndex] = updatedLine;
-      triggerAutosave(updatedLines);
+      setIsDirty(true);
       return updatedLines;
     });
   };
