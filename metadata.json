@@ -1,0 +1,6 @@
+{
+  "name": "GarmentsERP - Knit & Woven Factory Suite",
+  "description": "Enterprise Resource Planning (ERP) platform for Bangladesh Knit and Woven Garments manufacturing factories.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

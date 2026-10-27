@@ -1,0 +1,161 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Hind Siliguri", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-bangla: "Hind Siliguri", "Inter", system-ui, sans-serif;
+
+  --color-brand-cyan: #2BA5B5;
+  --color-brand-teal: #0F8B8D;
+  --color-chart-green: #2F9E44;
+  --color-chart-yellow: #E6D83A;
+  --color-chart-orange: #F4A62A;
+  --color-dark-bg: #0B2E33;
+  --color-dark-card: #103A40;
+  --color-dark-card-hover: #15454C;
+  --color-light-bg: #F5F6F8;
+  --color-light-card: #FFFFFF;
+
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+
+  --shadow-soft-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-soft-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-soft-lg: 0 10px 20px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-soft-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+}
+
+:root {
+  --font-family-base: "Inter", "Hind Siliguri", system-ui, -apple-system, sans-serif;
+  --accent-cyan: #2BA5B5;
+  --chart-green: #2F9E44;
+  --chart-yellow: #E6D83A;
+  --chart-orange: #F4A62A;
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--font-family-base);
+  line-height: 1.6;
+  background: radial-gradient(at 10% 20%, rgba(234, 246, 248, 0.9) 0px, transparent 50%),
+              radial-gradient(at 90% 10%, rgba(241, 245, 255, 0.9) 0px, transparent 50%),
+              radial-gradient(at 50% 90%, rgba(248, 241, 251, 0.9) 0px, transparent 50%),
+              #F5F6F8;
+  color: #1E293B;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+html.dark body {
+  background: radial-gradient(at 15% 15%, rgba(11, 46, 51, 0.95) 0px, transparent 60%),
+              radial-gradient(at 85% 85%, rgba(10, 31, 46, 0.95) 0px, transparent 60%),
+              #0B2E33;
+  color: #F8FAFC;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.4;
+  color: #0F172A;
+}
+
+html.dark h1, html.dark h2, html.dark h3, html.dark h4, html.dark h5, html.dark h6 {
+  color: #F8FAFC;
+}
+
+/* Glassmorphism Classes */
+.glass-card {
+  background: rgba(255, 255, 255, 0.68);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.04), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.glass-card:hover {
+  transform: translateY(-2px);
+}
+
+html.dark .glass-card {
+  background: rgba(16, 58, 64, 0.75);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+}
+
+.glass-sidebar {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border-right: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+html.dark .glass-sidebar {
+  background: rgba(16, 58, 64, 0.85);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-topbar {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+html.dark .glass-topbar {
+  background: rgba(16, 58, 64, 0.88);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-input {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+html.dark .glass-input {
+  background: rgba(11, 46, 51, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Inputs, buttons, tables inherit font */
+input, button, select, textarea, table, .toaster, [role="dialog"], [role="status"] {
+  font-family: inherit;
+}
+
+/* Bangla typography support: never clip matras / kar signs */
+.font-bangla, [lang="bn"], .bangla-text {
+  font-family: "Hind Siliguri", "Inter", sans-serif;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+}
+
+/* Accessible focus styling */
+:focus-visible {
+  outline: 2px solid #2BA5B5;
+  outline-offset: 2px;
+}
+
+/* Custom scrollbars */
+.scrollbar-custom::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-custom::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-custom::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+}
+html.light .scrollbar-custom::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
