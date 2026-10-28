@@ -6,16 +6,42 @@ Professional Enterprise Resource Planning (ERP) web application tailored for **R
 - **Frontend**: React + Vite + TypeScript + Tailwind CSS
 - **Routing**: React Router (HashRouter optimized for GitHub Pages static hosting)
 - **Database & Auth**: Supabase (@supabase/supabase-js) with Row Level Security (RLS) & RPC functions
-- **UI Components & Icons**: Lucide React, Framer Motion, React Hot Toast
-- **Design System**: Light / Dark glass theme with dual plant support (Knit & Woven units) and Hind Siliguri + Inter typography.
+- **UI Components & Icons**: Lucide React, Framer Motion, React Hot Toast, Recharts
+- **Design System**: Light / Dark theme with dual plant support (Knit & Woven units) and Hind Siliguri + Inter typography.
 
 ---
 
-## Sewing Module & Per-Hour Lock Model
-The **Sewing Hourly Production Report** (`/sewing/report`) implements a granular **Per-Hour Lock Model**:
-1. **Per-Hour Submission**: Each hour column (01 to 10) can be independently submitted and locked (`sewing_hour_locks`).
-2. **Role-Based Permissions**: Non-admin users cannot edit or overwrite submitted/locked hours. Admins can edit locked hours (logged as *After-submit edits*) or reopen hours.
-3. **Audit & Edit History**: Detailed audit change log tracking draft edits vs. after-submit edits with per-hour submit timelines and exports.
+## Sewing Module: Per-Part Targets & Shortage Tracking
+The **Sewing Hourly Production Report** (`/sewing/report`) includes production tracking and target analytics across all four part rows: **Back**, **Front**, **Out Put**, and **A.S.M**:
+
+1. **Per-Part Targets (Hour & Total Targets)**:
+   - Separate Hour Target (`back_hour_target`, `front_hour_target`, `output_hour_target`, `asm_hour_target`) and Total Target (`hour_target x working_hours`) for Back, Front, Out Put, and A.S.M rows.
+   - Configurable **Working Hours** selector (1 to 10 hours, default 8).
+   - "Apply Back Target to All" helper button copies Back hour target to Front, Out Put, and A.S.M (with confirmation).
+
+2. **Real-time Color Coding**:
+   - **Hour cells vs Hour Target**: Below target = RED (`#FEE2E2` with diff badge, e.g. `-20`), Equal = GREEN (`#DCFCE7` with `✓`), Above target = YELLOW (`#FEF9C3` with `+N`). Uncolored when target is blank.
+   - **Cumulative (Σ) zone**: Running cumulative sum under each hour cell compared dynamically with cumulative target (`hour target x elapsed working hours`) with color coding for Back, Front, Out Put, and A.S.M.
+   - **Total Column**: Shows sum of entered hourly values, compared with Total Target (`-N` or `+N`).
+
+3. **Compact Tracking Rows (Under Each Line Table)**:
+   - **SHORT / EXCESS (ঘাটতি / অতিরিক্ত)**: Sub-rows for Back, Front, Out Put, and A.S.M calculating hourly cumulative actual minus cumulative target (`-20`, `0`, `+30`).
+   - **REMAINING TARGET (বাকি লক্ষ্য)**: Sub-rows for Back, Front, Out Put, and A.S.M calculating Total Target minus cumulative actual (never below 0).
+
+4. **Line Summary Badges**:
+   - Live header chips: `Target X | Actual Y | Short Z pcs (P%)` in Red/Green/Yellow for Out Put and A.S.M.
+   - `SHORT Z pcs` alert badge when working hours are completed, or `Short so far` during ongoing shifts.
+
+5. **Top Management Overview**:
+   - Day summary card at the top of the entry page and on the Sewing Dashboard for all 4 parts: Out Put, Back, Front, and A.S.M.
+   - Line-by-line summary table with Best Line and Shortest Line highlights.
+   - Dashboard charts: Target vs Actual bar chart per line, Cumulative Actual vs Target line chart, and Short Qty by Line bar chart with Out Put / Back / Front / A.S.M part selector.
+   - Full read-only grid, Print, Excel (`.xlsx`), and PDF (`.pdf`) export with Management Summary including A.S.M.
+
+6. **Granular Per-Hour Lock Model & Audit**:
+   - Each hour column (01 to 10) can be independently submitted and locked (`sewing_hour_locks`).
+   - Edit history logs draft edits vs. after-submit edits with human-readable labels (`Back hour target`, `Out Put hour target`, `A.S.M hour target`, `Working hours`).
+   - Manual save only via "Save All Changes" with unsaved-changes indicators and page exit warnings. Whitelist prevents sending `manpower_total` or other forbidden generated columns to Supabase.
 
 ---
 

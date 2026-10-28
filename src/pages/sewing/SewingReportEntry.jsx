@@ -1,6 +1,7 @@
 /**
  * Sewing Hourly Production Report Entry Page (Per-Hour Lock Model)
  * Rupkatha Apparels Ltd. (src/pages/sewing/SewingReportEntry.jsx)
+ * Supports per-part targets, live color-coding, Short/Excess, Remaining target & Management Summary.
  */
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
@@ -16,7 +17,13 @@ import {
   fetchEditLogs,
   subscribeSewingRealtime,
 } from '../../lib/sewingQueries';
-import { calculateLineHourTotals } from '../../lib/sewingCalc';
+import {
+  calculateLineHourTotals,
+  calculatePartMetrics,
+  calculatePartHourlyBreakdown,
+  calculateManagementSummary,
+  formatNum,
+} from '../../lib/sewingCalc';
 import {
   FileText,
   Calendar,
@@ -31,8 +38,32 @@ import {
   Send,
   X,
   Check,
+  TrendingDown,
+  TrendingUp,
+  AlertTriangle,
+  Award,
+  Layers,
+  Copy,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+const FIELD_LABEL_MAP = {
+  back_hour_target: 'Back hour target',
+  front_hour_target: 'Front hour target',
+  output_hour_target: 'Out Put hour target',
+  asm_hour_target: 'A.S.M hour target',
+  working_hours: 'Working hours',
+  back_qty: 'Back Qty',
+  front_qty: 'Front Qty',
+  output_qty: 'Out Put Qty',
+  asm: 'A.S.M',
+  op: 'O.P',
+  hp: 'H.P',
+  ir: 'I.R',
+  buyer_name: 'Buyer Name',
+  style_no: 'Style No',
+  remarks: 'Remarks',
+};
 
 export const SewingReportEntry = () => {
   const { isDark } = useTheme();
@@ -47,15 +78,18 @@ export const SewingReportEntry = () => {
   const [factoryUnit, setFactoryUnit] = useState('knit');
   const [reportId, setReportId] = useState(null);
 
-  const [lines, setLines] = useState([1, 2, 3, 4].map((lineNo) => ({
+  const initLine = (lineNo) => ({
     lineNo,
     buyerName: '',
     styleNo: '',
     op: '',
     hp: '',
     ir: '',
-    totalTarget: '',
-    hourTarget: '',
+    backHourTarget: '',
+    frontHourTarget: '',
+    outputHourTarget: '',
+    asmHourTarget: '',
+    workingHours: 8,
     remarks: '',
     hours: Array.from({ length: 10 }, (_, i) => ({
       hourNo: i + 1,
@@ -64,8 +98,9 @@ export const SewingReportEntry = () => {
       outputQty: '',
       asm: '',
     })),
-  })));
+  });
 
+  const [lines, setLines] = useState([1, 2, 3, 4].map(initLine));
   const [hourLocks, setHourLocks] = useState([]); // [{ hour_no, submitted_by_name, submitted_at, ... }]
   const [editLogs, setEditLogs] = useState([]);
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
@@ -111,30 +146,16 @@ export const SewingReportEntry = () => {
               op: existingLine.op !== null ? existingLine.op : '',
               hp: existingLine.hp !== null ? existingLine.hp : '',
               ir: existingLine.ir !== null ? existingLine.ir : '',
-              totalTarget: existingLine.total_target !== null ? existingLine.total_target : '',
-              hourTarget: existingLine.hour_target !== null ? existingLine.hour_target : '',
+              backHourTarget: existingLine.back_hour_target !== null && existingLine.back_hour_target !== undefined ? existingLine.back_hour_target : '',
+              frontHourTarget: existingLine.front_hour_target !== null && existingLine.front_hour_target !== undefined ? existingLine.front_hour_target : '',
+              outputHourTarget: existingLine.output_hour_target !== null && existingLine.output_hour_target !== undefined ? existingLine.output_hour_target : '',
+              asmHourTarget: existingLine.asm_hour_target !== null && existingLine.asm_hour_target !== undefined ? existingLine.asm_hour_target : '',
+              workingHours: existingLine.working_hours !== null && existingLine.working_hours !== undefined ? existingLine.working_hours : 8,
               remarks: existingLine.remarks || '',
               hours: hoursArr,
             };
           } else {
-            return {
-              lineNo,
-              buyerName: '',
-              styleNo: '',
-              op: '',
-              hp: '',
-              ir: '',
-              totalTarget: '',
-              hourTarget: '',
-              remarks: '',
-              hours: Array.from({ length: 10 }, (_, i) => ({
-                hourNo: i + 1,
-                backQty: '',
-                frontQty: '',
-                outputQty: '',
-                asm: '',
-              })),
-            };
+            return initLine(lineNo);
           }
         });
         setLines(loadedLines);
@@ -142,24 +163,7 @@ export const SewingReportEntry = () => {
         setReportId(null);
         setHourLocks([]);
         setEditLogs([]);
-        setLines([1, 2, 3, 4].map((lineNo) => ({
-          lineNo,
-          buyerName: '',
-          styleNo: '',
-          op: '',
-          hp: '',
-          ir: '',
-          totalTarget: '',
-          hourTarget: '',
-          remarks: '',
-          hours: Array.from({ length: 10 }, (_, i) => ({
-            hourNo: i + 1,
-            backQty: '',
-            frontQty: '',
-            outputQty: '',
-            asm: '',
-          })),
-        })));
+        setLines([1, 2, 3, 4].map(initLine));
       }
       setIsDirty(false);
     } catch (err) {
@@ -225,12 +229,33 @@ export const SewingReportEntry = () => {
   };
 
   const handleLineChange = (lineIndex, field, value) => {
-    setLines(prevLines => {
+    setLines((prevLines) => {
       const updatedLines = [...prevLines];
       updatedLines[lineIndex] = { ...updatedLines[lineIndex], [field]: value };
       setIsDirty(true);
       return updatedLines;
     });
+  };
+
+  const handleApplySameTarget = (lineIndex) => {
+    const targetVal = lines[lineIndex].backHourTarget;
+    const ok = window.confirm(
+      `Copy Back hour target (${targetVal !== '' && targetVal !== null && targetVal !== undefined ? targetVal : 'blank'}) to Front, Out Put, and A.S.M?`
+    );
+    if (!ok) return;
+
+    setLines((prevLines) => {
+      const updatedLines = [...prevLines];
+      updatedLines[lineIndex] = {
+        ...updatedLines[lineIndex],
+        frontHourTarget: targetVal,
+        outputHourTarget: targetVal,
+        asmHourTarget: targetVal,
+      };
+      setIsDirty(true);
+      return updatedLines;
+    });
+    toast.success(`Copied Back target to Front, Out Put & A.S.M.`);
   };
 
   const handleHourChange = (lineIndex, hourIndex, field, value, hourNo) => {
@@ -244,7 +269,7 @@ export const SewingReportEntry = () => {
       setAdminWarnedSession(true);
     }
 
-    setLines(prevLines => {
+    setLines((prevLines) => {
       const updatedLines = [...prevLines];
       const updatedLine = { ...updatedLines[lineIndex] };
       const updatedHours = [...updatedLine.hours];
@@ -259,7 +284,7 @@ export const SewingReportEntry = () => {
   // Check if an hour has data across any line
   const isHourFilled = (hourNo) => {
     return lines.some((l) => {
-      const hr = l.hours.find((h) => h.hour_no === hourNo);
+      const hr = l.hours.find((h) => h.hourNo === hourNo);
       return hr && ((hr.backQty !== '' && hr.backQty !== null) || (hr.frontQty !== '' && hr.frontQty !== null) || (hr.outputQty !== '' && hr.outputQty !== null));
     });
   };
@@ -300,23 +325,35 @@ export const SewingReportEntry = () => {
   };
 
   const handleReopenHour = async (hourNo) => {
-    if (!isAdmin || !reportId) return;
-    if (window.confirm(`Reopen Hour ${String(hourNo).padStart(2, '0')} for editing?`)) {
-      try {
-        await reopenHourLock(reportId, hourNo);
-        const locks = await fetchHourLocks(reportId);
-        setHourLocks(locks);
-        toast.success(`Hour ${String(hourNo).padStart(2, '0')} reopened successfully.`);
-        await loadReportData();
-      } catch (err) {
-        toast.error(err?.message || 'Failed to reopen hour.');
-      }
+    if (!isAdmin) return;
+    if (!window.confirm(`Reopen Hour ${String(hourNo).padStart(2, '0')} for regular editing?`)) return;
+
+    try {
+      await reopenHourLock(reportId, hourNo);
+      const locks = await fetchHourLocks(reportId);
+      setHourLocks(locks);
+      toast.success(`Hour ${String(hourNo).padStart(2, '0')} reopened.`);
+      await loadReportData();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to reopen hour lock.');
     }
   };
 
   const handleSubmitAllFilled = async () => {
+    const filledUnlockedHours = [];
+    for (let h = 1; h <= 10; h++) {
+      if (isHourFilled(h) && !hourLocks.some((l) => l.hour_no === h)) {
+        filledUnlockedHours.push(h);
+      }
+    }
+
+    if (filledUnlockedHours.length === 0) {
+      toast('No unlocked filled hours found to submit.', { icon: 'ℹ️' });
+      return;
+    }
+
     if (isDirty) {
-      const wantSave = window.confirm('You have unsaved changes. Save all changes before submitting hours?');
+      const wantSave = window.confirm('You have unsaved changes. Save all changes before submitting all filled hours?');
       if (!wantSave) return;
       const ok = await handleSaveAll(lines);
       if (!ok) return;
@@ -324,18 +361,20 @@ export const SewingReportEntry = () => {
 
     const currentReportId = reportId;
     if (!currentReportId) {
-      toast.error('Please save report first.');
+      toast.error('Report must be saved first.');
+      return;
+    }
+
+    if (!window.confirm(`Submit and lock ${filledUnlockedHours.length} filled hours (H${filledUnlockedHours.join(', H')})?`)) {
       return;
     }
 
     try {
-      for (let h = 1; h <= 10; h++) {
-        if (isHourFilled(h) && !hourLocks.some((l) => l.hour_no === h)) {
-          try {
-            await submitHourLock(currentReportId, h);
-          } catch (err) {
-            console.error(`Failed to lock hour ${h}:`, err);
-          }
+      for (const h of filledUnlockedHours) {
+        try {
+          await submitHourLock(currentReportId, h);
+        } catch (err) {
+          console.error(`Failed to lock hour ${h}:`, err);
         }
       }
       const locks = await fetchHourLocks(currentReportId);
@@ -347,22 +386,7 @@ export const SewingReportEntry = () => {
     }
   };
 
-  // Cumulative calculation: running sum of all entered hours up to hourNo (1-10)
-  // Shown only from the first entered hour onward and carried over blank hours.
-  const getCumulativeAtHour = (line, field, hourNo) => {
-    let sum = 0;
-    let hasStarted = false;
-    for (let i = 0; i < hourNo; i++) {
-      const q = line.hours[i]?.[field];
-      if (q !== '' && q !== null && q !== undefined && !isNaN(Number(q))) {
-        sum += Number(q);
-        hasStarted = true;
-      }
-    }
-    return hasStarted ? sum : null;
-  };
-
-  // Live recalculation for each line as the user types (memoized on local lines state)
+  // Memoized line calculations, hourly breakdowns & management summary
   const lineCalculations = useMemo(() => {
     return lines.map((line) => {
       const opVal = Number(line.op) || 0;
@@ -370,9 +394,38 @@ export const SewingReportEntry = () => {
       const irVal = Number(line.ir) || 0;
       const totalManpower = opVal + hpVal + irVal;
 
-      const { totalBack, totalFront, totalOutput } = calculateLineHourTotals(line.hours);
-      return { totalManpower, totalBack, totalFront, totalOutput };
+      const { totalBack, totalFront, totalOutput, totalAsm } = calculateLineHourTotals(line.hours);
+      const backBreakdown = calculatePartHourlyBreakdown(line, 'back');
+      const frontBreakdown = calculatePartHourlyBreakdown(line, 'front');
+      const outputBreakdown = calculatePartHourlyBreakdown(line, 'output');
+      const asmBreakdown = calculatePartHourlyBreakdown(line, 'asm');
+
+      // Find last hour with entered output
+      let lastEnteredHourNo = 0;
+      line.hours.forEach((h) => {
+        if (h.outputQty !== '' && h.outputQty !== null && !isNaN(Number(h.outputQty))) {
+          if (h.hourNo > lastEnteredHourNo) lastEnteredHourNo = h.hourNo;
+        }
+      });
+
+      return {
+        totalManpower,
+        totalBack,
+        totalFront,
+        totalOutput,
+        totalAsm,
+        backBreakdown,
+        frontBreakdown,
+        outputBreakdown,
+        asmBreakdown,
+        lastEnteredHourNo,
+      };
     });
+  }, [lines]);
+
+  // Day Management Summary
+  const daySummary = useMemo(() => {
+    return calculateManagementSummary(lines);
   }, [lines]);
 
   // Edit log counts & filtered items
@@ -383,19 +436,111 @@ export const SewingReportEntry = () => {
     return true;
   });
 
+  // Cell coloring helper
+  const getCellStyling = (actualVal, hourTarget, isDisabled) => {
+    if (isDisabled) {
+      return {
+        bgClass: 'bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed',
+        badge: null,
+      };
+    }
+    if (hourTarget === null || hourTarget === undefined || hourTarget === '' || isNaN(Number(hourTarget))) {
+      return {
+        bgClass: isDark ? 'bg-[#12383E] text-white border-white/20' : 'bg-white text-[#0F172A] border-[#CBD5E1]',
+        badge: null,
+      };
+    }
+    if (actualVal === null || actualVal === undefined || actualVal === '' || isNaN(Number(actualVal))) {
+      return {
+        bgClass: isDark ? 'bg-[#12383E] text-white border-white/20' : 'bg-white text-[#0F172A] border-[#CBD5E1]',
+        badge: null,
+      };
+    }
+
+    const act = Number(actualVal);
+    const tgt = Number(hourTarget);
+    const diff = act - tgt;
+
+    if (diff < 0) {
+      return {
+        bgClass: isDark ? 'bg-red-950/70 text-red-200 border-red-500/60 font-semibold' : 'bg-[#FEE2E2] text-[#991B1B] border-red-300 font-semibold',
+        badge: `${diff}`,
+        badgeClass: isDark ? 'bg-red-900/80 text-red-100' : 'bg-red-200 text-red-900',
+      };
+    } else if (diff === 0) {
+      return {
+        bgClass: isDark ? 'bg-emerald-950/70 text-emerald-200 border-emerald-500/60 font-semibold' : 'bg-[#DCFCE7] text-[#166534] border-emerald-300 font-semibold',
+        badge: '✓',
+        badgeClass: isDark ? 'bg-emerald-900/80 text-emerald-100' : 'bg-emerald-200 text-emerald-900',
+      };
+    } else {
+      return {
+        bgClass: isDark ? 'bg-amber-950/70 text-amber-200 border-amber-500/60 font-semibold' : 'bg-[#FEF9C3] text-[#854D0E] border-amber-300 font-semibold',
+        badge: `+${diff}`,
+        badgeClass: isDark ? 'bg-amber-900/80 text-amber-100' : 'bg-amber-200 text-amber-900',
+      };
+    }
+  };
+
+  // Cumulative text color helper
+  const getCumulativeColorClass = (cumActual, cumTarget) => {
+    if (cumActual === null || cumTarget === null) {
+      return 'text-[#0F8B8D] dark:text-[#2BA5B5]';
+    }
+    if (cumActual < cumTarget) {
+      return isDark ? 'text-red-400 font-bold' : 'text-red-700 font-bold';
+    } else if (cumActual === cumTarget) {
+      return isDark ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-bold';
+    } else {
+      return isDark ? 'text-amber-400 font-bold' : 'text-amber-700 font-bold';
+    }
+  };
+
+  // Total cell display helper
+  const renderTotalCell = (actualTotal, totalTarget) => {
+    if (actualTotal === null) {
+      return <span className="text-slate-400">-</span>;
+    }
+    if (totalTarget === null || totalTarget <= 0) {
+      return <span className="font-bold font-mono">{actualTotal}</span>;
+    }
+    const diff = actualTotal - totalTarget;
+    if (diff < 0) {
+      return (
+        <span className={isDark ? 'text-red-400 font-black' : 'text-red-700 font-black'}>
+          {actualTotal} <span className="text-[10px]">({diff})</span>
+        </span>
+      );
+    } else if (diff === 0) {
+      return (
+        <span className={isDark ? 'text-emerald-400 font-black' : 'text-emerald-700 font-black'}>
+          {actualTotal} <span className="text-[10px]">(✓)</span>
+        </span>
+      );
+    } else {
+      return (
+        <span className={isDark ? 'text-amber-400 font-black' : 'text-amber-700 font-black'}>
+          {actualTotal} <span className="text-[10px]">(+{diff})</span>
+        </span>
+      );
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* Paper Header Block */}
-        <div className={`p-6 rounded-2xl border shadow-sm ${
-          isDark ? 'bg-[#103A40] border-white/25 text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'
-        }`}>
+        {/* TOP CONTROLS & DATE/UNIT SELECTION */}
+        <div
+          className={`p-6 rounded-2xl border shadow-sm ${
+            isDark ? 'bg-[#103A40] border-white/25 text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'
+          }`}
+        >
           <div className="flex items-center justify-between gap-4 pb-4 border-b border-current/20">
             <div className="flex flex-col gap-1">
               <h2 className={`text-xl font-extrabold ${isDark ? 'text-white' : 'text-[#0F172A]'}`}>
-                Welcome back, {profile?.full_name || 'Admin'}!
+                {companyName}
               </h2>
-              <h1 className="text-3xl font-black uppercase tracking-wider text-[#0F8B8D] dark:text-[#2BA5B5]">
+              <h1 className="text-2xl font-black tracking-tight text-[#0F8B8D] dark:text-[#2BA5B5]">
                 HOURLY PRODUCTION REPORT
               </h1>
               <p className="text-sm text-[#475569] dark:text-slate-300">
@@ -418,7 +563,9 @@ export const SewingReportEntry = () => {
             <div className="flex flex-wrap items-center gap-6 text-xs font-semibold">
               <div className="flex items-center gap-2">
                 <Factory className="w-4 h-4 text-[#0F8B8D]" />
-                <span>Unit: <strong className="uppercase">{factoryUnit} Sewing</strong></span>
+                <span>
+                  Unit: <strong className="uppercase">{factoryUnit} Sewing</strong>
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-[#0F8B8D]" />
@@ -473,10 +620,259 @@ export const SewingReportEntry = () => {
           </div>
         </div>
 
-        {/* 4 Line Tables with Per-Hour Submit Controls in Header */}
+        {/* TOP MANAGEMENT VIEW: DAY SUMMARY CARD */}
+        <div
+          className={`p-5 rounded-2xl border shadow-sm ${
+            isDark ? 'bg-[#0D3137] border-white/20 text-white' : 'bg-white border-slate-300 text-slate-900'
+          }`}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-4 border-b border-current/15 gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-[#0F8B8D]" />
+                <h3 className="font-extrabold text-sm uppercase tracking-wider text-[#0F8B8D] dark:text-[#2BA5B5]">
+                  Top Management Overview · দৈনিক সুইং লক্ষ্যমাত্রা ও ঘাটতি সারসংক্ষেপ
+                </h3>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Target vs Actual achievement &amp; Shortage tracking across all 4 production lines
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs">
+              {daySummary.bestLine && (
+                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-1">
+                  <Award className="w-3.5 h-3.5" /> Best: Line 0{daySummary.bestLine.lineNo} ({daySummary.bestLine.output.achievement}%)
+                </span>
+              )}
+              {daySummary.worstLine && daySummary.worstLine.lineNo !== daySummary.bestLine?.lineNo && (
+                <span className="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30 font-bold flex items-center gap-1">
+                  <AlertTriangle className="w-3.5 h-3.5" /> Shortest: Line 0{daySummary.worstLine.lineNo} ({daySummary.worstLine.output.achievement}%)
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* 4 KPI Part Cards: Out Put, Back, Front, A.S.M */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            {[
+              { key: 'output', label: 'Out Put (সর্বমোট সমাপ্ত পোশাক)', color: '#0F8B8D' },
+              { key: 'back', label: 'Back Part (ব্যাক পার্ট)', color: '#3B82F6' },
+              { key: 'front', label: 'Front Part (ফ্রন্ট পার্ট)', color: '#8B5CF6' },
+              { key: 'asm', label: 'A.S.M (অ্যাসেম্বলি)', color: '#F59E0B' },
+            ].map(({ key, label }) => {
+              const partData = daySummary.byPart[key] || {};
+              const hasTgt = partData.totalTarget !== null;
+              const isShort = partData.status === 'short';
+              const isAchieved = partData.status === 'achieved';
+              const isExcess = partData.status === 'excess';
+
+              return (
+                <div
+                  key={key}
+                  className={`p-4 rounded-xl border ${
+                    isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{label}</span>
+                    {hasTgt ? (
+                      <span
+                        className={`text-[11px] font-black px-2 py-0.5 rounded-full ${
+                          isShort
+                            ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200'
+                            : isAchieved
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200'
+                        }`}
+                      >
+                        {partData.achievement !== null ? `${partData.achievement}% Achieved` : 'Pending'}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 font-bold">No Target Set</span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs font-mono mt-2">
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase">Target:</span>
+                      <p className="font-extrabold text-sm">{partData.totalTarget !== null ? formatNum(partData.totalTarget) : '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase">Actual:</span>
+                      <p className="font-extrabold text-sm text-[#0F8B8D] dark:text-[#2BA5B5]">
+                        {partData.totalActual !== null ? formatNum(partData.totalActual) : '-'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {hasTgt && (
+                    <div className="mt-2.5 pt-2 border-t border-current/10 flex items-center justify-between text-xs font-semibold">
+                      {isShort && (
+                        <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1 font-bold">
+                          <TrendingDown className="w-3.5 h-3.5" /> Short {formatNum(partData.shortQty)} pcs ({partData.shortPct}%)
+                        </span>
+                      )}
+                      {isAchieved && (
+                        <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold">
+                          <Check className="w-3.5 h-3.5" /> 100% Target Met
+                        </span>
+                      )}
+                      {isExcess && (
+                        <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1 font-bold">
+                          <TrendingUp className="w-3.5 h-3.5" /> Excess +{formatNum(partData.shortExcessQty)} pcs
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Line By Line Performance Table */}
+          <div className="overflow-x-auto border border-current/15 rounded-xl">
+            <table className="w-full text-xs font-mono text-left">
+              <thead className={isDark ? 'bg-[#0B2E33] text-slate-300' : 'bg-slate-100 text-slate-700'}>
+                <tr>
+                  <th className="p-2 border-r border-current/10 text-center">Line</th>
+                  <th className="p-2 border-r border-current/10">Buyer / Style</th>
+                  <th className="p-2 border-r border-current/10 text-center">Working Hrs</th>
+                  <th className="p-2 border-r border-current/10 text-center">Out Put Target</th>
+                  <th className="p-2 border-r border-current/10 text-center">Actual Output</th>
+                  <th className="p-2 border-r border-current/10 text-center">Ach%</th>
+                  <th className="p-2 border-r border-current/10 text-center">Short / Excess</th>
+                  <th className="p-2 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-current/10">
+                {daySummary.lines.map((lSum) => {
+                  const m = lSum.output;
+                  const hasTgt = m.totalTarget !== null;
+
+                  let statusBadge = <span className="text-slate-400 font-normal">No Target</span>;
+                  if (hasTgt) {
+                    if (m.status === 'short') {
+                      statusBadge = (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30">
+                          SHORT {m.shortPct}%
+                        </span>
+                      );
+                    } else if (m.status === 'achieved') {
+                      statusBadge = (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                          ACHIEVED
+                        </span>
+                      );
+                    } else if (m.status === 'excess') {
+                      statusBadge = (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30">
+                          EXCESS +{m.shortExcessQty}
+                        </span>
+                      );
+                    } else {
+                      statusBadge = <span className="text-slate-400">Pending</span>;
+                    }
+                  }
+
+                  return (
+                    <tr
+                      key={lSum.lineNo}
+                      className={`hover:bg-white/5 transition-colors ${
+                        daySummary.bestLine?.lineNo === lSum.lineNo ? 'bg-emerald-500/5' : ''
+                      }`}
+                    >
+                      <td className="p-2 border-r border-current/10 text-center font-bold">
+                        Line 0{lSum.lineNo}
+                      </td>
+                      <td className="p-2 border-r border-current/10 font-medium">
+                        {lSum.buyer} · {lSum.style}
+                      </td>
+                      <td className="p-2 border-r border-current/10 text-center font-bold">
+                        {m.workingHours} hrs
+                      </td>
+                      <td className="p-2 border-r border-current/10 text-center font-bold">
+                        {m.totalTarget !== null ? formatNum(m.totalTarget) : '-'}
+                      </td>
+                      <td className="p-2 border-r border-current/10 text-center font-bold text-[#0F8B8D] dark:text-[#2BA5B5]">
+                        {m.totalActual !== null ? formatNum(m.totalActual) : '-'}
+                      </td>
+                      <td className="p-2 border-r border-current/10 text-center font-bold">
+                        {m.achievement !== null ? `${m.achievement}%` : '-'}
+                      </td>
+                      <td className="p-2 border-r border-current/10 text-center font-bold">
+                        {m.shortExcessQty !== null ? (
+                          m.shortExcessQty < 0 ? (
+                            <span className="text-rose-600 dark:text-rose-400">{m.shortExcessQty} pcs</span>
+                          ) : m.shortExcessQty === 0 ? (
+                            <span className="text-emerald-600 dark:text-emerald-400">0</span>
+                          ) : (
+                            <span className="text-amber-600 dark:text-amber-400">+{m.shortExcessQty} pcs</span>
+                          )
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                      <td className="p-2 text-center">{statusBadge}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* 4 PRODUCTION LINE TABLES */}
         <div className="space-y-6">
           {lines.map((line, lineIdx) => {
-            const { totalManpower, totalBack, totalFront, totalOutput } = lineCalculations[lineIdx];
+            const {
+              totalManpower,
+              totalBack,
+              totalFront,
+              totalOutput,
+              totalAsm,
+              backBreakdown,
+              frontBreakdown,
+              outputBreakdown,
+              asmBreakdown,
+              lastEnteredHourNo,
+            } = lineCalculations[lineIdx];
+
+            const outMetrics = outputBreakdown.metrics;
+            const backMetrics = backBreakdown.metrics;
+            const frontMetrics = frontBreakdown.metrics;
+            const asmMetrics = asmBreakdown.metrics;
+
+            // Short badge logic
+            const workingHours = line.workingHours || 8;
+            const isFinishedWorkingHours = lastEnteredHourNo >= workingHours;
+
+            let mainAlertBadge = null;
+            if (outMetrics.totalTarget !== null && outMetrics.status === 'short') {
+              if (isFinishedWorkingHours) {
+                mainAlertBadge = (
+                  <span className="px-2.5 py-1 rounded-lg bg-rose-600 text-white font-extrabold text-xs shadow-xs flex items-center gap-1.5 animate-pulse">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    SHORT {Math.abs(outMetrics.shortExcessQty)} pcs
+                  </span>
+                );
+              } else if (lastEnteredHourNo > 0) {
+                // Short so far based on cumulative target up to last entered hour
+                const cumTgtSoFar = (outMetrics.hourTarget || 0) * Math.min(lastEnteredHourNo, workingHours);
+                const actualSoFar = line.hours
+                  .slice(0, lastEnteredHourNo)
+                  .reduce((s, h) => s + (Number(h.outputQty) || 0), 0);
+                if (actualSoFar < cumTgtSoFar) {
+                  const shortSoFar = cumTgtSoFar - actualSoFar;
+                  mainAlertBadge = (
+                    <span className="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/40 font-bold text-xs flex items-center gap-1.5">
+                      <TrendingDown className="w-3.5 h-3.5" />
+                      Short so far: {shortSoFar} pcs
+                    </span>
+                  );
+                }
+              }
+            }
 
             return (
               <div
@@ -485,33 +881,162 @@ export const SewingReportEntry = () => {
                   isDark ? 'bg-[#103A40] border-white/25 text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'
                 }`}
               >
-                <div className="flex items-center justify-between mb-3 px-1">
-                  <h3 className="font-extrabold text-sm uppercase tracking-wider text-[#0F8B8D] dark:text-[#2BA5B5]">
-                    Line 0{line.lineNo} Production Register
-                  </h3>
-                  <div className="flex items-center gap-3 text-xs font-bold font-mono">
-                    <span>Total Manpower: {totalManpower > 0 ? totalManpower : '-'}</span>
-                    <span className="opacity-40">·</span>
-                    <span className="text-[#0F8B8D] dark:text-[#2BA5B5]">
-                      Total Output: {totalOutput !== null ? totalOutput : '-'}
-                    </span>
+                {/* LINE HEADER WITH WORKING HOURS SELECTOR & TARGET SUMMARY BADGES */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-3 px-1 gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h3 className="font-extrabold text-sm uppercase tracking-wider text-[#0F8B8D] dark:text-[#2BA5B5]">
+                      Line 0{line.lineNo} Production Register
+                    </h3>
+
+                    {/* Working hours selector */}
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg border border-current/20 text-xs font-bold">
+                      <Clock className="w-3.5 h-3.5 text-[#0F8B8D]" />
+                      <span>Working Hours:</span>
+                      <select
+                        value={line.workingHours || 8}
+                        onChange={(e) => handleLineChange(lineIdx, 'workingHours', parseInt(e.target.value, 10))}
+                        className={`font-mono font-black rounded px-1.5 py-0.5 outline-none cursor-pointer ${
+                          isDark ? 'bg-[#0B2E33] text-white' : 'bg-slate-100 text-slate-800'
+                        }`}
+                      >
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((h) => (
+                          <option key={h} value={h}>
+                            {h} hrs
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Helper to copy Back target to Front & Out Put */}
+                    <button
+                      type="button"
+                      title="Apply Back hour target to Front and Out Put"
+                      onClick={() => handleApplySameTarget(lineIdx)}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-[#0F8B8D] dark:text-[#2BA5B5] border border-[#0F8B8D]/30 transition-colors cursor-pointer"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>Apply Back Target to All</span>
+                    </button>
+                  </div>
+
+                  {/* Summary Chips: Target vs Actual, Shortage */}
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+                    <div className="px-2 py-1 rounded bg-black/5 dark:bg-white/5 border border-current/10 font-bold">
+                      Total MP: {totalManpower > 0 ? totalManpower : '-'}
+                    </div>
+
+                    {outMetrics.totalTarget !== null && (
+                      <div
+                        className={`px-2.5 py-1 rounded-lg border font-bold text-xs flex items-center gap-1.5 ${
+                          outMetrics.status === 'short'
+                            ? isDark
+                              ? 'bg-red-950/60 border-red-800 text-red-200'
+                              : 'bg-red-50 border-red-300 text-red-800'
+                            : outMetrics.status === 'achieved'
+                            ? isDark
+                              ? 'bg-emerald-950/60 border-emerald-800 text-emerald-200'
+                              : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                            : isDark
+                            ? 'bg-amber-950/60 border-amber-800 text-amber-200'
+                            : 'bg-amber-50 border-amber-300 text-amber-800'
+                        }`}
+                      >
+                        <span>Target {outMetrics.totalTarget}</span>
+                        <span>|</span>
+                        <span>Actual {outMetrics.totalActual ?? 0}</span>
+                        <span>|</span>
+                        {outMetrics.status === 'short' && (
+                          <span className="font-extrabold text-rose-600 dark:text-rose-400">
+                            Short {Math.abs(outMetrics.shortExcessQty)} pcs ({outMetrics.shortPct}%)
+                          </span>
+                        )}
+                        {outMetrics.status === 'achieved' && (
+                          <span className="font-extrabold text-emerald-600 dark:text-emerald-400">Achieved 100%</span>
+                        )}
+                        {outMetrics.status === 'excess' && (
+                          <span className="font-extrabold text-amber-600 dark:text-amber-400">
+                            Excess +{outMetrics.shortExcessQty} pcs ({outMetrics.excessPct}%)
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {asmMetrics.totalTarget !== null && (
+                      <div
+                        className={`px-2.5 py-1 rounded-lg border font-bold text-xs flex items-center gap-1.5 ${
+                          asmMetrics.status === 'short'
+                            ? isDark
+                              ? 'bg-red-950/60 border-red-800 text-red-200'
+                              : 'bg-red-50 border-red-300 text-red-800'
+                            : asmMetrics.status === 'achieved'
+                            ? isDark
+                              ? 'bg-emerald-950/60 border-emerald-800 text-emerald-200'
+                              : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                            : isDark
+                            ? 'bg-amber-950/60 border-amber-800 text-amber-200'
+                            : 'bg-amber-50 border-amber-300 text-amber-800'
+                        }`}
+                      >
+                        <span>A.S.M Tgt {asmMetrics.totalTarget}</span>
+                        <span>|</span>
+                        <span>Act {asmMetrics.totalActual ?? 0}</span>
+                        <span>|</span>
+                        {asmMetrics.status === 'short' && (
+                          <span className="font-extrabold text-rose-600 dark:text-rose-400">
+                            Short {Math.abs(asmMetrics.shortExcessQty)} pcs ({asmMetrics.shortPct}%)
+                          </span>
+                        )}
+                        {asmMetrics.status === 'achieved' && (
+                          <span className="font-extrabold text-emerald-600 dark:text-emerald-400">Achieved 100%</span>
+                        )}
+                        {asmMetrics.status === 'excess' && (
+                          <span className="font-extrabold text-amber-600 dark:text-amber-400">
+                            Excess +{asmMetrics.shortExcessQty} pcs ({asmMetrics.excessPct}%)
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {mainAlertBadge}
                   </div>
                 </div>
 
+                {/* THE MAIN REGISTER GRID */}
                 <div className="overflow-x-auto">
                   <table
                     className="w-full border-collapse text-xs font-mono"
-                    style={{ tableLayout: 'fixed', minWidth: '1350px', border: '1px solid #1E293B' }}
+                    style={{ tableLayout: 'fixed', minWidth: '1420px', border: '1px solid #1E293B' }}
                   >
                     <thead>
                       <tr className={isDark ? 'bg-[#0B2E33] text-slate-200' : 'bg-[#F1F5F9] text-[#0F172A]'}>
-                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '110px' }}>Buyer Name</th>
-                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '100px' }}>Style No</th>
-                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '90px' }}>Order Qty / MP</th>
-                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '56px' }}>Line</th>
-                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '80px' }}>Total Target</th>
-                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '80px' }}>Hour Target</th>
-                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '80px' }}>Parts</th>
+                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '105px' }}>
+                          Buyer Name
+                        </th>
+                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '95px' }}>
+                          Style No
+                        </th>
+                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '85px' }}>
+                          Order / MP
+                        </th>
+                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '48px' }}>
+                          Line
+                        </th>
+                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '70px' }}>
+                          Parts
+                        </th>
+                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '80px' }}>
+                          <div>Hour Target</div>
+                          <div className="text-[9px] text-[#0F8B8D] dark:text-[#2BA5B5] font-bangla font-normal">
+                            লক্ষ্যমাত্রা/ঘণ্টা
+                          </div>
+                        </th>
+                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '80px' }}>
+                          <div>Total Target</div>
+                          <div className="text-[9px] text-[#0F8B8D] dark:text-[#2BA5B5] font-bangla font-normal">
+                            মোট লক্ষ্য
+                          </div>
+                        </th>
+
                         {Array.from({ length: 10 }).map((_, i) => {
                           const hourNo = i + 1;
                           const lockObj = hourLocks.find((l) => l.hour_no === hourNo);
@@ -524,7 +1049,9 @@ export const SewingReportEntry = () => {
                               key={i}
                               className={`p-1 border border-[#1E293B] font-extrabold text-center relative ${
                                 isLockedHour
-                                  ? isDark ? 'bg-amber-950/40 text-amber-200' : 'bg-amber-50 text-amber-900'
+                                  ? isDark
+                                    ? 'bg-amber-950/40 text-amber-200'
+                                    : 'bg-amber-50 text-amber-900'
                                   : ''
                               }`}
                               style={{ width: '68px' }}
@@ -533,7 +1060,9 @@ export const SewingReportEntry = () => {
                                 <span>{String(hourNo).padStart(2, '0')}</span>
                                 {isLockedHour ? (
                                   <span
-                                    title={`Submitted by ${lockObj.submitted_by_name || 'Admin'} at ${new Date(lockObj.submitted_at).toLocaleTimeString()}`}
+                                    title={`Submitted by ${lockObj.submitted_by_name || 'Admin'} at ${new Date(
+                                      lockObj.submitted_at
+                                    ).toLocaleTimeString()}`}
                                     className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-300 flex items-center gap-0.5"
                                   >
                                     <Lock className="w-2.5 h-2.5" />
@@ -545,9 +1074,21 @@ export const SewingReportEntry = () => {
                                     title={filled ? 'Submit this hour' : 'Enter data before submitting'}
                                     onClick={() => {
                                       if (hasEarlierUnsub) {
-                                        if (!window.confirm('Warning: An earlier hour has data and is not submitted. Proceed?')) return;
+                                        if (
+                                          !window.confirm(
+                                            'Warning: An earlier hour has data and is not submitted. Proceed?'
+                                          )
+                                        )
+                                          return;
                                       }
-                                      if (window.confirm(`Submit Hour ${String(hourNo).padStart(2, '0')}? After submit only admin can edit.`)) {
+                                      if (
+                                        window.confirm(
+                                          `Submit Hour ${String(hourNo).padStart(
+                                            2,
+                                            '0'
+                                          )}? After submit only admin can edit.`
+                                        )
+                                      ) {
                                         handleSubmitHour(hourNo);
                                       }
                                     }}
@@ -561,7 +1102,9 @@ export const SewingReportEntry = () => {
                                   </button>
                                 )}
                               </div>
-                              <div className="text-[9px] font-bangla text-[#0F8B8D] dark:text-[#2BA5B5] font-normal">ঘণ্টা</div>
+                              <div className="text-[9px] font-bangla text-[#0F8B8D] dark:text-[#2BA5B5] font-normal">
+                                ঘণ্টা
+                              </div>
                               {isLockedHour && isAdmin && (
                                 <button
                                   type="button"
@@ -574,10 +1117,20 @@ export const SewingReportEntry = () => {
                             </th>
                           );
                         })}
-                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '80px' }}>Total</th>
-                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '140px' }}>Remarks</th>
+
+                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '85px' }}>
+                          <div>Total</div>
+                          <div className="text-[9px] text-[#0F8B8D] dark:text-[#2BA5B5] font-bangla font-normal">মোট</div>
+                        </th>
+                        <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '130px' }}>
+                          <div>Remarks</div>
+                          <div className="text-[9px] text-[#475569] dark:text-slate-400 font-bangla font-normal">
+                            মন্তব্য
+                          </div>
+                        </th>
                       </tr>
                     </thead>
+
                     <tbody>
                       {/* ROW 1: BACK */}
                       <tr className={isDark ? 'bg-[#0B2E33]/40' : 'bg-[#F8FAFC]'}>
@@ -585,7 +1138,6 @@ export const SewingReportEntry = () => {
                           <input
                             type="text"
                             placeholder="-"
-                            disabled={false}
                             value={line.buyerName}
                             onChange={(e) => handleLineChange(lineIdx, 'buyerName', e.target.value)}
                             className={`w-full px-2 py-1.5 text-xs rounded border text-center font-bold outline-none ${
@@ -597,7 +1149,6 @@ export const SewingReportEntry = () => {
                           <input
                             type="text"
                             placeholder="-"
-                            disabled={false}
                             value={line.styleNo}
                             onChange={(e) => handleLineChange(lineIdx, 'styleNo', e.target.value)}
                             className={`w-full px-2 py-1.5 text-xs rounded border text-center font-bold outline-none ${
@@ -613,7 +1164,7 @@ export const SewingReportEntry = () => {
                               inputMode="numeric"
                               value={line.op}
                               onChange={(e) => handleLineChange(lineIdx, 'op', e.target.value)}
-                              className={`w-12 px-1 py-0.5 rounded border text-center font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                              className={`w-11 px-1 py-0.5 rounded border text-center font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                 isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
                               }`}
                             />
@@ -625,7 +1176,7 @@ export const SewingReportEntry = () => {
                               inputMode="numeric"
                               value={line.hp}
                               onChange={(e) => handleLineChange(lineIdx, 'hp', e.target.value)}
-                              className={`w-12 px-1 py-0.5 rounded border text-center font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                              className={`w-11 px-1 py-0.5 rounded border text-center font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                 isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
                               }`}
                             />
@@ -637,7 +1188,7 @@ export const SewingReportEntry = () => {
                               inputMode="numeric"
                               value={line.ir}
                               onChange={(e) => handleLineChange(lineIdx, 'ir', e.target.value)}
-                              className={`w-12 px-1 py-0.5 rounded border text-center font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                              className={`w-11 px-1 py-0.5 rounded border text-center font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                 isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
                               }`}
                             />
@@ -649,36 +1200,42 @@ export const SewingReportEntry = () => {
                         <td rowSpan={4} className="border border-[#1E293B] p-1 align-middle text-center font-black text-base">
                           0{line.lineNo}
                         </td>
-                        <td rowSpan={4} className="border border-[#1E293B] p-1 align-middle text-center">
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            value={line.totalTarget}
-                            onChange={(e) => handleLineChange(lineIdx, 'totalTarget', e.target.value)}
-                            className={`w-full px-2 py-2 text-xs rounded border text-center font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                              isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
-                            }`}
-                          />
-                        </td>
-                        <td rowSpan={4} className="border border-[#1E293B] p-1 align-middle text-center">
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            value={line.hourTarget}
-                            onChange={(e) => handleLineChange(lineIdx, 'hourTarget', e.target.value)}
-                            className={`w-full px-2 py-2 text-xs rounded border text-center font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                              isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
-                            }`}
-                          />
-                        </td>
                         <td className="border border-[#1E293B] p-1.5 font-extrabold text-center">Back</td>
+
+                        {/* Back Hour Target */}
+                        <td className="border border-[#1E293B] p-1 align-middle text-center">
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            placeholder="-"
+                            value={line.backHourTarget}
+                            onChange={(e) => handleLineChange(lineIdx, 'backHourTarget', e.target.value)}
+                            className={`w-full px-1 py-1.5 text-xs rounded border text-center font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                              isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
+                            }`}
+                          />
+                        </td>
+
+                        {/* Back Total Target = backHourTarget * workingHours */}
+                        <td className="border border-[#1E293B] p-1 align-middle text-center font-black text-xs">
+                          {backMetrics.totalTarget !== null ? backMetrics.totalTarget : '-'}
+                        </td>
+
+                        {/* Back 10 Hours */}
                         {line.hours.map((hr, hrIdx) => {
                           const isLocked = hourLocks.some((l) => l.hour_no === hr.hourNo);
                           const isDisabled = isLocked && !isAdmin;
-                          const cumBack = getCumulativeAtHour(line, 'backQty', hr.hourNo);
+                          const hBreak = backBreakdown.hourly[hrIdx] || {};
+                          const cellStyle = getCellStyling(hr.backQty, backMetrics.hourTarget, isDisabled);
+                          const cumColor = getCumulativeColorClass(hBreak.cumActual, hBreak.cumTarget);
 
                           return (
-                            <td key={hrIdx} className={`border border-[#1E293B] p-1 text-center align-middle ${isLocked ? 'bg-amber-500/10' : ''}`}>
+                            <td
+                              key={hrIdx}
+                              className={`border border-[#1E293B] p-1 text-center align-middle ${
+                                isLocked ? 'bg-amber-500/10' : ''
+                              }`}
+                            >
                               <div className="relative">
                                 <input
                                   type="number"
@@ -689,27 +1246,36 @@ export const SewingReportEntry = () => {
                                   onChange={(e) => handleHourChange(lineIdx, hrIdx, 'backQty', e.target.value, hr.hourNo)}
                                   className={`w-full h-7 text-xs rounded border text-center font-bold outline-none tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                     isLocked && isAdmin ? 'border-amber-500 ring-1 ring-amber-500' : ''
-                                  } ${
-                                    isDisabled
-                                      ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed'
-                                      : isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
-                                  }`}
+                                  } ${cellStyle.bgClass}`}
                                 />
+                                {cellStyle.badge && (
+                                  <span
+                                    className={`absolute left-0.5 top-0.5 text-[8px] px-0.5 rounded font-extrabold ${cellStyle.badgeClass}`}
+                                  >
+                                    {cellStyle.badge}
+                                  </span>
+                                )}
                                 {isLocked && (
                                   <span className="absolute right-0.5 top-0.5 text-[8px] text-amber-600 dark:text-amber-400">
                                     <Lock className="w-2.5 h-2.5" />
                                   </span>
                                 )}
                               </div>
-                              <div className="text-[10px] text-[#0F8B8D] dark:text-[#2BA5B5] font-mono font-semibold mt-0.5 border-t border-dashed border-[#1E293B]/20 pt-0.5 min-h-[16px] text-center">
-                                {cumBack !== null ? `Σ ${cumBack}` : ''}
+                              <div
+                                className={`text-[10px] font-mono mt-0.5 border-t border-dashed border-[#1E293B]/20 pt-0.5 min-h-[16px] text-center ${cumColor}`}
+                              >
+                                {hBreak.cumActual !== null ? `Σ ${hBreak.cumActual}` : ''}
                               </div>
                             </td>
                           );
                         })}
-                        <td className="border border-[#1E293B] p-1 text-center font-bold font-mono text-slate-800 dark:text-slate-200">
-                          {totalBack !== null ? totalBack : '-'}
+
+                        {/* Back Total */}
+                        <td className="border border-[#1E293B] p-1 text-center font-bold font-mono">
+                          {renderTotalCell(totalBack, backMetrics.totalTarget)}
                         </td>
+
+                        {/* Remarks */}
                         <td rowSpan={4} className="border border-[#1E293B] p-1 align-middle text-center">
                           <textarea
                             rows={4}
@@ -726,13 +1292,41 @@ export const SewingReportEntry = () => {
                       {/* ROW 2: FRONT */}
                       <tr className={isDark ? 'bg-[#0B2E33]/60' : 'bg-[#F1F5F9]'}>
                         <td className="border border-[#1E293B] p-1.5 font-extrabold text-center">Front</td>
+
+                        {/* Front Hour Target */}
+                        <td className="border border-[#1E293B] p-1 align-middle text-center">
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            placeholder="-"
+                            value={line.frontHourTarget}
+                            onChange={(e) => handleLineChange(lineIdx, 'frontHourTarget', e.target.value)}
+                            className={`w-full px-1 py-1.5 text-xs rounded border text-center font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                              isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
+                            }`}
+                          />
+                        </td>
+
+                        {/* Front Total Target = frontHourTarget * workingHours */}
+                        <td className="border border-[#1E293B] p-1 align-middle text-center font-black text-xs">
+                          {frontMetrics.totalTarget !== null ? frontMetrics.totalTarget : '-'}
+                        </td>
+
+                        {/* Front 10 Hours */}
                         {line.hours.map((hr, hrIdx) => {
                           const isLocked = hourLocks.some((l) => l.hour_no === hr.hourNo);
                           const isDisabled = isLocked && !isAdmin;
-                          const cumFront = getCumulativeAtHour(line, 'frontQty', hr.hourNo);
+                          const hBreak = frontBreakdown.hourly[hrIdx] || {};
+                          const cellStyle = getCellStyling(hr.frontQty, frontMetrics.hourTarget, isDisabled);
+                          const cumColor = getCumulativeColorClass(hBreak.cumActual, hBreak.cumTarget);
 
                           return (
-                            <td key={hrIdx} className={`border border-[#1E293B] p-1 text-center align-middle ${isLocked ? 'bg-amber-500/10' : ''}`}>
+                            <td
+                              key={hrIdx}
+                              className={`border border-[#1E293B] p-1 text-center align-middle ${
+                                isLocked ? 'bg-amber-500/10' : ''
+                              }`}
+                            >
                               <div className="relative">
                                 <input
                                   type="number"
@@ -743,51 +1337,74 @@ export const SewingReportEntry = () => {
                                   onChange={(e) => handleHourChange(lineIdx, hrIdx, 'frontQty', e.target.value, hr.hourNo)}
                                   className={`w-full h-7 text-xs rounded border text-center font-bold outline-none tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                     isLocked && isAdmin ? 'border-amber-500 ring-1 ring-amber-500' : ''
-                                  } ${
-                                    isDisabled
-                                      ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed'
-                                      : isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
-                                  }`}
+                                  } ${cellStyle.bgClass}`}
                                 />
+                                {cellStyle.badge && (
+                                  <span
+                                    className={`absolute left-0.5 top-0.5 text-[8px] px-0.5 rounded font-extrabold ${cellStyle.badgeClass}`}
+                                  >
+                                    {cellStyle.badge}
+                                  </span>
+                                )}
                                 {isLocked && (
                                   <span className="absolute right-0.5 top-0.5 text-[8px] text-amber-600 dark:text-amber-400">
                                     <Lock className="w-2.5 h-2.5" />
                                   </span>
                                 )}
                               </div>
-                              <div className="text-[10px] text-[#0F8B8D] dark:text-[#2BA5B5] font-mono font-semibold mt-0.5 border-t border-dashed border-[#1E293B]/20 pt-0.5 min-h-[16px] text-center">
-                                {cumFront !== null ? `Σ ${cumFront}` : ''}
+                              <div
+                                className={`text-[10px] font-mono mt-0.5 border-t border-dashed border-[#1E293B]/20 pt-0.5 min-h-[16px] text-center ${cumColor}`}
+                              >
+                                {hBreak.cumActual !== null ? `Σ ${hBreak.cumActual}` : ''}
                               </div>
                             </td>
                           );
                         })}
-                        <td className="border border-[#1E293B] p-1 text-center font-bold font-mono text-slate-800 dark:text-slate-200">
-                          {totalFront !== null ? totalFront : '-'}
+
+                        {/* Front Total */}
+                        <td className="border border-[#1E293B] p-1 text-center font-bold font-mono">
+                          {renderTotalCell(totalFront, frontMetrics.totalTarget)}
                         </td>
                       </tr>
 
                       {/* ROW 3: OUT PUT */}
                       <tr className={isDark ? 'bg-[#103A40]/80' : 'bg-[#ECFEFF]'}>
                         <td className="border border-[#1E293B] p-1.5 font-extrabold text-center text-[#0F8B8D]">Out Put</td>
+
+                        {/* Out Put Hour Target */}
+                        <td className="border border-[#1E293B] p-1 align-middle text-center">
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            placeholder="-"
+                            value={line.outputHourTarget}
+                            onChange={(e) => handleLineChange(lineIdx, 'outputHourTarget', e.target.value)}
+                            className={`w-full px-1 py-1.5 text-xs rounded border text-center font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                              isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
+                            }`}
+                          />
+                        </td>
+
+                        {/* Out Put Total Target = outputHourTarget * workingHours */}
+                        <td className="border border-[#1E293B] p-1 align-middle text-center font-black text-xs text-[#0F8B8D] dark:text-[#2BA5B5]">
+                          {outMetrics.totalTarget !== null ? outMetrics.totalTarget : '-'}
+                        </td>
+
+                        {/* Out Put 10 Hours */}
                         {line.hours.map((hr, hrIdx) => {
                           const isLocked = hourLocks.some((l) => l.hour_no === hr.hourNo);
                           const isDisabled = isLocked && !isAdmin;
-                          const outVal = hr.outputQty !== '' && hr.outputQty !== null ? Number(hr.outputQty) : null;
-                          const hrTarget = Number(line.hourTarget) || 0;
-                          const isBelow = hrTarget > 0 && outVal !== null && outVal < hrTarget;
-                          const isAbove = hrTarget > 0 && outVal !== null && outVal >= hrTarget;
-                          const cumOutput = getCumulativeAtHour(line, 'outputQty', hr.hourNo);
-
-                          let cellBgClass = isDark ? 'bg-[#12383E] text-white' : 'bg-white text-[#0F172A]';
-                          if (isBelow) cellBgClass = 'bg-[#FEE2E2] text-rose-900 border-rose-400';
-                          else if (isAbove) cellBgClass = 'bg-[#DCFCE7] text-emerald-900 border-emerald-400';
-
-                          if (isDisabled) {
-                            cellBgClass = 'bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed';
-                          }
+                          const hBreak = outputBreakdown.hourly[hrIdx] || {};
+                          const cellStyle = getCellStyling(hr.outputQty, outMetrics.hourTarget, isDisabled);
+                          const cumColor = getCumulativeColorClass(hBreak.cumActual, hBreak.cumTarget);
 
                           return (
-                            <td key={hrIdx} className={`border border-[#1E293B] p-1 text-center align-middle ${isLocked ? 'bg-amber-500/10' : ''}`}>
+                            <td
+                              key={hrIdx}
+                              className={`border border-[#1E293B] p-1 text-center align-middle ${
+                                isLocked ? 'bg-amber-500/10' : ''
+                              }`}
+                            >
                               <div className="relative">
                                 <input
                                   type="number"
@@ -798,61 +1415,308 @@ export const SewingReportEntry = () => {
                                   onChange={(e) => handleHourChange(lineIdx, hrIdx, 'outputQty', e.target.value, hr.hourNo)}
                                   className={`w-full h-7 text-xs rounded border text-center font-bold outline-none tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                     isLocked && isAdmin ? 'border-amber-500 ring-1 ring-amber-500' : ''
-                                  } ${cellBgClass}`}
+                                  } ${cellStyle.bgClass}`}
                                 />
+                                {cellStyle.badge && (
+                                  <span
+                                    className={`absolute left-0.5 top-0.5 text-[8px] px-0.5 rounded font-extrabold ${cellStyle.badgeClass}`}
+                                  >
+                                    {cellStyle.badge}
+                                  </span>
+                                )}
                                 {isLocked && (
                                   <span className="absolute right-0.5 top-0.5 text-[8px] text-amber-600 dark:text-amber-400">
                                     <Lock className="w-2.5 h-2.5" />
                                   </span>
                                 )}
                               </div>
-                              <div className="text-[10px] text-[#0F8B8D] dark:text-[#2BA5B5] font-mono font-semibold mt-0.5 border-t border-dashed border-[#1E293B]/20 pt-0.5 min-h-[16px] text-center">
-                                {cumOutput !== null ? `Σ ${cumOutput}` : ''}
+                              <div
+                                className={`text-[10px] font-mono mt-0.5 border-t border-dashed border-[#1E293B]/20 pt-0.5 min-h-[16px] text-center ${cumColor}`}
+                              >
+                                {hBreak.cumActual !== null ? `Σ ${hBreak.cumActual}` : ''}
                               </div>
                             </td>
                           );
                         })}
+
+                        {/* Out Put Total */}
                         <td className="border border-[#1E293B] p-1 text-center font-extrabold font-mono text-[#0F8B8D] dark:text-[#2BA5B5]">
-                          {totalOutput !== null ? totalOutput : '-'}
+                          {renderTotalCell(totalOutput, outMetrics.totalTarget)}
                         </td>
                       </tr>
 
                       {/* ROW 4: A.S.M */}
                       <tr className={isDark ? 'bg-[#2A2415]/60' : 'bg-[#FFFBEB]'}>
                         <td className="border border-[#1E293B] p-1.5 font-extrabold text-center">A.S.M</td>
+
+                        {/* A.S.M Hour Target */}
+                        <td className="border border-[#1E293B] p-1 align-middle text-center">
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            placeholder="-"
+                            value={line.asmHourTarget}
+                            onChange={(e) => handleLineChange(lineIdx, 'asmHourTarget', e.target.value)}
+                            className={`w-full px-1 py-1.5 text-xs rounded border text-center font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                              isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
+                            }`}
+                          />
+                        </td>
+
+                        {/* A.S.M Total Target = asmHourTarget * workingHours */}
+                        <td className="border border-[#1E293B] p-1 align-middle text-center font-black text-xs">
+                          {asmMetrics.totalTarget !== null ? asmMetrics.totalTarget : '-'}
+                        </td>
+
+                        {/* A.S.M 10 Hours */}
                         {line.hours.map((hr, hrIdx) => {
                           const isLocked = hourLocks.some((l) => l.hour_no === hr.hourNo);
                           const isDisabled = isLocked && !isAdmin;
+                          const hBreak = asmBreakdown.hourly[hrIdx] || {};
+                          const cellStyle = getCellStyling(hr.asm, asmMetrics.hourTarget, isDisabled);
+                          const cumColor = getCumulativeColorClass(hBreak.cumActual, hBreak.cumTarget);
 
                           return (
-                            <td key={hrIdx} className={`border border-[#1E293B] p-1 text-center align-middle ${isLocked ? 'bg-amber-500/10' : ''}`}>
+                            <td
+                              key={hrIdx}
+                              className={`border border-[#1E293B] p-1 text-center align-middle ${
+                                isLocked ? 'bg-amber-500/10' : ''
+                              }`}
+                            >
                               <div className="relative">
                                 <input
-                                  type="text"
+                                  type="number"
+                                  inputMode="numeric"
                                   disabled={isDisabled}
                                   value={hr.asm}
                                   onFocus={(e) => e.target.select()}
                                   onChange={(e) => handleHourChange(lineIdx, hrIdx, 'asm', e.target.value, hr.hourNo)}
-                                  className={`w-full h-7 text-[11px] rounded border text-center font-bold outline-none ${
+                                  className={`w-full h-7 text-xs rounded border text-center font-bold outline-none tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                     isLocked && isAdmin ? 'border-amber-500 ring-1 ring-amber-500' : ''
-                                  } ${
-                                    isDisabled
-                                      ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed'
-                                      : isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
-                                  }`}
+                                  } ${cellStyle.bgClass}`}
                                   placeholder="-"
                                 />
+                                {cellStyle.badge && (
+                                  <span
+                                    className={`absolute left-0.5 top-0.5 text-[8px] px-0.5 rounded font-extrabold ${cellStyle.badgeClass}`}
+                                  >
+                                    {cellStyle.badge}
+                                  </span>
+                                )}
                                 {isLocked && (
                                   <span className="absolute right-0.5 top-0.5 text-[8px] text-amber-600 dark:text-amber-400">
                                     <Lock className="w-2.5 h-2.5" />
                                   </span>
                                 )}
                               </div>
+                              <div
+                                className={`text-[10px] font-mono mt-0.5 border-t border-dashed border-[#1E293B]/20 pt-0.5 min-h-[16px] text-center ${cumColor}`}
+                              >
+                                {hBreak.cumActual !== null ? `Σ ${hBreak.cumActual}` : ''}
+                              </div>
                             </td>
                           );
                         })}
-                        <td className="border border-[#1E293B] p-1 text-center font-bold font-mono"></td>
+
+                        {/* A.S.M Total */}
+                        <td className="border border-[#1E293B] p-1 text-center font-bold font-mono">
+                          {renderTotalCell(totalAsm, asmMetrics.totalTarget)}
+                        </td>
                       </tr>
+
+                      {/* COMPACT SECTION: SHORT / EXCESS (ঘাটতি / অতিরিক্ত) */}
+                      {['back', 'front', 'output', 'asm'].map((pKey, pIdx) => {
+                        const breakdown =
+                          pKey === 'back'
+                            ? backBreakdown
+                            : pKey === 'front'
+                            ? frontBreakdown
+                            : pKey === 'asm'
+                            ? asmBreakdown
+                            : outputBreakdown;
+                        const partLabel =
+                          pKey === 'back'
+                            ? 'Back'
+                            : pKey === 'front'
+                            ? 'Front'
+                            : pKey === 'asm'
+                            ? 'A.S.M'
+                            : 'Out Put';
+                        const metrics = breakdown.metrics;
+
+                        return (
+                          <tr
+                            key={`short_${pKey}`}
+                            className={
+                              isDark
+                                ? pKey === 'output'
+                                  ? 'bg-rose-950/20'
+                                  : 'bg-white/[0.02]'
+                                : pKey === 'output'
+                                ? 'bg-rose-50/50'
+                                : 'bg-slate-50/70'
+                            }
+                          >
+                            {pIdx === 0 && (
+                              <td
+                                rowSpan={4}
+                                colSpan={4}
+                                className="border border-[#1E293B] p-2 text-center align-middle font-black text-xs text-rose-600 dark:text-rose-400 bg-rose-500/10"
+                              >
+                                <div>SHORT / EXCESS</div>
+                                <div className="text-[10px] font-bangla font-semibold">ঘাটতি / অতিরিক্ত (জমা)</div>
+                              </td>
+                            )}
+                            <td className="border border-[#1E293B] p-1 text-center font-bold text-[11px]">{partLabel}</td>
+                            <td className="border border-[#1E293B] p-1 text-center font-mono text-slate-400">-</td>
+                            <td className="border border-[#1E293B] p-1 text-center font-mono text-slate-400">-</td>
+
+                            {/* 10 Hourly Short/Excess values */}
+                            {breakdown.hourly.map((hBreak, hIdx) => {
+                              const s = hBreak.shortExcess;
+                              let displayVal = '-';
+                              let colorClass = 'text-slate-400';
+
+                              if (s !== null) {
+                                if (s < 0) {
+                                  displayVal = `${s}`;
+                                  colorClass = 'text-rose-600 dark:text-rose-400 font-extrabold';
+                                } else if (s === 0) {
+                                  displayVal = '0';
+                                  colorClass = 'text-emerald-600 dark:text-emerald-400 font-extrabold';
+                                } else {
+                                  displayVal = `+${s}`;
+                                  colorClass = 'text-amber-600 dark:text-amber-400 font-extrabold';
+                                }
+                              }
+
+                              return (
+                                <td
+                                  key={hIdx}
+                                  className={`border border-[#1E293B] p-1 text-center align-middle font-mono text-[11px] ${colorClass}`}
+                                >
+                                  {displayVal}
+                                </td>
+                              );
+                            })}
+
+                            {/* Final Short / Excess Total */}
+                            <td className="border border-[#1E293B] p-1 text-center font-black font-mono text-xs">
+                              {metrics.shortExcessQty !== null ? (
+                                metrics.shortExcessQty < 0 ? (
+                                  <span className="text-rose-600 dark:text-rose-400">{metrics.shortExcessQty}</span>
+                                ) : metrics.shortExcessQty === 0 ? (
+                                  <span className="text-emerald-600 dark:text-emerald-400">0</span>
+                                ) : (
+                                  <span className="text-amber-600 dark:text-amber-400">+{metrics.shortExcessQty}</span>
+                                )
+                              ) : (
+                                '-'
+                              )}
+                            </td>
+
+                            {/* Remarks column for short/excess */}
+                            {pIdx === 0 && (
+                              <td
+                                rowSpan={4}
+                                className="border border-[#1E293B] p-1 text-center align-middle text-[10px] text-slate-500 font-mono"
+                              >
+                                {outMetrics.status === 'short' && (
+                                  <span className="text-rose-600 dark:text-rose-400 font-bold">
+                                    Short {outMetrics.shortPct}%
+                                  </span>
+                                )}
+                                {outMetrics.status === 'achieved' && (
+                                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">100% Achieved</span>
+                                )}
+                                {outMetrics.status === 'excess' && (
+                                  <span className="text-amber-600 dark:text-amber-400 font-bold">
+                                    +{outMetrics.shortExcessQty} pcs
+                                  </span>
+                                )}
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+
+                      {/* COMPACT SECTION: REMAINING TARGET (বাকি) */}
+                      {['back', 'front', 'output', 'asm'].map((pKey, pIdx) => {
+                        const breakdown =
+                          pKey === 'back'
+                            ? backBreakdown
+                            : pKey === 'front'
+                            ? frontBreakdown
+                            : pKey === 'asm'
+                            ? asmBreakdown
+                            : outputBreakdown;
+                        const partLabel =
+                          pKey === 'back'
+                            ? 'Back'
+                            : pKey === 'front'
+                            ? 'Front'
+                            : pKey === 'asm'
+                            ? 'A.S.M'
+                            : 'Out Put';
+                        const metrics = breakdown.metrics;
+
+                        return (
+                          <tr
+                            key={`rem_${pKey}`}
+                            className={
+                              isDark
+                                ? pKey === 'output'
+                                  ? 'bg-blue-950/20'
+                                  : 'bg-white/[0.01]'
+                                : pKey === 'output'
+                                ? 'bg-cyan-50/50'
+                                : 'bg-slate-50/50'
+                            }
+                          >
+                            {pIdx === 0 && (
+                              <td
+                                rowSpan={4}
+                                colSpan={4}
+                                className="border border-[#1E293B] p-2 text-center align-middle font-black text-xs text-blue-600 dark:text-blue-400 bg-blue-500/10"
+                              >
+                                <div>REMAINING TARGET</div>
+                                <div className="text-[10px] font-bangla font-semibold">বাকি লক্ষ্য</div>
+                              </td>
+                            )}
+                            <td className="border border-[#1E293B] p-1 text-center font-bold text-[11px]">{partLabel}</td>
+                            <td className="border border-[#1E293B] p-1 text-center font-mono text-slate-400">-</td>
+                            <td className="border border-[#1E293B] p-1 text-center font-mono text-slate-400">-</td>
+
+                            {/* 10 Hourly Remaining values */}
+                            {breakdown.hourly.map((hBreak, hIdx) => {
+                              const r = hBreak.remaining;
+                              return (
+                                <td
+                                  key={hIdx}
+                                  className="border border-[#1E293B] p-1 text-center align-middle font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300"
+                                >
+                                  {r !== null ? r : '-'}
+                                </td>
+                              );
+                            })}
+
+                            {/* Final Remaining Total */}
+                            <td className="border border-[#1E293B] p-1 text-center font-black font-mono text-xs text-slate-800 dark:text-slate-200">
+                              {metrics.totalTarget !== null
+                                ? Math.max(0, metrics.totalTarget - (metrics.totalActual || 0))
+                                : '-'}
+                            </td>
+
+                            {/* Blank remarks cell for remaining */}
+                            {pIdx === 0 && (
+                              <td
+                                rowSpan={4}
+                                className="border border-[#1E293B] p-1 text-center align-middle text-[10px] text-slate-400"
+                              ></td>
+                            )}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -864,20 +1728,24 @@ export const SewingReportEntry = () => {
         {/* EDIT HISTORY DRAWER */}
         {showHistoryDrawer && (
           <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex justify-end">
-            <div className={`w-full max-w-md h-full flex flex-col shadow-2xl ${
-              isDark ? 'bg-[#103A40] text-white border-l border-white/10' : 'bg-white text-[#0F172A]'
-            }`}>
+            <div
+              className={`w-full max-w-md h-full flex flex-col shadow-2xl ${
+                isDark ? 'bg-[#103A40] text-white border-l border-white/10' : 'bg-white text-[#0F172A]'
+              }`}
+            >
               <div className="p-4 border-b border-current/20 flex items-center justify-between">
                 <div>
                   <h3 className="font-extrabold text-base flex items-center gap-2">
                     <History className="w-5 h-5 text-[#0F8B8D]" /> Edit History &amp; Audit
                   </h3>
-                  <p className="text-xs text-[#475569] dark:text-slate-300">Detailed change log and per-hour submit timeline</p>
+                  <p className="text-xs text-[#475569] dark:text-slate-300">
+                    Detailed change log including targets and per-hour submit timeline
+                  </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowHistoryDrawer(false)}
-                  className="p-1 rounded-lg hover:bg-current/10"
+                  className="p-1 rounded-lg hover:bg-current/10 cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -901,7 +1769,9 @@ export const SewingReportEntry = () => {
 
               {/* Submitted Hours Timeline */}
               <div className="p-4 border-b border-current/10 space-y-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#475569] dark:text-slate-300">Hours Submitted Timeline</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#475569] dark:text-slate-300">
+                  Hours Submitted Timeline
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {Array.from({ length: 10 }).map((_, i) => {
                     const hrNo = i + 1;
@@ -914,7 +1784,11 @@ export const SewingReportEntry = () => {
                             ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/40'
                             : 'bg-slate-200 dark:bg-white/5 text-slate-400 border-current/10'
                         }`}
-                        title={lock ? `Submitted by ${lock.submitted_by_name} at ${new Date(lock.submitted_at).toLocaleTimeString()}` : 'Not submitted'}
+                        title={
+                          lock
+                            ? `Submitted by ${lock.submitted_by_name} at ${new Date(lock.submitted_at).toLocaleTimeString()}`
+                            : 'Not submitted'
+                        }
                       >
                         <Lock className="w-3 h-3" />
                         <span>H{String(hrNo).padStart(2, '0')}</span>
@@ -930,7 +1804,7 @@ export const SewingReportEntry = () => {
                 <button
                   type="button"
                   onClick={() => setHistoryFilter('all')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer ${
                     historyFilter === 'all' ? 'bg-[#0F8B8D] text-white' : 'bg-current/10'
                   }`}
                 >
@@ -939,7 +1813,7 @@ export const SewingReportEntry = () => {
                 <button
                   type="button"
                   onClick={() => setHistoryFilter('after_submit')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer ${
                     historyFilter === 'after_submit' ? 'bg-rose-600 text-white' : 'bg-current/10'
                   }`}
                 >
@@ -952,22 +1826,29 @@ export const SewingReportEntry = () => {
                 {filteredEditLogs.length === 0 ? (
                   <p className="text-center text-xs text-[#475569] dark:text-slate-400 py-8">No edit logs found.</p>
                 ) : (
-                  filteredEditLogs.map((log) => (
-                    <div key={log.id} className="p-3 rounded-xl border border-current/15 bg-white/5 text-xs space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-[#0F8B8D] dark:text-[#2BA5B5]">{log.editor_name || 'User'}</span>
-                        {log.after_submit && (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-rose-500/20 text-rose-500 border border-rose-500/30">
-                            After-Submit
-                          </span>
-                        )}
+                  filteredEditLogs.map((log) => {
+                    const fieldLabel = FIELD_LABEL_MAP[log.field_name] || log.field_name || 'Field';
+                    return (
+                      <div key={log.id} className="p-3 rounded-xl border border-current/15 bg-white/5 text-xs space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-[#0F8B8D] dark:text-[#2BA5B5]">{log.editor_name || 'User'}</span>
+                          {log.after_submit && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-rose-500/20 text-rose-500 border border-rose-500/30">
+                              After-Submit
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[#475569] dark:text-slate-300">
+                          Line {log.line_no}
+                          {log.hour_no ? ` · Hour ${String(log.hour_no).padStart(2, '0')}` : ''} ·{' '}
+                          <span className="font-semibold text-slate-200">{fieldLabel}</span>:{' '}
+                          <strong className="text-slate-400">{log.old_value ?? '-'}</strong> →{' '}
+                          <strong className="text-emerald-400">{log.new_value ?? '-'}</strong>
+                        </p>
+                        <p className="text-[10px] text-slate-400">{new Date(log.edited_at).toLocaleString()}</p>
                       </div>
-                      <p className="text-[#475569] dark:text-slate-300">
-                        Hour {String(log.hour_no).padStart(2, '0')} (Line {log.line_no}): <strong className="text-white">{log.old_value ?? '-'}</strong> → <strong className="text-emerald-400">{log.new_value ?? '-'}</strong>
-                      </p>
-                      <p className="text-[10px] text-slate-400">{new Date(log.edited_at).toLocaleString()}</p>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

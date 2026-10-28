@@ -3,11 +3,13 @@ import { useAuth } from '../context/AuthContext';
 import { useCompany } from '../context/CompanyContext';
 import { CompanyLogo } from '../components/CompanyLogo';
 import { ROLE_LABELS, UNIT_LABELS } from '../lib/constants';
-import { LogOut, Factory, User, Clock, CheckCircle2, Layers, Scissors, Package, BadgeDollarSign, FileDown, Printer } from 'lucide-react';
+import { LogOut, Factory, User, Clock, CheckCircle2, Layers, Scissors, Package, BadgeDollarSign, FileDown, Printer, TrendingDown, Award } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { exportSewingReportsToExcel } from '../lib/exportExcel';
+import { exportSewingReportsToPdf } from '../lib/exportPdf';
 import { fetchSewingReports, subscribeSewingRealtime } from '../lib/sewingQueries';
+import { calculatePartMetrics, calculateManagementSummary, formatNum } from '../lib/sewingCalc';
 
 export const Dashboard: React.FC = () => {
   const { profile, signOut } = useAuth();
@@ -109,19 +111,51 @@ export const Dashboard: React.FC = () => {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => exportSewingReportsToExcel({ reports, date: new Date().toISOString().split('T')[0], unit: 'all' })}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-xl transition-colors border border-teal-200"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-xl transition-colors border border-teal-200 cursor-pointer"
               >
                 <FileDown className="w-4 h-4" />
                 <span>Download Excel</span>
               </button>
               <button
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors border border-rose-200"
+                onClick={() => exportSewingReportsToPdf({ reports, date: new Date().toISOString().split('T')[0], unit: 'all' })}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors border border-rose-200 cursor-pointer"
               >
                 <Printer className="w-4 h-4" />
                 <span>Download PDF</span>
               </button>
             </div>
           </div>
+
+          {/* Shortage & Target Summary Chips */}
+          {(() => {
+            const allLines = reports.flatMap((r: any) => r.lines || []);
+            const summary: any = calculateManagementSummary(allLines);
+            const outSum = summary.byPart?.output || {};
+
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-xs text-slate-500 font-bold uppercase">Out Put Target</span>
+                  <p className="text-xl font-black text-slate-900 mt-1">{outSum.totalTarget !== null ? formatNum(outSum.totalTarget) : '-'}</p>
+                  <p className="text-[11px] text-slate-500">All lines combined</p>
+                </div>
+                <div className="p-4 rounded-xl bg-teal-50 border border-teal-200">
+                  <span className="text-xs text-teal-700 font-bold uppercase">Actual Output</span>
+                  <p className="text-xl font-black text-[#0F8B8D] mt-1">{outSum.totalActual !== null ? formatNum(outSum.totalActual) : '-'}</p>
+                  <p className="text-[11px] text-teal-600 font-semibold">{outSum.achievement !== null ? `${outSum.achievement}% Achieved` : 'No Target'}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-rose-50 border border-rose-200">
+                  <span className="text-xs text-rose-700 font-bold uppercase">Shortage Summary</span>
+                  <p className="text-xl font-black text-rose-600 mt-1">
+                    {outSum.shortQty ? `-${formatNum(outSum.shortQty)} pcs` : '0 pcs'}
+                  </p>
+                  <p className="text-[11px] text-rose-600 font-semibold">
+                    {outSum.shortPct ? `${outSum.shortPct}% Short of target` : 'On Target / Excess'}
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
           
           {loading ? (
             <div className="text-center py-8 text-sm text-slate-500">Loading reports...</div>
@@ -135,24 +169,69 @@ export const Dashboard: React.FC = () => {
                     <th className="p-3 border-r border-slate-200">Line</th>
                     <th className="p-3 border-r border-slate-200">Buyer</th>
                     <th className="p-3 border-r border-slate-200">Style</th>
-                    <th className="p-3 border-r border-slate-200">Total Output</th>
-                    <th className="p-3">Ach%</th>
+                    <th className="p-3 border-r border-slate-200 text-center">Working Hrs</th>
+                    <th className="p-3 border-r border-slate-200 text-center">Target</th>
+                    <th className="p-3 border-r border-slate-200 text-center">Total Output</th>
+                    <th className="p-3 border-r border-slate-200 text-center">Ach%</th>
+                    <th className="p-3 border-r border-slate-200 text-center">Short / Excess</th>
+                    <th className="p-3 text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {reports.flatMap((r: any) => r.lines || []).map((line: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-slate-50">
-                      <td className="p-3 border-r border-slate-200">{line.line_no}</td>
-                      <td className="p-3 border-r border-slate-200">{line.buyer_name || '-'}</td>
-                      <td className="p-3 border-r border-slate-200">{line.style_no || '-'}</td>
-                      <td className="p-3 border-r border-slate-200 font-semibold">
-                        {line.hours?.reduce((sum: number, h: any) => sum + (h.output_qty || 0), 0) || 0}
-                      </td>
-                      <td className="p-3">
-                        {((line.hours?.reduce((sum: number, h: any) => sum + (h.output_qty || 0), 0) || 0) / (line.total_target || 1) * 100).toFixed(0)}%
-                      </td>
-                    </tr>
-                  ))}
+                  {reports.flatMap((r: any) => r.lines || []).map((line: any, idx: number) => {
+                    const m = calculatePartMetrics(line, 'output');
+                    const hasTgt = m.totalTarget !== null;
+
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="p-3 border-r border-slate-200 font-bold">Line 0{line.line_no}</td>
+                        <td className="p-3 border-r border-slate-200">{line.buyer_name || '-'}</td>
+                        <td className="p-3 border-r border-slate-200">{line.style_no || '-'}</td>
+                        <td className="p-3 border-r border-slate-200 text-center font-mono">{m.workingHours} hrs</td>
+                        <td className="p-3 border-r border-slate-200 text-center font-bold font-mono">
+                          {m.totalTarget !== null ? formatNum(m.totalTarget) : '-'}
+                        </td>
+                        <td className="p-3 border-r border-slate-200 text-center font-bold font-mono text-[#0F8B8D]">
+                          {m.totalActual !== null ? formatNum(m.totalActual) : '-'}
+                        </td>
+                        <td className="p-3 border-r border-slate-200 text-center font-bold font-mono">
+                          {m.achievement !== null ? `${m.achievement}%` : '-'}
+                        </td>
+                        <td className="p-3 border-r border-slate-200 text-center font-bold font-mono">
+                          {m.shortExcessQty !== null ? (
+                            m.shortExcessQty < 0 ? (
+                              <span className="text-rose-600 font-bold">{m.shortExcessQty} pcs</span>
+                            ) : m.shortExcessQty === 0 ? (
+                              <span className="text-emerald-600 font-bold">0</span>
+                            ) : (
+                              <span className="text-amber-600 font-bold">+{m.shortExcessQty} pcs</span>
+                            )
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="p-3 text-center">
+                          {hasTgt ? (
+                            m.status === 'short' ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                SHORT {m.shortPct}%
+                              </span>
+                            ) : m.status === 'achieved' ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                ACHIEVED
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                EXCESS +{m.shortExcessQty}
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-slate-400 text-[10px]">No Target</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

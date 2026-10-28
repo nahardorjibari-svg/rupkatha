@@ -1,13 +1,22 @@
 /**
  * Sewing Dashboard Page
  * Rupkatha Apparels Ltd. (src/pages/sewing/SewingDashboard.jsx)
+ * Provides Top Management View, Day Summary, Target vs Actual Bar Chart,
+ * Cumulative Actual vs Target Line Chart, and Short Qty By Line Bar Chart.
  */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { useTheme } from '../../context/ThemeContext';
 import { useCompany } from '../../context/CompanyContext';
 import { fetchSewingReports, subscribeSewingRealtime } from '../../lib/sewingQueries';
-import { calculateLineHourTotals, calculateAchievement, calculateOutputPerManpower, formatNum } from '../../lib/sewingCalc';
+import {
+  calculateLineHourTotals,
+  calculateAchievement,
+  calculateOutputPerManpower,
+  calculatePartMetrics,
+  calculateManagementSummary,
+  formatNum,
+} from '../../lib/sewingCalc';
 import {
   ResponsiveContainer,
   BarChart,
@@ -19,7 +28,6 @@ import {
   Tooltip,
   Legend,
   CartesianGrid,
-  ReferenceLine,
 } from 'recharts';
 import {
   Cog,
@@ -27,17 +35,21 @@ import {
   Calendar,
   Users,
   TrendingUp,
+  TrendingDown,
   Award,
   AlertCircle,
+  AlertTriangle,
   RefreshCw,
   CheckCircle2,
   Filter,
+  Check,
+  Layers,
 } from 'lucide-react';
 
 const ACCENT_TEAL = '#2BA5B5';
-const CHART_GREEN = '#2F9E44';
-const CHART_YELLOW = '#E6D83A';
-const CHART_ORANGE = '#F4A62A';
+const CHART_GREEN = '#10B981';
+const CHART_RED = '#EF4444';
+const CHART_YELLOW = '#F59E0B';
 
 export const SewingDashboard = () => {
   const { isDark } = useTheme();
@@ -46,7 +58,7 @@ export const SewingDashboard = () => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [unitFilter, setUnitFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [compareYesterday, setCompareYesterday] = useState(false);
+  const [chartPart, setChartPart] = useState('output'); // 'output' | 'back' | 'front'
 
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -93,122 +105,118 @@ export const SewingDashboard = () => {
     return lines;
   }, [reports]);
 
-  // KPI Calculations (NULL-safe)
+  // Management Summary
+  const daySummary = useMemo(() => {
+    return calculateManagementSummary(allLines);
+  }, [allLines]);
+
+  // KPI Calculations
   const kpis = useMemo(() => {
     let totalOutput = 0;
-    let totalBack = 0;
-    let totalFront = 0;
     let totalManpower = 0;
-    let totalTarget = 0;
-    let hasTarget = false;
-
-    let bestLine = null;
-    let lowestLine = null;
-    let maxAch = -1;
-    let minAch = 999;
 
     allLines.forEach((l) => {
-      const { totalBack: b, totalFront: f, totalOutput: out } = calculateLineHourTotals(l.hours || []);
+      const { totalOutput: out } = calculateLineHourTotals(l.hours || []);
       if (out !== null) totalOutput += out;
-      if (b !== null) totalBack += b;
-      if (f !== null) totalFront += f;
-      if (l.manpower_total !== null) totalManpower += Number(l.manpower_total);
-      if (l.total_target !== null) {
-        totalTarget += Number(l.total_target);
-        hasTarget = true;
-      }
-
-      const ach = calculateAchievement(out, l.total_target);
-      if (ach !== null) {
-        if (ach > maxAch) {
-          maxAch = ach;
-          bestLine = `Line ${l.line_no} (${l.factory_unit?.toUpperCase()})`;
-        }
-        if (ach < minAch) {
-          minAch = ach;
-          lowestLine = `Line ${l.line_no} (${l.factory_unit?.toUpperCase()})`;
-        }
-      }
+      const op = Number(l.op) || 0;
+      const hp = Number(l.hp) || 0;
+      const ir = Number(l.ir) || 0;
+      totalManpower += op + hp + ir;
     });
 
-    const overallAch = hasTarget && totalTarget > 0 ? Math.round((totalOutput / totalTarget) * 100) : null;
+    const outData = daySummary.byPart.output || {};
     const opm = totalManpower > 0 ? Number((totalOutput / totalManpower).toFixed(1)) : null;
 
     return {
       totalOutput,
-      totalBack,
-      totalFront,
       totalManpower,
-      totalTarget: hasTarget ? totalTarget : null,
-      overallAch,
       opm,
-      bestLine: bestLine || 'N/A',
-      lowestLine: lowestLine || 'N/A',
+      totalTarget: outData.totalTarget,
+      overallAch: outData.achievement,
+      shortQty: outData.shortQty,
+      shortPct: outData.shortPct,
+      bestLine: daySummary.bestLine ? `Line 0${daySummary.bestLine.lineNo}` : 'N/A',
+      worstLine: daySummary.worstLine ? `Line 0${daySummary.worstLine.lineNo}` : 'N/A',
     };
-  }, [allLines]);
+  }, [allLines, daySummary]);
 
-  // Hourly Output Grouped Chart Data (Hours 1 to 10)
-  const hourlyChartData = useMemo(() => {
-    const hourMap = {};
-    for (let h = 1; h <= 10; h++) {
-      hourMap[h] = { hour: `Hour ${h}`, output: 0, back: 0, front: 0, target: 0 };
-    }
-
-    allLines.forEach((l) => {
-      const hTarget = l.hour_target || 0;
-      (l.hours || []).forEach((h) => {
-        if (hourMap[h.hour_no]) {
-          if (h.output_qty !== null) hourMap[h.hour_no].output += Number(h.output_qty);
-          if (h.back_qty !== null) hourMap[h.hour_no].back += Number(h.back_qty);
-          if (h.front_qty !== null) hourMap[h.hour_no].front += Number(h.front_qty);
-          hourMap[h.hour_no].target += Number(hTarget);
-        }
-      });
+  const hasAnyTarget = useMemo(() => {
+    return allLines.some((l) => {
+      const m = calculatePartMetrics(l, chartPart);
+      return m.totalTarget !== null && m.totalTarget > 0;
     });
+  }, [allLines, chartPart]);
 
-    return Object.values(hourMap);
-  }, [allLines]);
-
-  // Line-wise Total Output Chart Data
-  const lineOutputData = useMemo(() => {
+  // 1. Target vs Actual Bar Chart Data per Line
+  const lineTargetVsActualData = useMemo(() => {
     return allLines.map((l) => {
-      const { totalOutput } = calculateLineHourTotals(l.hours || []);
+      const m = calculatePartMetrics(l, chartPart);
       return {
-        name: `Line ${l.line_no} (${l.factory_unit?.toUpperCase()})`,
-        output: totalOutput || 0,
-        target: l.total_target || 0,
+        line: `Line 0${l.line_no}`,
         buyer: l.buyer_name || 'Buyer',
+        target: m.totalTarget || 0,
+        actual: m.totalActual || 0,
+        hasTarget: m.totalTarget !== null,
       };
     });
-  }, [allLines]);
+  }, [allLines, chartPart]);
 
-  // Cumulative Output Line Chart Data
-  const cumulativeChartData = useMemo(() => {
-    let runningOutput = 0;
-    const hourMap = {};
-    for (let h = 1; h <= 10; h++) {
-      hourMap[h] = { hour: `H${h}`, cumulative: 0 };
-    }
+  // 2. Cumulative Actual vs Cumulative Target per Hour (Hours 1 to 10)
+  const cumulativeHourlyData = useMemo(() => {
+    const hours = [];
+    let runningActual = 0;
+    let runningTarget = 0;
+
+    const qtyKey = chartPart === 'back' ? 'back_qty' : chartPart === 'front' ? 'front_qty' : chartPart === 'asm' ? 'asm' : 'output_qty';
+    const targetKey = chartPart === 'back' ? 'back_hour_target' : chartPart === 'front' ? 'front_hour_target' : chartPart === 'asm' ? 'asm_hour_target' : 'output_hour_target';
 
     for (let h = 1; h <= 10; h++) {
-      let sumH = 0;
+      let hActual = 0;
+      let hTarget = 0;
+
       allLines.forEach((l) => {
         const hr = (l.hours || []).find((x) => x.hour_no === h);
-        if (hr && hr.output_qty !== null) {
-          sumH += Number(hr.output_qty);
+        if (hr && hr[qtyKey] !== null && hr[qtyKey] !== undefined && hr[qtyKey] !== '') {
+          hActual += Number(hr[qtyKey]);
+        }
+        const wHrs = l.working_hours || 8;
+        if (h <= wHrs && l[targetKey] !== null && l[targetKey] !== undefined) {
+          hTarget += Number(l[targetKey]) || 0;
         }
       });
-      runningOutput += sumH;
-      hourMap[h].cumulative = runningOutput;
+
+      runningActual += hActual;
+      runningTarget += hTarget;
+
+      hours.push({
+        hour: `H${String(h).padStart(2, '0')}`,
+        cumActual: runningActual,
+        cumTarget: runningTarget,
+      });
     }
 
-    return Object.values(hourMap);
-  }, [allLines]);
+    return hours;
+  }, [allLines, chartPart]);
+
+  // 3. Short Qty by Line Bar Chart Data (Red Bars)
+  const lineShortData = useMemo(() => {
+    return allLines.map((l) => {
+      const m = calculatePartMetrics(l, chartPart);
+      const shortQty = m.shortExcessQty !== null && m.shortExcessQty < 0 ? Math.abs(m.shortExcessQty) : 0;
+      return {
+        line: `Line 0${l.line_no}`,
+        buyer: l.buyer_name || '-',
+        shortQty,
+        hasTarget: m.totalTarget !== null,
+        status: m.status,
+      };
+    });
+  }, [allLines, chartPart]);
 
   return (
     <AdminLayout>
       <div className="space-y-6 sm:space-y-8">
-        {/* Page Header */}
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-[#2BA5B5]/10 text-[#2BA5B5] border border-[#2BA5B5]/30 mb-2">
@@ -216,16 +224,16 @@ export const SewingDashboard = () => {
               <span>{companyName} · Sewing Production Floor</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              Sewing Live Dashboard
+              Sewing Executive Dashboard
             </h1>
             <p className="text-xs sm:text-sm text-[#475569] dark:text-slate-400 font-bangla mt-1">
-              সুইং লাইন লাইভ প্রোডাকশন ড্যাশবোর্ড ও রিয়েল-টাইম মনিটরিং
+              সুইং লাইন লক্ষ্যমাত্রা, ঘাটতি ট্র্যাকিং এবং লাইভ উৎপাদন পারফরম্যান্স
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <span className="text-xs text-[#475569] dark:text-slate-400 font-medium">
-              Last synced: {lastUpdated.toLocaleTimeString()}
+              Synced: {lastUpdated.toLocaleTimeString()}
             </span>
             <button
               type="button"
@@ -239,31 +247,27 @@ export const SewingDashboard = () => {
           </div>
         </div>
 
-        {/* Filter Bar */}
+        {/* Filter Toolbar */}
         <div
           className={`p-4 rounded-2xl border shadow-soft-sm flex flex-wrap items-center justify-between gap-4 transition-colors ${
             isDark ? 'bg-[#103A40] border-white/10 text-white' : 'glass-card text-slate-900'
           }`}
         >
           <div className="flex flex-wrap items-center gap-4">
-            {/* Date Picker */}
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-[#2BA5B5]" />
-              <label className="text-xs font-bold text-[#334155] dark:text-slate-300">Date (BDT):</label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-xl border outline-none transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-xl border outline-none ${
                   isDark ? 'bg-white/5 border-white/15 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
                 }`}
               />
             </div>
 
-            {/* Factory Unit Filter */}
             <div className="flex items-center gap-2">
               <Factory className="w-4 h-4 text-[#2BA5B5]" />
-              <label className="text-xs font-bold text-[#334155] dark:text-slate-300">Unit:</label>
               <select
                 value={unitFilter}
                 onChange={(e) => setUnitFilter(e.target.value)}
@@ -271,46 +275,33 @@ export const SewingDashboard = () => {
                   isDark ? 'bg-[#0B2E33] border-white/15 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
                 }`}
               >
-                <option value="all">All Units (Knit &amp; Woven)</option>
+                <option value="all">All Factory Units</option>
                 <option value="knit">Knit Plant</option>
                 <option value="woven">Woven Plant</option>
               </select>
             </div>
-
-            {/* Status Filter */}
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-[#2BA5B5]" />
-              <label className="text-xs font-bold text-[#334155] dark:text-slate-300">Status:</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-xl border outline-none cursor-pointer ${
-                  isDark ? 'bg-[#0B2E33] border-white/15 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
-                }`}
-              >
-                <option value="all">All Status</option>
-                <option value="submitted">Submitted</option>
-                <option value="draft">Draft</option>
-              </select>
-            </div>
           </div>
 
-          {/* Compare Yesterday Toggle */}
-          <div className="flex items-center gap-2 text-xs">
-            <span className="font-semibold text-[#475569] dark:text-slate-300">Compare Yesterday:</span>
-            <button
-              type="button"
-              onClick={() => setCompareYesterday(!compareYesterday)}
-              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${
-                compareYesterday ? 'bg-[#2BA5B5]' : 'bg-slate-300'
-              }`}
-            >
-              <span
-                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow-xs ${
-                  compareYesterday ? 'translate-x-4.5' : 'translate-x-1'
+          {/* Toggle for Part selection in charts */}
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-black/5 dark:bg-white/5 border border-current/10">
+            <span className="text-[11px] font-bold px-2 text-slate-500">Charts Part:</span>
+            {[
+              { id: 'output', label: 'Out Put' },
+              { id: 'back', label: 'Back' },
+              { id: 'front', label: 'Front' },
+              { id: 'asm', label: 'A.S.M' },
+            ].map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setChartPart(p.id)}
+                className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                  chartPart === p.id ? 'bg-[#2BA5B5] text-white shadow-xs font-bold' : 'text-[#475569] dark:text-slate-400'
                 }`}
-              />
-            </button>
+              >
+                {p.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -321,240 +312,377 @@ export const SewingDashboard = () => {
           </div>
         )}
 
-        {/* 6 KPI CARDS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          <div className={`p-5 rounded-2xl border shadow-soft-sm ${isDark ? 'bg-[#103A40] border-white/10' : 'glass-card'}`}>
-            <p className="text-xs font-bold uppercase tracking-wider text-[#334155] dark:text-slate-400">Total Output</p>
-            <p className="text-2xl font-extrabold text-[#0E7490] dark:text-white mt-2 font-mono">
-              {formatNum(kpis.totalOutput)}
-            </p>
-            <p className="text-[11px] text-[#475569] dark:text-slate-400 mt-1 font-medium">Pieces produced today</p>
-          </div>
-
-          <div className={`p-5 rounded-2xl border shadow-soft-sm ${isDark ? 'bg-[#103A40] border-white/10' : 'glass-card'}`}>
-            <p className="text-xs font-bold uppercase tracking-wider text-[#334155] dark:text-slate-400">Total Target</p>
-            <p className="text-2xl font-extrabold text-[#15803D] dark:text-emerald-400 mt-2 font-mono">
-              {formatNum(kpis.totalTarget)}
-            </p>
-            <p className="text-[11px] text-[#475569] dark:text-slate-400 mt-1 font-medium">Scheduled production</p>
-          </div>
-
-          <div className={`p-5 rounded-2xl border shadow-soft-sm ${isDark ? 'bg-[#103A40] border-white/10' : 'glass-card'}`}>
-            <p className="text-xs font-bold uppercase tracking-wider text-[#334155] dark:text-slate-400">Achievement %</p>
-            <p className="text-2xl font-extrabold text-[#B45309] dark:text-yellow-400 mt-2 font-mono">
-              {kpis.overallAch !== null ? `${kpis.overallAch}%` : '-'}
-            </p>
-            <p className="text-[11px] text-[#475569] dark:text-slate-400 mt-1 font-medium">Output vs Target ratio</p>
-          </div>
-
-          <div className={`p-5 rounded-2xl border shadow-soft-sm ${isDark ? 'bg-[#103A40] border-white/10' : 'glass-card'}`}>
-            <p className="text-xs font-bold uppercase tracking-wider text-[#334155] dark:text-slate-400">Total Manpower</p>
-            <p className="text-2xl font-extrabold text-[#C2410C] dark:text-amber-400 mt-2 font-mono">
-              {formatNum(kpis.totalManpower)}
-            </p>
-            <p className="text-[11px] text-[#475569] dark:text-slate-400 mt-1 font-medium">Active operators</p>
-          </div>
-
-          <div className={`p-5 rounded-2xl border shadow-soft-sm ${isDark ? 'bg-[#103A40] border-white/10' : 'glass-card'}`}>
-            <p className="text-xs font-bold uppercase tracking-wider text-[#334155] dark:text-slate-400">Output / Manpower</p>
-            <p className="text-2xl font-extrabold text-[#0E7490] dark:text-teal-300 mt-2 font-mono">
-              {kpis.opm !== null ? kpis.opm : '-'}
-            </p>
-            <p className="text-[11px] text-[#475569] dark:text-slate-400 mt-1 font-medium">Pcs per operator</p>
-          </div>
-
-          <div className={`p-5 rounded-2xl border shadow-soft-sm ${isDark ? 'bg-[#103A40] border-white/10' : 'glass-card'}`}>
-            <p className="text-xs font-bold uppercase tracking-wider text-[#334155] dark:text-slate-400">Best Line</p>
-            <p className="text-sm font-bold text-[#15803D] dark:text-emerald-400 mt-2 truncate">
-              {kpis.bestLine}
-            </p>
-            <p className="text-[11px] text-[#475569] dark:text-slate-400 mt-1 font-medium">Highest efficiency</p>
-          </div>
-        </div>
-
-        {/* CHARTS GRID */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* 1. Hourly Output Grouped Bar Chart */}
-          <div className={`p-6 rounded-3xl border shadow-soft-lg ${isDark ? 'bg-[#103A40] border-white/10 text-white' : 'glass-card text-slate-900'}`}>
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
-              <div>
-                <h3 className="font-bold text-base tracking-tight">Hourly Output vs Target (Hours 01–10)</h3>
-                <p className="text-xs text-[#475569] dark:text-slate-400 font-bangla">ঘণ্টাভিত্তিক উৎপাদন তুলনা</p>
-              </div>
-              <TrendingUp className="w-4 h-4 text-[#2BA5B5]" />
-            </div>
-
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={hourlyChartData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.06)' : '#CBD5E1'} vertical={false} />
-                  <XAxis dataKey="hour" stroke={isDark ? '#94A3B8' : '#334155'} fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke={isDark ? '#94A3B8' : '#334155'} fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className={`p-3 rounded-2xl text-xs shadow-lg border ${isDark ? 'bg-[#0B2E33] border-white/20 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
-                            <p className="font-bold">{payload[0].payload.hour}</p>
-                            <p className="text-[#2BA5B5] mt-1">Output: <strong>{payload[0].value} pcs</strong></p>
-                            <p className="text-emerald-400">Back: <strong>{payload[0].payload.back} pcs</strong></p>
-                            <p className="text-amber-400">Front: <strong>{payload[0].payload.front} pcs</strong></p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar dataKey="output" fill={ACCENT_TEAL} radius={[6, 6, 0, 0]} maxBarSize={28} name="Output Pcs" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* 2. Line-wise Total Output */}
-          <div className={`p-6 rounded-3xl border shadow-soft-lg ${isDark ? 'bg-[#103A40] border-white/10 text-white' : 'glass-card text-slate-900'}`}>
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
-              <div>
-                <h3 className="font-bold text-base tracking-tight">Line-wise Total Output vs Target</h3>
-                <p className="text-xs text-[#475569] dark:text-slate-400 font-bangla">লাইন অনুযায়ী মোট উৎপাদন</p>
-              </div>
-              <Award className="w-4 h-4 text-[#2BA5B5]" />
-            </div>
-
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={lineOutputData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.06)' : '#CBD5E1'} vertical={false} />
-                  <XAxis dataKey="name" stroke={isDark ? '#94A3B8' : '#334155'} fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke={isDark ? '#94A3B8' : '#334155'} fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className={`p-3 rounded-2xl text-xs shadow-lg border ${isDark ? 'bg-[#0B2E33] border-white/20 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
-                            <p className="font-bold">{payload[0].payload.name} ({payload[0].payload.buyer})</p>
-                            <p className="text-[#2BA5B5] mt-1">Output: <strong>{payload[0].value}</strong></p>
-                            <p className="text-slate-300">Target: <strong>{payload[0].payload.target}</strong></p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar dataKey="output" fill={CHART_GREEN} radius={[6, 6, 0, 0]} maxBarSize={32} name="Output Pcs" />
-                  <Bar dataKey="target" fill={CHART_ORANGE} radius={[6, 6, 0, 0]} maxBarSize={32} name="Target Pcs" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
-        {/* CUMULATIVE OUTPUT LINE CHART */}
-        <div className={`p-6 rounded-3xl border shadow-soft-lg ${isDark ? 'bg-[#103A40] border-white/10 text-white' : 'glass-card text-slate-900'}`}>
-          <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
+        {/* TOP MANAGEMENT VIEW: DAY SUMMARY CARD */}
+        <div
+          className={`p-6 rounded-3xl border shadow-soft-lg ${
+            isDark ? 'bg-[#0D3137] border-white/20 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-4 border-b border-current/15 gap-2">
             <div>
-              <h3 className="font-bold text-base tracking-tight">Cumulative Hourly Output Trend</h3>
-              <p className="text-xs text-[#475569] dark:text-slate-400 font-bangla">সঞ্চয়মূলক উৎপাদন অগ্রগতি</p>
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-[#2BA5B5]" />
+                <h3 className="font-extrabold text-base tracking-tight text-[#0F8B8D] dark:text-[#2BA5B5]">
+                  Top Management Day Summary · উৎপাদন ও ঘাটতি নিরীক্ষা
+                </h3>
+              </div>
+              <p className="text-xs text-[#475569] dark:text-slate-400 mt-0.5">
+                Target vs Actual comparisons and Short/Excess calculations across all active lines
+              </p>
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#2BA5B5]/15 text-[#2BA5B5]">
-              Realtime Growth
-            </span>
-          </div>
 
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={cumulativeChartData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.06)' : '#CBD5E1'} vertical={false} />
-                <XAxis dataKey="hour" stroke={isDark ? '#94A3B8' : '#334155'} fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke={isDark ? '#94A3B8' : '#334155'} fontSize={11} tickLine={false} axisLine={false} />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className={`p-3 rounded-2xl text-xs shadow-lg border ${isDark ? 'bg-[#0B2E33] border-white/20 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
-                          <p className="font-bold">{payload[0].payload.hour}</p>
-                          <p className="text-[#2BA5B5] mt-1">Cumulative Output: <strong>{payload[0].value} pcs</strong></p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Line type="monotone" dataKey="cumulative" stroke={ACCENT_TEAL} strokeWidth={3} dot={{ fill: ACCENT_TEAL, r: 4 }} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* LINE STATUS TABLE */}
-        <div className={`p-6 rounded-3xl border shadow-soft-lg ${isDark ? 'bg-[#103A40] border-white/10 text-white' : 'glass-card text-slate-900'}`}>
-          <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
-            <div>
-              <h3 className="font-bold text-base tracking-tight">Active Sewing Lines Status &amp; Progress</h3>
-              <p className="text-xs text-[#475569] dark:text-slate-400 font-bangla">সুইং লাইনের বর্তমান অবস্থা ও অগ্রগতি</p>
+            <div className="flex items-center gap-2 text-xs">
+              {daySummary.bestLine && (
+                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-1">
+                  <Award className="w-3.5 h-3.5" /> Best: Line 0{daySummary.bestLine.lineNo} ({daySummary.bestLine.output.achievement}%)
+                </span>
+              )}
+              {daySummary.worstLine && daySummary.worstLine.lineNo !== daySummary.bestLine?.lineNo && (
+                <span className="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30 font-bold flex items-center gap-1">
+                  <AlertTriangle className="w-3.5 h-3.5" /> Shortest: Line 0{daySummary.worstLine.lineNo} ({daySummary.worstLine.output.achievement}%)
+                </span>
+              )}
             </div>
-            <span className="text-xs font-bold text-[#2BA5B5]">{allLines.length} Lines Online</span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className={`border-b ${isDark ? 'border-white/10 text-slate-400' : 'border-slate-200 text-[#334155]'}`}>
-                  <th className="py-3 px-3 font-bold">Line</th>
-                  <th className="py-3 px-3 font-bold">Unit</th>
-                  <th className="py-3 px-3 font-bold">Buyer &amp; Style</th>
-                  <th className="py-3 px-3 font-bold text-center">Manpower</th>
-                  <th className="py-3 px-3 font-bold text-center">Target</th>
-                  <th className="py-3 px-3 font-bold text-center">Output</th>
-                  <th className="py-3 px-3 font-bold text-center">Achievement</th>
-                  <th className="py-3 px-3 font-bold">Progress Bar</th>
+          {/* 4 KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {[
+              { key: 'output', label: 'Out Put (সর্বমোট পোশাক)', color: '#0F8B8D' },
+              { key: 'back', label: 'Back Part (ব্যাক পার্ট)', color: '#3B82F6' },
+              { key: 'front', label: 'Front Part (ফ্রন্ট পার্ট)', color: '#8B5CF6' },
+              { key: 'asm', label: 'A.S.M (অ্যাসেম্বলি)', color: '#F59E0B' },
+            ].map(({ key, label }) => {
+              const partData = daySummary.byPart[key] || {};
+              const hasTgt = partData.totalTarget !== null;
+              const isShort = partData.status === 'short';
+              const isAchieved = partData.status === 'achieved';
+              const isExcess = partData.status === 'excess';
+
+              return (
+                <div
+                  key={key}
+                  className={`p-4 rounded-2xl border ${
+                    isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{label}</span>
+                    {hasTgt ? (
+                      <span
+                        className={`text-[11px] font-black px-2 py-0.5 rounded-full ${
+                          isShort
+                            ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200'
+                            : isAchieved
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200'
+                        }`}
+                      >
+                        {partData.achievement !== null ? `${partData.achievement}% Achieved` : 'Pending'}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 font-bold">No Target</span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs font-mono mt-2">
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase">Target:</span>
+                      <p className="font-extrabold text-base">{partData.totalTarget !== null ? formatNum(partData.totalTarget) : '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase">Actual:</span>
+                      <p className="font-extrabold text-base text-[#0F8B8D] dark:text-[#2BA5B5]">
+                        {partData.totalActual !== null ? formatNum(partData.totalActual) : '-'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {hasTgt && (
+                    <div className="mt-2.5 pt-2 border-t border-current/10 flex items-center justify-between text-xs font-semibold">
+                      {isShort && (
+                        <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1 font-bold">
+                          <TrendingDown className="w-3.5 h-3.5" /> Short {formatNum(partData.shortQty)} pcs ({partData.shortPct}%)
+                        </span>
+                      )}
+                      {isAchieved && (
+                        <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold">
+                          <Check className="w-3.5 h-3.5" /> 100% Target Met
+                        </span>
+                      )}
+                      {isExcess && (
+                        <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1 font-bold">
+                          <TrendingUp className="w-3.5 h-3.5" /> Excess +{formatNum(partData.shortExcessQty)} pcs
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Lines Table */}
+          <div className="overflow-x-auto border border-current/15 rounded-xl">
+            <table className="w-full text-xs font-mono text-left">
+              <thead className={isDark ? 'bg-[#0B2E33] text-slate-300' : 'bg-slate-100 text-slate-700'}>
+                <tr>
+                  <th className="p-2.5 border-r border-current/10 text-center">Line</th>
+                  <th className="p-2.5 border-r border-current/10">Buyer / Style</th>
+                  <th className="p-2.5 border-r border-current/10 text-center">Target</th>
+                  <th className="p-2.5 border-r border-current/10 text-center">Actual</th>
+                  <th className="p-2.5 border-r border-current/10 text-center">Ach%</th>
+                  <th className="p-2.5 border-r border-current/10 text-center">Short / Excess</th>
+                  <th className="p-2.5 text-center">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
-                {allLines.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="py-8 text-center text-[#475569] dark:text-slate-400">
-                      No sewing lines found for the selected date and filters.
-                    </td>
-                  </tr>
-                ) : (
-                  allLines.map((l) => {
-                    const { totalOutput } = calculateLineHourTotals(l.hours || []);
-                    const ach = calculateAchievement(totalOutput, l.total_target);
+              <tbody className="divide-y divide-current/10">
+                {daySummary.lines.map((lSum) => {
+                  const m = lSum.output;
+                  const hasTgt = m.totalTarget !== null;
 
-                    return (
-                      <tr key={l.id} className={`hover:bg-white/5 transition-colors ${isDark ? 'text-slate-200' : 'text-[#1E293B]'}`}>
-                        <td className="py-3.5 px-3 font-bold">Line {l.line_no}</td>
-                        <td className="py-3.5 px-3 uppercase font-semibold text-[#2BA5B5]">{l.factory_unit}</td>
-                        <td className="py-3.5 px-3">
-                          <p className="font-bold">{l.buyer_name || '-'}</p>
-                          <p className="text-[10px] text-[#475569] dark:text-slate-400">{l.style_no || '-'}</p>
-                        </td>
-                        <td className="py-3.5 px-3 text-center font-mono font-semibold">{l.manpower_total ?? '-'}</td>
-                        <td className="py-3.5 px-3 text-center font-mono font-semibold">{l.total_target ?? '-'}</td>
-                        <td className="py-3.5 px-3 text-center font-mono font-bold text-[#2BA5B5]">{totalOutput ?? '-'}</td>
-                        <td className="py-3.5 px-3 text-center font-mono font-bold">
-                          {ach !== null ? `${ach}%` : '-'}
-                        </td>
-                        <td className="py-3.5 px-3 w-48">
-                          <div className="w-full bg-slate-200 dark:bg-white/10 rounded-full h-2.5 overflow-hidden">
-                            <div
-                              className="h-2.5 rounded-full transition-all duration-500"
-                              style={{
-                                width: `${Math.min(ach || 0, 100)}%`,
-                                backgroundColor: (ach || 0) >= 90 ? CHART_GREEN : (ach || 0) >= 70 ? CHART_YELLOW : CHART_ORANGE,
-                              }}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
+                  return (
+                    <tr
+                      key={lSum.lineNo}
+                      className={`hover:bg-white/5 transition-colors ${
+                        daySummary.bestLine?.lineNo === lSum.lineNo ? 'bg-emerald-500/5' : ''
+                      }`}
+                    >
+                      <td className="p-2.5 border-r border-current/10 text-center font-bold">
+                        Line 0{lSum.lineNo}
+                      </td>
+                      <td className="p-2.5 border-r border-current/10 font-medium">
+                        {lSum.buyer} · {lSum.style}
+                      </td>
+                      <td className="p-2.5 border-r border-current/10 text-center font-bold">
+                        {m.totalTarget !== null ? formatNum(m.totalTarget) : <span className="text-slate-400">No target</span>}
+                      </td>
+                      <td className="p-2.5 border-r border-current/10 text-center font-bold text-[#0F8B8D] dark:text-[#2BA5B5]">
+                        {m.totalActual !== null ? formatNum(m.totalActual) : '-'}
+                      </td>
+                      <td className="p-2.5 border-r border-current/10 text-center font-bold">
+                        {m.achievement !== null ? `${m.achievement}%` : '-'}
+                      </td>
+                      <td className="p-2.5 border-r border-current/10 text-center font-bold">
+                        {m.shortExcessQty !== null ? (
+                          m.shortExcessQty < 0 ? (
+                            <span className="text-rose-600 dark:text-rose-400">{m.shortExcessQty} pcs</span>
+                          ) : m.shortExcessQty === 0 ? (
+                            <span className="text-emerald-600 dark:text-emerald-400">0</span>
+                          ) : (
+                            <span className="text-amber-600 dark:text-amber-400">+{m.shortExcessQty} pcs</span>
+                          )
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                      <td className="p-2.5 text-center">
+                        {hasTgt ? (
+                          m.status === 'short' ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30">
+                              SHORT {m.shortPct}%
+                            </span>
+                          ) : m.status === 'achieved' ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                              ACHIEVED
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30">
+                              EXCESS
+                            </span>
+                          )
+                        ) : (
+                          <span className="text-slate-400 text-[11px]">No target</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
+
+        {/* 3 DASHBOARD CHARTS */}
+        {!hasAnyTarget ? (
+          <div className="p-8 rounded-3xl border border-dashed border-slate-300 dark:border-white/20 text-center bg-white/5">
+            <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">
+              Enter hour targets to see achievement
+            </h4>
+            <p className="text-xs text-slate-500 mt-1">
+              Add hour targets in the Sewing Report Entry page to view live comparison charts and shortage analytics.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* 1. Target vs Actual Bar Chart per line */}
+              <div
+                className={`p-6 rounded-3xl border shadow-soft-lg ${
+                  isDark ? 'bg-[#103A40] border-white/10 text-white' : 'glass-card text-slate-900'
+                }`}
+              >
+                <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
+                  <div>
+                    <h3 className="font-bold text-base tracking-tight capitalize">
+                      {chartPart} Target vs Actual Output per Line
+                    </h3>
+                    <p className="text-xs text-[#475569] dark:text-slate-400 font-bangla">
+                      লাইনভিত্তিক নির্ধারিত লক্ষ্যমাত্রা বনাম প্রকৃত উৎপাদন
+                    </p>
+                  </div>
+                  <Award className="w-4 h-4 text-[#2BA5B5]" />
+                </div>
+
+                <div className="h-72 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={lineTargetVsActualData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.06)' : '#CBD5E1'} vertical={false} />
+                      <XAxis dataKey="line" stroke={isDark ? '#94A3B8' : '#334155'} fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis stroke={isDark ? '#94A3B8' : '#334155'} fontSize={11} tickLine={false} axisLine={false} />
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div
+                                className={`p-3 rounded-2xl text-xs shadow-lg border ${
+                                  isDark ? 'bg-[#0B2E33] border-white/20 text-white' : 'bg-white border-slate-200 text-slate-800'
+                                }`}
+                              >
+                                <p className="font-bold">{payload[0].payload.line} ({payload[0].payload.buyer})</p>
+                                <p className="text-emerald-400 mt-1">Actual: <strong>{payload[0].value} pcs</strong></p>
+                                <p className="text-amber-400">Target: <strong>{payload[0].payload.target} pcs</strong></p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar dataKey="actual" fill={CHART_GREEN} radius={[6, 6, 0, 0]} maxBarSize={32} name="Actual Pcs" />
+                      <Bar dataKey="target" fill={CHART_YELLOW} radius={[6, 6, 0, 0]} maxBarSize={32} name="Target Pcs" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* 2. Cumulative Actual vs Cumulative Target Line Chart per hour */}
+              <div
+                className={`p-6 rounded-3xl border shadow-soft-lg ${
+                  isDark ? 'bg-[#103A40] border-white/10 text-white' : 'glass-card text-slate-900'
+                }`}
+              >
+                <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
+                  <div>
+                    <h3 className="font-bold text-base tracking-tight capitalize">
+                      Cumulative {chartPart} Actual vs Cumulative Target
+                    </h3>
+                    <p className="text-xs text-[#475569] dark:text-slate-400 font-bangla">
+                      ঘণ্টাভিত্তিক ক্রমযোজিত উৎপাদন বনাম ক্রমযোজিত লক্ষ্যমাত্রা
+                    </p>
+                  </div>
+                  <TrendingUp className="w-4 h-4 text-[#2BA5B5]" />
+                </div>
+
+                <div className="h-72 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={cumulativeHourlyData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.06)' : '#CBD5E1'} vertical={false} />
+                      <XAxis dataKey="hour" stroke={isDark ? '#94A3B8' : '#334155'} fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis stroke={isDark ? '#94A3B8' : '#334155'} fontSize={11} tickLine={false} axisLine={false} />
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div
+                                className={`p-3 rounded-2xl text-xs shadow-lg border ${
+                                  isDark ? 'bg-[#0B2E33] border-white/20 text-white' : 'bg-white border-slate-200 text-slate-800'
+                                }`}
+                              >
+                                <p className="font-bold">{payload[0].payload.hour}</p>
+                                <p className="text-[#2BA5B5] mt-1">
+                                  Cum Actual: <strong>{payload[0].value} pcs</strong>
+                                </p>
+                                <p className="text-amber-400">
+                                  Cum Target: <strong>{payload[0].payload.cumTarget} pcs</strong>
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="cumActual"
+                        stroke={ACCENT_TEAL}
+                        strokeWidth={3}
+                        dot={{ fill: ACCENT_TEAL, r: 4 }}
+                        name="Cum Actual"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="cumTarget"
+                        stroke={CHART_YELLOW}
+                        strokeWidth={2}
+                        strokeDasharray="4 4"
+                        dot={{ fill: CHART_YELLOW, r: 3 }}
+                        name="Cum Target"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Short Qty by Line Bar Chart (Red Bars) */}
+            <div
+              className={`p-6 rounded-3xl border shadow-soft-lg ${
+                isDark ? 'bg-[#103A40] border-white/10 text-white' : 'glass-card text-slate-900'
+              }`}
+            >
+              <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
+                <div>
+                  <h3 className="font-bold text-base tracking-tight capitalize text-rose-500">
+                    Short Qty by Line ({chartPart}) · লাইনভিত্তিক ঘাটতির পরিমাণ
+                  </h3>
+                  <p className="text-xs text-[#475569] dark:text-slate-400 font-bangla">
+                    নির্দিষ্ট লাইনে ঘাটতি (Short pcs) লাল বারে প্রদর্শিত
+                  </p>
+                </div>
+                <AlertTriangle className="w-4 h-4 text-rose-500" />
+              </div>
+
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={lineShortData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.06)' : '#CBD5E1'} vertical={false} />
+                    <XAxis dataKey="line" stroke={isDark ? '#94A3B8' : '#334155'} fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis stroke={isDark ? '#94A3B8' : '#334155'} fontSize={11} tickLine={false} axisLine={false} />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div
+                              className={`p-3 rounded-2xl text-xs shadow-lg border ${
+                                isDark ? 'bg-[#0B2E33] border-white/20 text-white' : 'bg-white border-slate-200 text-slate-800'
+                              }`}
+                            >
+                              <p className="font-bold">{payload[0].payload.line} ({payload[0].payload.buyer})</p>
+                              <p className="text-rose-500 mt-1">Short Qty: <strong>{payload[0].value} pcs</strong></p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar dataKey="shortQty" fill={CHART_RED} radius={[6, 6, 0, 0]} maxBarSize={36} name="Short Qty (pcs)" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );
