@@ -107,8 +107,14 @@ export const SewingReportEntry: React.FC = () => {
   const [isDirty, setIsDirty] = useState(false);
   const [adminWarnedSession, setAdminWarnedSession] = useState(false);
 
-  const loadReportData = useCallback(async () => {
+  // DEBUG: Track why state resets
+  const logReset = (reason: string) => {
+    console.log(`[SewingReportEntry] DRAFT RESET because: ${reason} (Date: ${date}, Unit: ${factoryUnit})`);
+  };
+
+  const loadReportData = useCallback(async (isInitialLoad = false) => {
     setLoading(true);
+    if (isInitialLoad) logReset('Initial Load / Switch');
     try {
       const reports = await fetchSewingReports({ date, unit: factoryUnit });
       const matched = reports.find((r: any) => r.report_date === date && r.factory_unit === factoryUnit);
@@ -130,23 +136,23 @@ export const SewingReportEntry: React.FC = () => {
               const foundHr = (existingLine.hours || []).find((h: any) => h.hour_no === hrNo);
               return {
                 hourNo: hrNo,
-                backQty: foundHr && foundHr.back_qty !== null ? foundHr.back_qty : '',
-                frontQty: foundHr && foundHr.front_qty !== null ? foundHr.front_qty : '',
-                outputQty: foundHr && foundHr.output_qty !== null ? foundHr.output_qty : '',
-                asm: foundHr && foundHr.asm ? foundHr.asm : '',
+                backQty: foundHr && foundHr.back_qty !== null ? String(foundHr.back_qty) : '',
+                frontQty: foundHr && foundHr.front_qty !== null ? String(foundHr.front_qty) : '',
+                outputQty: foundHr && foundHr.output_qty !== null ? String(foundHr.output_qty) : '',
+                asm: foundHr && foundHr.asm ? String(foundHr.asm) : '',
               };
             });
             return {
               lineNo,
               buyerName: existingLine.buyer_name || '',
               styleNo: existingLine.style_no || '',
-              op: existingLine.op !== null ? existingLine.op : '',
-              hp: existingLine.hp !== null ? existingLine.hp : '',
-              ir: existingLine.ir !== null ? existingLine.ir : '',
-              backHourTarget: existingLine.back_hour_target ?? '',
-              frontHourTarget: existingLine.front_hour_target ?? '',
-              outputHourTarget: existingLine.output_hour_target ?? '',
-              asmHourTarget: existingLine.asm_hour_target ?? '',
+              op: existingLine.op !== null ? String(existingLine.op) : '',
+              hp: existingLine.hp !== null ? String(existingLine.hp) : '',
+              ir: existingLine.ir !== null ? String(existingLine.ir) : '',
+              backHourTarget: existingLine.back_hour_target !== null ? String(existingLine.back_hour_target) : '',
+              frontHourTarget: existingLine.front_hour_target !== null ? String(existingLine.front_hour_target) : '',
+              outputHourTarget: existingLine.output_hour_target !== null ? String(existingLine.output_hour_target) : '',
+              asmHourTarget: existingLine.asm_hour_target !== null ? String(existingLine.asm_hour_target) : '',
               workingHours: existingLine.working_hours ?? 8,
               remarks: existingLine.remarks || '',
               hours: hoursArr,
@@ -171,14 +177,8 @@ export const SewingReportEntry: React.FC = () => {
   }, [date, factoryUnit]);
 
   useEffect(() => {
-    loadReportData();
-    const unsubscribe = subscribeSewingRealtime(() => {
-      if (!isDirty) {
-        loadReportData();
-      }
-    });
-    return () => unsubscribe();
-  }, [loadReportData, isDirty]);
+    loadReportData(true);
+  }, [date, factoryUnit]);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -203,16 +203,22 @@ export const SewingReportEntry: React.FC = () => {
       });
       if (res?.reportId) {
         setReportId(res.reportId);
+        // Only refresh locks and logs, NOT the lines grid to avoid wiping user focus/position
+        const [locks, logs] = await Promise.all([
+          fetchHourLocks(res.reportId),
+          fetchEditLogs(res.reportId)
+        ]);
+        setHourLocks(locks);
+        setEditLogs(logs);
       }
       setIsDirty(false);
       toast.success('All changes saved to database.');
-      await loadReportData();
       return true;
     } catch (err: any) {
       console.error('Save error detailed:', err);
       if (err?.message?.includes('RLS') || err?.message?.includes('locked')) {
         toast.error('This hour is submitted and locked. Changes reverted.');
-        await loadReportData();
+        await loadReportData(false);
       } else {
         toast.error(err?.message || 'Failed to save data.');
       }
@@ -313,7 +319,7 @@ export const SewingReportEntry: React.FC = () => {
       const locks = await fetchHourLocks(reportId);
       setHourLocks(locks);
       toast.success(`Hour ${String(hourNo).padStart(2, '0')} submitted and locked successfully.`);
-      await loadReportData();
+      // No full reload of lines here, just the locks
     } catch (err: any) {
       toast.error(err?.message || 'Failed to submit hour lock.');
     }
@@ -328,7 +334,7 @@ export const SewingReportEntry: React.FC = () => {
       const locks = await fetchHourLocks(reportId);
       setHourLocks(locks);
       toast.success(`Hour ${String(hourNo).padStart(2, '0')} reopened.`);
-      await loadReportData();
+      // No full reload of lines here, just the locks
     } catch (err: any) {
       toast.error(err?.message || 'Failed to reopen hour lock.');
     }
@@ -374,7 +380,7 @@ export const SewingReportEntry: React.FC = () => {
       const locks = await fetchHourLocks(reportId);
       setHourLocks(locks);
       toast.success('All filled hours submitted.');
-      await loadReportData();
+      // No full reload of lines here, just the locks
     } catch (err: any) {
       toast.error(err?.message || 'Failed to submit all filled hours.');
     }
@@ -488,8 +494,8 @@ export const SewingReportEntry: React.FC = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* TOP CONTROLS */}
-        <div className={`p-6 rounded-2xl border shadow-sm ${isDark ? 'bg-[#103A40] border-white/25 text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'}`}>
+        {/* TOP CONTROLS - STICKY */}
+        <div className={`sticky top-0 z-40 p-6 rounded-2xl border shadow-md ${isDark ? 'bg-[#103A40]/95 border-white/25 text-white' : 'bg-white/95 border-[#1E293B] text-[#0F172A]'} backdrop-blur-sm`}>
           <div className="flex items-center justify-between gap-4 pb-4 border-b border-current/20">
             <div className="flex flex-col gap-1">
               <h2 className={`text-xl font-extrabold ${isDark ? 'text-white' : 'text-[#0F172A]'}`}>{companyName}</h2>
@@ -646,7 +652,7 @@ export const SewingReportEntry: React.FC = () => {
                           {['op', 'hp', 'ir'].map((f) => (
                             <div key={f} className="flex items-center justify-between gap-1">
                               <span className="font-bold text-[10px] uppercase">{f}:</span>
-                              <input type="number" value={line[f]} onChange={(e) => handleLineChange(lineIdx, f, e.target.value)} className={`w-11 px-1 py-0.5 rounded border text-center font-bold outline-none ${isDark ? 'bg-[#12383E] border-[#1E293B] text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'}`} />
+                              <input type="text" value={line[f]} onChange={(e) => handleLineChange(lineIdx, f, e.target.value)} className={`w-11 px-1 py-0.5 rounded border text-center font-bold outline-none ${isDark ? 'bg-[#12383E] border-[#1E293B] text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'}`} />
                             </div>
                           ))}
                           <div className="pt-1 border-t border-[#1E293B]/30 text-center font-extrabold text-[11px] text-[#0F8B8D]">Tot: {totalManpower > 0 ? totalManpower : '-'}</div>
@@ -654,7 +660,7 @@ export const SewingReportEntry: React.FC = () => {
                         <td rowSpan={4} className="border border-[#1E293B] p-1 align-middle text-center font-black text-base">0{line.lineNo}</td>
                         <td className="border border-[#1E293B] p-1.5 font-extrabold text-center">Back</td>
                         <td className="border border-[#1E293B] p-1 align-middle text-center">
-                          <input type="number" value={line.backHourTarget} onChange={(e) => handleLineChange(lineIdx, 'backHourTarget', e.target.value)} className={`w-full px-1 py-1.5 text-xs rounded border text-center font-bold outline-none ${isDark ? 'bg-[#12383E] border-[#1E293B] text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'}`} />
+                          <input type="text" value={line.backHourTarget} onChange={(e) => handleLineChange(lineIdx, 'backHourTarget', e.target.value)} className={`w-full px-1 py-1.5 text-xs rounded border text-center font-bold outline-none ${isDark ? 'bg-[#12383E] border-[#1E293B] text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'}`} />
                         </td>
                         <td className="border border-[#1E293B] p-1 align-middle text-center font-black text-xs">{backMetrics.totalTarget ?? '-'}</td>
                         {line.hours.map((hr: any, hrIdx: number) => {
@@ -665,7 +671,7 @@ export const SewingReportEntry: React.FC = () => {
                           return (
                             <td key={hrIdx} className={`border border-[#1E293B] p-1 text-center align-middle ${isLocked ? 'bg-amber-500/10' : ''}`}>
                               <div className="relative">
-                                <input type="number" disabled={isDisabled} value={hr.backQty} onChange={(e) => handleHourChange(lineIdx, hrIdx, 'backQty', e.target.value, hr.hourNo)} className={`w-full h-7 text-xs rounded border text-center font-bold outline-none ${cellStyle.bgClass}`} />
+                                <input type="text" disabled={isDisabled} value={hr.backQty} onChange={(e) => handleHourChange(lineIdx, hrIdx, 'backQty', e.target.value, hr.hourNo)} className={`w-full h-7 text-xs rounded border text-center font-bold outline-none ${cellStyle.bgClass}`} />
                                 {isLocked && <span className="absolute right-0.5 top-0.5 text-amber-600"><Lock className="w-2.5 h-2.5" /></span>}
                               </div>
                               <div className={`text-[10px] font-mono mt-0.5 border-t border-dashed border-[#1E293B]/20 pt-0.5 text-center ${getCumulativeColorClass(hBreak.cumActual, hBreak.cumTarget)}`}>{hBreak.cumActual !== null ? `Σ ${hBreak.cumActual}` : ''}</div>
@@ -681,7 +687,7 @@ export const SewingReportEntry: React.FC = () => {
                       <tr className={isDark ? 'bg-[#0B2E33]/60' : 'bg-[#F1F5F9]'}>
                         <td className="border border-[#1E293B] p-1.5 font-extrabold text-center">Front</td>
                         <td className="border border-[#1E293B] p-1 align-middle text-center">
-                          <input type="number" value={line.frontHourTarget} onChange={(e) => handleLineChange(lineIdx, 'frontHourTarget', e.target.value)} className={`w-full px-1 py-1.5 text-xs rounded border text-center font-bold outline-none ${isDark ? 'bg-[#12383E] border-[#1E293B] text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'}`} />
+                          <input type="text" value={line.frontHourTarget} onChange={(e) => handleLineChange(lineIdx, 'frontHourTarget', e.target.value)} className={`w-full px-1 py-1.5 text-xs rounded border text-center font-bold outline-none ${isDark ? 'bg-[#12383E] border-[#1E293B] text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'}`} />
                         </td>
                         <td className="border border-[#1E293B] p-1 align-middle text-center font-black text-xs">{frontMetrics.totalTarget ?? '-'}</td>
                         {line.hours.map((hr: any, hrIdx: number) => {
@@ -692,7 +698,7 @@ export const SewingReportEntry: React.FC = () => {
                           return (
                             <td key={hrIdx} className={`border border-[#1E293B] p-1 text-center align-middle ${isLocked ? 'bg-amber-500/10' : ''}`}>
                               <div className="relative">
-                                <input type="number" disabled={isDisabled} value={hr.frontQty} onChange={(e) => handleHourChange(lineIdx, hrIdx, 'frontQty', e.target.value, hr.hourNo)} className={`w-full h-7 text-xs rounded border text-center font-bold outline-none ${cellStyle.bgClass}`} />
+                                <input type="text" disabled={isDisabled} value={hr.frontQty} onChange={(e) => handleHourChange(lineIdx, hrIdx, 'frontQty', e.target.value, hr.hourNo)} className={`w-full h-7 text-xs rounded border text-center font-bold outline-none ${cellStyle.bgClass}`} />
                                 {isLocked && <span className="absolute right-0.5 top-0.5 text-amber-600"><Lock className="w-2.5 h-2.5" /></span>}
                               </div>
                               <div className={`text-[10px] font-mono mt-0.5 border-t border-dashed border-[#1E293B]/20 pt-0.5 text-center ${getCumulativeColorClass(hBreak.cumActual, hBreak.cumTarget)}`}>{hBreak.cumActual !== null ? `Σ ${hBreak.cumActual}` : ''}</div>
@@ -705,7 +711,7 @@ export const SewingReportEntry: React.FC = () => {
                       <tr className={isDark ? 'bg-[#103A40]/80' : 'bg-[#ECFEFF]'}>
                         <td className="border border-[#1E293B] p-1.5 font-extrabold text-center text-[#0F8B8D]">Out Put</td>
                         <td className="border border-[#1E293B] p-1 align-middle text-center">
-                          <input type="number" value={line.outputHourTarget} onChange={(e) => handleLineChange(lineIdx, 'outputHourTarget', e.target.value)} className={`w-full px-1 py-1.5 text-xs rounded border text-center font-bold outline-none ${isDark ? 'bg-[#12383E] border-[#1E293B] text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'}`} />
+                          <input type="text" value={line.outputHourTarget} onChange={(e) => handleLineChange(lineIdx, 'outputHourTarget', e.target.value)} className={`w-full px-1 py-1.5 text-xs rounded border text-center font-bold outline-none ${isDark ? 'bg-[#12383E] border-[#1E293B] text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'}`} />
                         </td>
                         <td className="border border-[#1E293B] p-1 align-middle text-center font-black text-xs text-[#0F8B8D]">{outMetrics.totalTarget ?? '-'}</td>
                         {line.hours.map((hr: any, hrIdx: number) => {
@@ -716,7 +722,7 @@ export const SewingReportEntry: React.FC = () => {
                           return (
                             <td key={hrIdx} className={`border border-[#1E293B] p-1 text-center align-middle ${isLocked ? 'bg-amber-500/10' : ''}`}>
                               <div className="relative">
-                                <input type="number" disabled={isDisabled} value={hr.outputQty} onChange={(e) => handleHourChange(lineIdx, hrIdx, 'outputQty', e.target.value, hr.hourNo)} className={`w-full h-7 text-xs rounded border text-center font-bold outline-none ${cellStyle.bgClass}`} />
+                                <input type="text" disabled={isDisabled} value={hr.outputQty} onChange={(e) => handleHourChange(lineIdx, hrIdx, 'outputQty', e.target.value, hr.hourNo)} className={`w-full h-7 text-xs rounded border text-center font-bold outline-none ${cellStyle.bgClass}`} />
                                 {isLocked && <span className="absolute right-0.5 top-0.5 text-amber-600"><Lock className="w-2.5 h-2.5" /></span>}
                               </div>
                               <div className={`text-[10px] font-mono mt-0.5 border-t border-dashed border-[#1E293B]/20 pt-0.5 text-center ${getCumulativeColorClass(hBreak.cumActual, hBreak.cumTarget)}`}>{hBreak.cumActual !== null ? `Σ ${hBreak.cumActual}` : ''}</div>
@@ -729,7 +735,7 @@ export const SewingReportEntry: React.FC = () => {
                       <tr className={isDark ? 'bg-[#2A2415]/60' : 'bg-[#FFFBEB]'}>
                         <td className="border border-[#1E293B] p-1.5 font-extrabold text-center">A.S.M</td>
                         <td className="border border-[#1E293B] p-1 align-middle text-center">
-                          <input type="number" value={line.asmHourTarget} onChange={(e) => handleLineChange(lineIdx, 'asmHourTarget', e.target.value)} className={`w-full px-1 py-1.5 text-xs rounded border text-center font-bold outline-none ${isDark ? 'bg-[#12383E] border-[#1E293B] text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'}`} />
+                          <input type="text" value={line.asmHourTarget} onChange={(e) => handleLineChange(lineIdx, 'asmHourTarget', e.target.value)} className={`w-full px-1 py-1.5 text-xs rounded border text-center font-bold outline-none ${isDark ? 'bg-[#12383E] border-[#1E293B] text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'}`} />
                         </td>
                         <td className="border border-[#1E293B] p-1 align-middle text-center font-black text-xs">{asmMetrics.totalTarget ?? '-'}</td>
                         {line.hours.map((hr: any, hrIdx: number) => {
@@ -740,7 +746,7 @@ export const SewingReportEntry: React.FC = () => {
                           return (
                             <td key={hrIdx} className={`border border-[#1E293B] p-1 text-center align-middle ${isLocked ? 'bg-amber-500/10' : ''}`}>
                               <div className="relative">
-                                <input type="number" disabled={isDisabled} value={hr.asm} onChange={(e) => handleHourChange(lineIdx, hrIdx, 'asm', e.target.value, hr.hourNo)} className={`w-full h-7 text-xs rounded border text-center font-bold outline-none ${cellStyle.bgClass}`} />
+                                <input type="text" disabled={isDisabled} value={hr.asm} onChange={(e) => handleHourChange(lineIdx, hrIdx, 'asm', e.target.value, hr.hourNo)} className={`w-full h-7 text-xs rounded border text-center font-bold outline-none ${cellStyle.bgClass}`} />
                                 {isLocked && <span className="absolute right-0.5 top-0.5 text-amber-600"><Lock className="w-2.5 h-2.5" /></span>}
                               </div>
                               <div className={`text-[10px] font-mono mt-0.5 border-t border-dashed border-[#1E293B]/20 pt-0.5 text-center ${getCumulativeColorClass(hBreak.cumActual, hBreak.cumTarget)}`}>{hBreak.cumActual !== null ? `Σ ${hBreak.cumActual}` : ''}</div>
