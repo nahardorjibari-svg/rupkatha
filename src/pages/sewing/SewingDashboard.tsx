@@ -243,8 +243,15 @@ export const SewingDashboard: React.FC = () => {
     const cellBorderColor = isDark ? 'rgba(255,255,255,0.45)' : '#1E293B';
     const headerBg = isDark ? 'rgba(0,0,0,0.4)' : '#F1F5F9';
 
+    // Font Clamps based on Request 10
+    const hourFs = `clamp(13px, 2.2cqw, ${24 * fsScale}px)`;
+    const sigmaFs = `clamp(9px, 1.35cqw, ${14 * fsScale}px)`;
+    const totalFs = `clamp(15px, 2.6cqw, ${28 * fsScale}px)`;
+    const labelFs = `clamp(10px, 1.2cqw, ${16 * fsScale}px)`;
+    const smallFs = `clamp(8px, 1cqw, ${12 * fsScale}px)`;
+
     return (
-      <div className="relative pt-6">
+      <div className="relative pt-6" style={{ containerType: 'inline-size' } as any}>
         {/* Line Tab */}
         <div 
           className="absolute top-0 left-6 z-10 px-6 py-1 text-sm font-black text-white rounded-t-xl shadow-lg"
@@ -257,170 +264,116 @@ export const SewingDashboard: React.FC = () => {
           className={`overflow-hidden border-[3px] rounded-2xl shadow-xl ${isDark ? 'bg-[#0A262B]' : 'bg-white'}`}
           style={{ borderColor: lineColor }}
         >
-          <div className="flex">
-            {/* Left Info Block (Compact) */}
-            <div 
-              className="w-[130px] shrink-0 border-r-[1.5px] flex flex-col"
-              style={{ borderColor: cellBorderColor }}
-            >
-              <div 
-                className="p-3 border-b-[1.5px] flex-1 flex flex-col justify-center bg-slate-50 dark:bg-black/20"
-                style={{ borderColor: cellBorderColor }}
+          <table className="w-full table-fixed border-collapse" style={{ borderCollapse: 'collapse' }}>
+            <thead>
+              <tr 
+                className="font-black border-b-[2.5px]"
+                style={{ backgroundColor: headerBg, borderColor: cellBorderColor, height: `calc(44px * ${fsScale})` }}
               >
-                <span className="text-slate-400 uppercase font-black tracking-tighter" style={{ fontSize: `calc(9px * ${fsScale})` }}>Buyer</span>
-                <span className="font-black truncate" style={{ fontSize: `calc(13px * ${fsScale})` }}>{line.buyer_name || '-'}</span>
-              </div>
-              <div 
-                className="p-3 border-b-[1.5px] flex-1 flex flex-col justify-center"
-                style={{ borderColor: cellBorderColor }}
-              >
-                <span className="text-slate-400 uppercase font-black tracking-tighter" style={{ fontSize: `calc(9px * ${fsScale})` }}>Style</span>
-                <span className="font-black truncate" style={{ fontSize: `calc(13px * ${fsScale})` }}>{line.style_no || '-'}</span>
-              </div>
-              <div 
-                className="p-3 border-b-[1.5px] flex-1 flex flex-col justify-center bg-slate-100 dark:bg-black/30"
-                style={{ borderColor: cellBorderColor }}
-              >
-                <span className="text-slate-400 uppercase font-black tracking-tighter" style={{ fontSize: `calc(9px * ${fsScale})` }}>Order Qty</span>
-                <div className="flex gap-1 font-mono font-black" style={{ fontSize: `calc(12px * ${fsScale})` }}>
-                  <span>{line.op || '-'}</span>/<span>{line.hp || '-'}</span>/<span>{line.ir || '-'}</span>
-                </div>
-              </div>
-              <div className="p-3 flex-1 flex items-center justify-center bg-slate-200 dark:bg-black/50">
-                <div className="text-center">
-                  <span className="block uppercase font-black text-slate-500" style={{ fontSize: `calc(10px * ${fsScale})` }}>Target</span>
-                  <span className="font-black leading-none text-[#0F8B8D]" style={{ fontSize: `calc(28px * ${fsScale})` }}>
-                    {breakdownByPart.output.metrics.totalTarget || '-'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Production Grid */}
-            <div className="flex-1 min-w-0 overflow-x-auto">
-              <table className="w-full table-fixed border-collapse" style={{ borderCollapse: 'collapse' }}>
-                <thead>
+                <th className="w-[11%] border-r-[1.5px] px-2 text-left uppercase tracking-tighter" style={{ borderColor: cellBorderColor, fontSize: labelFs }}>Info</th>
+                <th className="w-[9%] border-r-[1.5px] px-2 text-left uppercase tracking-widest" style={{ borderColor: cellBorderColor, fontSize: labelFs }}>Parts</th>
+                {[...Array(10)].map((_, i) => (
+                  <th key={i} className="w-[5.6%] border-r-[1.5px] px-1" style={{ borderColor: cellBorderColor, fontSize: labelFs }}>H{i + 1}</th>
+                ))}
+                <th className="w-[9%] border-r-[1.5px] px-1 text-center uppercase tracking-widest" style={{ borderColor: cellBorderColor, fontSize: labelFs }}>Total</th>
+                <th className="w-[15%] px-2 text-center uppercase tracking-widest" style={{ fontSize: labelFs }}>Remarks</th>
+              </tr>
+            </thead>
+            <tbody className="text-center font-black">
+              {parts.map((p, pIdx) => {
+                const bd = breakdownByPart[p.id as keyof typeof breakdownByPart];
+                const isLast = pIdx === parts.length - 1;
+                
+                return (
                   <tr 
-                    className="font-black border-b-[2.5px]"
-                    style={{ backgroundColor: headerBg, borderColor: cellBorderColor, height: `calc(44px * ${fsScale})` }}
+                    key={p.id} 
+                    className={isLast ? '' : 'border-b-[2.5px]'}
+                    style={{ borderColor: cellBorderColor, height: `calc(64px * ${fsScale})` }}
                   >
-                    <th 
-                      className="w-[85px] border-r-[1.5px] px-2 text-left uppercase tracking-widest"
-                      style={{ borderColor: cellBorderColor, fontSize: `calc(12px * ${fsScale})` }}
-                    >
-                      Parts
-                    </th>
-                    {[...Array(10)].map((_, i) => (
-                      <th 
-                        key={i} 
-                        className="border-r-[1.5px] px-1"
-                        style={{ borderColor: cellBorderColor, fontSize: `calc(14px * ${fsScale})`, minWidth: '64px' }}
-                      >
-                        H{i + 1}
-                      </th>
-                    ))}
-                    <th 
-                      className="w-[85px] border-r-[1.5px] px-1 text-center uppercase tracking-widest"
-                      style={{ borderColor: cellBorderColor, fontSize: `calc(12px * ${fsScale})` }}
-                    >
-                      Total
-                    </th>
-                    <th 
-                      className="w-[150px] px-2 text-center uppercase tracking-widest"
-                      style={{ fontSize: `calc(12px * ${fsScale})` }}
-                    >
-                      Remarks
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="text-center font-black">
-                  {parts.map((p, pIdx) => {
-                    const bd = breakdownByPart[p.id as keyof typeof breakdownByPart];
-                    const isLast = pIdx === parts.length - 1;
-                    
-                    return (
-                      <tr 
-                        key={p.id} 
-                        className={isLast ? '' : 'border-b-[2.5px]'}
-                        style={{ borderColor: cellBorderColor, minHeight: '64px' }}
-                      >
-                        {/* Part Label */}
-                        <td 
-                          className="border-r-[1.5px] px-2 text-left relative"
-                          style={{ borderColor: cellBorderColor, backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : '#F8FAFC', height: `calc(64px * ${fsScale})` }}
-                        >
-                          <div className="absolute left-0 top-0 bottom-0 w-1.5" style={{ backgroundColor: p.stripe }} />
-                          <span className="pl-2 uppercase font-black" style={{ fontSize: `calc(clamp(14px, 1.2vw, 20px) * ${fsScale})` }}>{p.label}</span>
-                        </td>
+                    {/* Left Info Block (Buyer, Style, Qty, Target) */}
+                    {pIdx === 0 && (
+                      <td className="border-r-[1.5px] p-2 text-left bg-slate-50 dark:bg-black/20" style={{ borderColor: cellBorderColor }}>
+                        <div className="flex flex-col justify-center h-full">
+                          <span className="text-slate-400 uppercase font-black tracking-tighter block" style={{ fontSize: smallFs }}>Buyer</span>
+                          <span className="font-black truncate block leading-tight" style={{ fontSize: labelFs }}>{line.buyer_name || '-'}</span>
+                        </div>
+                      </td>
+                    )}
+                    {pIdx === 1 && (
+                      <td className="border-r-[1.5px] p-2 text-left" style={{ borderColor: cellBorderColor }}>
+                        <div className="flex flex-col justify-center h-full">
+                          <span className="text-slate-400 uppercase font-black tracking-tighter block" style={{ fontSize: smallFs }}>Style</span>
+                          <span className="font-black truncate block leading-tight" style={{ fontSize: labelFs }}>{line.style_no || '-'}</span>
+                        </div>
+                      </td>
+                    )}
+                    {pIdx === 2 && (
+                      <td className="border-r-[1.5px] p-2 text-left bg-slate-100 dark:bg-black/30" style={{ borderColor: cellBorderColor }}>
+                        <div className="flex flex-col justify-center h-full">
+                          <span className="text-slate-400 uppercase font-black tracking-tighter block" style={{ fontSize: smallFs }}>Order Qty</span>
+                          <div className="flex gap-0.5 font-mono font-black" style={{ fontSize: labelFs }}>
+                            <span>{line.op || '-'}</span>/<span>{line.hp || '-'}</span>/<span>{line.ir || '-'}</span>
+                          </div>
+                        </div>
+                      </td>
+                    )}
+                    {pIdx === 3 && (
+                      <td className="border-r-[1.5px] p-2 text-center bg-slate-200 dark:bg-black/50" style={{ borderColor: cellBorderColor }}>
+                        <div className="flex flex-col justify-center items-center h-full">
+                          <span className="block uppercase font-black text-slate-500" style={{ fontSize: smallFs }}>Target</span>
+                          <span className="font-black leading-none text-[#0F8B8D]" style={{ fontSize: `clamp(16px, 2.4cqw, ${26 * fsScale}px)` }}>
+                            {breakdownByPart.output.metrics.totalTarget || '-'}
+                          </span>
+                        </div>
+                      </td>
+                    )}
 
-                        {/* Hourly Cells */}
-                        {[...Array(10)].map((_, i) => {
-                          const hr = bd.hourly[i];
-                          let cellColor = isDark ? 'text-white' : 'text-slate-900';
-                          
-                          if (hr.hourDiff !== null) {
-                            if (hr.hourDiff < 0) cellColor = 'text-[#DC2626]'; // Red
-                            else if (hr.hourDiff === 0) cellColor = 'text-[#15803D]'; // Green
-                            else cellColor = 'text-[#B45309]'; // Amber
-                          }
-                          
-                          return (
-                            <td 
-                              key={i} 
-                              className="border-r-[1.5px] relative align-middle"
-                              style={{ borderColor: cellBorderColor, minWidth: '64px' }}
-                            >
-                              <div className="flex flex-col items-center justify-center h-full gap-0.5">
-                                {hr.hourActual !== null ? (
-                                  <>
-                                    <span 
-                                      className={`leading-none ${cellColor}`}
-                                      style={{ fontSize: `calc(clamp(22px, 2vw, 34px) * ${fsScale})` }}
-                                    >
-                                      {hr.hourActual}
-                                    </span>
-                                    {p.id !== 'asm' ? (
-                                      <span 
-                                        className="font-black text-[#0E7490] dark:text-[#5EEAD4] leading-none"
-                                        style={{ fontSize: `calc(clamp(13px, 1.1vw, 18px) * ${fsScale})` }}
-                                      >
-                                        Σ{hr.cumActual}
-                                      </span>
-                                    ) : (
-                                      <div style={{ height: `calc(clamp(13px, 1.1vw, 18px) * ${fsScale})` }} />
-                                    )}
-                                  </>
-                                ) : (
-                                  <span className="text-slate-300 dark:text-white/10">-</span>
-                                )}
-                              </div>
-                            </td>
-                          );
-                        })}
+                    {/* Part Label */}
+                    <td 
+                      className="border-r-[1.5px] px-2 text-left relative"
+                      style={{ borderColor: cellBorderColor, backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : '#F8FAFC' }}
+                    >
+                      <div className="absolute left-0 top-0 bottom-0 w-1.5" style={{ backgroundColor: p.stripe }} />
+                      <span className="pl-1 uppercase font-black whitespace-nowrap" style={{ fontSize: labelFs }}>{p.label}</span>
+                    </td>
 
-                        {/* Total Cell */}
+                    {/* Hourly Cells */}
+                    {[...Array(10)].map((_, i) => {
+                      const hr = bd.hourly[i];
+                      let cellColor = isDark ? 'text-white' : 'text-slate-900';
+                      
+                      if (hr.hourDiff !== null) {
+                        if (hr.hourDiff < 0) cellColor = 'text-[#DC2626]'; // Red
+                        else if (hr.hourDiff === 0) cellColor = 'text-[#15803D]'; // Green
+                        else cellColor = 'text-[#B45309]'; // Amber
+                      }
+                      
+                      const isLargeCum = String(hr.cumActual || '').length >= 4;
+                      
+                      return (
                         <td 
-                          className="border-r-[1.5px] align-middle bg-slate-50/50 dark:bg-black/20"
+                          key={i} 
+                          className="border-r-[1.5px] relative align-middle"
                           style={{ borderColor: cellBorderColor }}
                         >
-                          <div className="flex flex-col items-center justify-center gap-0.5">
-                            {bd.metrics.totalActual !== null ? (
+                          <div className="flex flex-col items-center justify-center h-full">
+                            {hr.hourActual !== null ? (
                               <>
                                 <span 
-                                  className="text-[#0F8B8D] leading-none"
-                                  style={{ fontSize: `calc(clamp(24px, 2.2vw, 38px) * ${fsScale})` }}
+                                  className={`leading-none ${cellColor} whitespace-nowrap`}
+                                  style={{ fontSize: hourFs }}
                                 >
-                                  {bd.metrics.totalActual}
+                                  {hr.hourActual}
                                 </span>
-                                {p.id === 'output' && bd.metrics.totalTarget ? (
+                                {p.id !== 'asm' ? (
                                   <span 
-                                    className="font-black text-slate-500 leading-none"
-                                    style={{ fontSize: `calc(clamp(12px, 1vw, 16px) * ${fsScale})` }}
+                                    className="font-black text-[#0E7490] dark:text-[#5EEAD4] leading-none whitespace-nowrap"
+                                    style={{ fontSize: isLargeCum ? `calc(${sigmaFs} * 0.85)` : sigmaFs }}
                                   >
-                                    T:{bd.metrics.totalTarget}
+                                    Σ{hr.cumActual}
                                   </span>
                                 ) : (
-                                  <div style={{ height: `calc(clamp(12px, 1vw, 16px) * ${fsScale})` }} />
+                                  <div style={{ height: sigmaFs }} />
                                 )}
                               </>
                             ) : (
@@ -428,29 +381,59 @@ export const SewingDashboard: React.FC = () => {
                             )}
                           </div>
                         </td>
+                      );
+                    })}
 
-                        {/* Remarks (rowSpan=4) */}
-                        {pIdx === 0 && (
-                          <td 
-                            rowSpan={4} 
-                            className="p-3 italic leading-tight align-middle text-center bg-slate-50/20 dark:bg-black/10"
-                            style={{ width: '150px' }}
-                          >
-                            <div 
-                              className="max-h-[220px] overflow-y-auto custom-scrollbar break-words"
-                              style={{ fontSize: `calc(13px * ${fsScale})` }}
+                    {/* Total Cell */}
+                    <td 
+                      className="border-r-[1.5px] align-middle bg-slate-50/50 dark:bg-black/20"
+                      style={{ borderColor: cellBorderColor }}
+                    >
+                      <div className="flex flex-col items-center justify-center">
+                        {bd.metrics.totalActual !== null ? (
+                          <>
+                            <span 
+                              className="text-[#0F8B8D] leading-none whitespace-nowrap"
+                              style={{ fontSize: totalFs }}
                             >
-                              {line.remarks || '-'}
-                            </div>
-                          </td>
+                              {bd.metrics.totalActual}
+                            </span>
+                            {p.id === 'output' && bd.metrics.totalTarget ? (
+                              <span 
+                                className="font-black text-slate-500 leading-none whitespace-nowrap"
+                                style={{ fontSize: smallFs }}
+                              >
+                                T:{bd.metrics.totalTarget}
+                              </span>
+                            ) : (
+                              <div style={{ height: smallFs }} />
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-slate-300 dark:text-white/10">-</span>
                         )}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                      </div>
+                    </td>
+
+                    {/* Remarks (rowSpan=4) */}
+                    {pIdx === 0 && (
+                      <td 
+                        rowSpan={4} 
+                        className="p-2 italic leading-tight align-middle text-center bg-slate-50/20 dark:bg-black/10"
+                      >
+                        <div 
+                          className="max-h-full overflow-y-auto custom-scrollbar break-words"
+                          style={{ fontSize: `clamp(10px, 1.1cqw, ${14 * fsScale}px)` }}
+                        >
+                          {line.remarks || '-'}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     );
@@ -572,7 +555,7 @@ export const SewingDashboard: React.FC = () => {
                   </h2>
                   <div className="flex-1 h-[1px] bg-slate-200 dark:bg-white/5" />
                 </div>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 min-[1100px]:grid-cols-2 gap-6">
                   {unitData[u].lines.map((l: any) => (
                     <LineSheetTable key={l.id} line={l} />
                   ))}
