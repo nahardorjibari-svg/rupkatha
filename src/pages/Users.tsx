@@ -229,8 +229,8 @@ export const Users: React.FC = () => {
 
     setIsAdding(true);
     try {
-      // Invoke Supabase Edge Function 'create-user'
-      const { data, error: fnErr } = await supabase.functions.invoke('create-user', {
+      // Invoke Supabase Edge Function 'rapid-function'
+      const { data, error: fnErr } = await supabase.functions.invoke('rapid-function', {
         body: {
           email: trimmedEmail,
           password: addPassword,
@@ -242,14 +242,38 @@ export const Users: React.FC = () => {
       });
 
       if (fnErr) {
-        throw new Error(fnErr.message || 'Edge function execution failed.');
+        console.error('Edge function error:', fnErr);
+        let realMessage = fnErr.message;
+        if ((fnErr as any)?.context) {
+          try {
+            const errorJson = await (fnErr as any).context.json();
+            realMessage = errorJson?.message || errorJson?.error || (typeof errorJson === 'string' ? errorJson : JSON.stringify(errorJson));
+          } catch (_) {}
+        }
+        const errorToThrow: any = new Error(realMessage || 'Edge function execution failed.');
+        if ((fnErr as any)?.context) {
+          errorToThrow.context = (fnErr as any).context;
+        }
+        throw errorToThrow;
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
       }
 
       toast.success(`Staff member ${trimmedName} created successfully!`);
       setCreatedCredentials({ email: trimmedEmail, pass: addPassword });
       loadProfiles();
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to create user. Ensure create-user edge function is deployed.');
+      console.error('Failed to create user error object:', err);
+      let errorMsg = err?.message || 'Failed to create user.';
+      if (err?.context) {
+        try {
+          const errorJson = await err.context.json();
+          errorMsg = errorJson?.message || errorJson?.error || (typeof errorJson === 'string' ? errorJson : JSON.stringify(errorJson));
+        } catch (_) {}
+      }
+      toast.error(errorMsg);
     } finally {
       setIsAdding(false);
     }
