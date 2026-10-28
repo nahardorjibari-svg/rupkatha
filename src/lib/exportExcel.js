@@ -207,7 +207,7 @@ export function exportSewingReportsToExcel({ reports, date, unit }) {
       asms ? `ASM: ${asms}` : '',
     ]);
 
-    // 5. SHORT / EXCESS Rows for Back, Front, Out Put, A.S.M
+    // 5. HOUR SHORT / EXCESS Rows for Back, Front, Out Put, A.S.M (Main, Per-Hour)
     ['back', 'front', 'output', 'asm'].forEach((pKey) => {
       const breakdown = pKey === 'back' ? backB : pKey === 'front' ? frontB : pKey === 'asm' ? asmB : outB;
       const partName = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Out Put';
@@ -219,12 +219,33 @@ export function exportSewingReportsToExcel({ reports, date, unit }) {
         '',
         '',
         '',
-        `SHORT/EXCESS (${partName})`,
+        `HOUR SHORT/EXCESS (${partName})`,
         '-',
         '-',
-        ...breakdown.hourly.map((h) => (h.shortExcess !== null ? (h.shortExcess > 0 ? `+${h.shortExcess}` : h.shortExcess) : '-')),
-        m.shortExcessQty !== null ? (m.shortExcessQty > 0 ? `+${m.shortExcessQty}` : m.shortExcessQty) : '-',
-        m.shortPct ? `Short ${m.shortPct}%` : '',
+        ...breakdown.hourly.map((h) => (h.hourDiff !== null ? (h.hourDiff > 0 ? `+${h.hourDiff}` : `${h.hourDiff}`) : '-')),
+        breakdown.sumHourDiff !== null ? (breakdown.sumHourDiff > 0 ? `+${breakdown.sumHourDiff}` : `${breakdown.sumHourDiff}`) : '-',
+        breakdown.missingHoursCount > 0 && breakdown.enteredHoursCount > 0 ? `${breakdown.missingHoursCount} hrs not entered` : (m.shortPct ? `Short ${m.shortPct}%` : ''),
+      ]);
+    });
+
+    // 6. RUNNING SHORT / EXCESS Rows for Back, Front, Out Put, A.S.M (Cumulative)
+    ['back', 'front', 'output', 'asm'].forEach((pKey) => {
+      const breakdown = pKey === 'back' ? backB : pKey === 'front' ? frontB : pKey === 'asm' ? asmB : outB;
+      const partName = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Out Put';
+      const m = breakdown.metrics;
+      detailRows.push([
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        `RUNNING SHORT/EXCESS (${partName})`,
+        '-',
+        '-',
+        ...breakdown.hourly.map((h) => (h.shortExcess !== null ? (h.shortExcess > 0 ? `+${h.shortExcess}` : `${h.shortExcess}`) : '-')),
+        m.shortExcessQty !== null ? (m.shortExcessQty > 0 ? `+${m.shortExcessQty}` : `${m.shortExcessQty}`) : '-',
+        'Cumulative',
       ]);
     });
 

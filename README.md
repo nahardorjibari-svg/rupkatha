@@ -24,13 +24,14 @@ The **Sewing Hourly Production Report** (`/sewing/report`) includes production t
    - **Cumulative (Σ) zone**: Running cumulative sum under each hour cell compared dynamically with cumulative target (`hour target x elapsed working hours`) with color coding for Back, Front, Out Put, and A.S.M.
    - **Total Column**: Shows sum of entered hourly values, compared with Total Target (`-N` or `+N`).
 
-3. **Compact Tracking Rows (Under Each Line Table)**:
-   - **SHORT / EXCESS (ঘাটতি / অতিরিক্ত)**: Sub-rows for Back, Front, Out Put, and A.S.M calculating hourly cumulative actual minus cumulative target (`-20`, `0`, `+30`).
+3. **Dual Short / Excess & Remaining Tracking Rows (Under Each Line Table)**:
+   - **HOUR SHORT / EXCESS (প্রতি ঘণ্টা)**: The primary, bold group placed first. For each hour with entered data: `hour actual - hour target` (e.g. target 80, actual 70 -> `-10` in Red; actual 80 -> `0` in Green; actual 90 -> `+10` in Yellow). Blank hours remain uncounted. Each cell has an informative tooltip (`Hour XX: target YY, actual ZZ, short/excess WW`). Total column = SUM of all entered hours' differences (e.g. `-55`) with missing hours indicator (`x hours not entered`).
+   - **RUNNING SHORT / EXCESS (জমা)**: The secondary group in smaller, muted typography displaying cumulative actual minus cumulative target.
    - **REMAINING TARGET (বাকি লক্ষ্য)**: Sub-rows for Back, Front, Out Put, and A.S.M calculating Total Target minus cumulative actual (never below 0).
 
-4. **Line Summary Badges**:
-   - Live header chips: `Target X | Actual Y | Short Z pcs (P%)` in Red/Green/Yellow for Out Put and A.S.M.
-   - `SHORT Z pcs` alert badge when working hours are completed, or `Short so far` during ongoing shifts.
+4. **Line Summary Badges & Per-Hour Shortage Metrics**:
+   - Line Header displays **Total MP** and **Total Output**, with live summary chips: `Target X | Actual Y | Ach Z% | Short S pcs (P%)` in Red/Green/Yellow for Out Put and A.S.M.
+   - Per-hour sum is used for "Short Qty" across line chips, Management Summary, Executive Dashboard ("Short qty by line"), Reports grid, Excel export, and PDF export. Total actual / total target achievement percentage is shown alongside.
 
 5. **Top Management Overview**:
    - Day summary card at the top of the entry page and on the Sewing Dashboard for all 4 parts: Out Put, Back, Front, and A.S.M.

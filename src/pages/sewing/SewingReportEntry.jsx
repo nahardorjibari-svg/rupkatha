@@ -925,6 +925,10 @@ export const SewingReportEntry = () => {
                       Total MP: {totalManpower > 0 ? totalManpower : '-'}
                     </div>
 
+                    <div className="px-2 py-1 rounded bg-[#0F8B8D]/10 text-[#0F8B8D] dark:text-[#2BA5B5] border border-[#0F8B8D]/25 font-bold">
+                      Total Output: {totalOutput !== null ? totalOutput : '-'}
+                    </div>
+
                     {outMetrics.totalTarget !== null && (
                       <div
                         className={`px-2.5 py-1 rounded-lg border font-bold text-xs flex items-center gap-1.5 ${
@@ -944,6 +948,8 @@ export const SewingReportEntry = () => {
                         <span>Target {outMetrics.totalTarget}</span>
                         <span>|</span>
                         <span>Actual {outMetrics.totalActual ?? 0}</span>
+                        <span>|</span>
+                        <span>Ach {outMetrics.achievement ?? 0}%</span>
                         <span>|</span>
                         {outMetrics.status === 'short' && (
                           <span className="font-extrabold text-rose-600 dark:text-rose-400">
@@ -980,6 +986,8 @@ export const SewingReportEntry = () => {
                         <span>A.S.M Tgt {asmMetrics.totalTarget}</span>
                         <span>|</span>
                         <span>Act {asmMetrics.totalActual ?? 0}</span>
+                        <span>|</span>
+                        <span>Ach {asmMetrics.achievement ?? 0}%</span>
                         <span>|</span>
                         {asmMetrics.status === 'short' && (
                           <span className="font-extrabold text-rose-600 dark:text-rose-400">
@@ -1026,13 +1034,13 @@ export const SewingReportEntry = () => {
                         </th>
                         <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '80px' }}>
                           <div>Hour Target</div>
-                          <div className="text-[9px] text-[#0F8B8D] dark:text-[#2BA5B5] font-bangla font-normal">
+                          <div className="text-[9px] text-[#0F8B8D] dark:text-[#2BA5B5] font-bangla font-normal leading-[1.6]">
                             লক্ষ্যমাত্রা/ঘণ্টা
                           </div>
                         </th>
                         <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '80px' }}>
                           <div>Total Target</div>
-                          <div className="text-[9px] text-[#0F8B8D] dark:text-[#2BA5B5] font-bangla font-normal">
+                          <div className="text-[9px] text-[#0F8B8D] dark:text-[#2BA5B5] font-bangla font-normal leading-[1.6]">
                             মোট লক্ষ্য
                           </div>
                         </th>
@@ -1102,7 +1110,7 @@ export const SewingReportEntry = () => {
                                   </button>
                                 )}
                               </div>
-                              <div className="text-[9px] font-bangla text-[#0F8B8D] dark:text-[#2BA5B5] font-normal">
+                              <div className="text-[9px] font-bangla text-[#0F8B8D] dark:text-[#2BA5B5] font-normal leading-[1.6]">
                                 ঘণ্টা
                               </div>
                               {isLockedHour && isAdmin && (
@@ -1120,11 +1128,11 @@ export const SewingReportEntry = () => {
 
                         <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '85px' }}>
                           <div>Total</div>
-                          <div className="text-[9px] text-[#0F8B8D] dark:text-[#2BA5B5] font-bangla font-normal">মোট</div>
+                          <div className="text-[9px] text-[#0F8B8D] dark:text-[#2BA5B5] font-bangla font-normal leading-[1.6]">মোট</div>
                         </th>
                         <th className="p-2 border border-[#1E293B] font-extrabold text-center" style={{ width: '130px' }}>
                           <div>Remarks</div>
-                          <div className="text-[9px] text-[#475569] dark:text-slate-400 font-bangla font-normal">
+                          <div className="text-[9px] text-[#475569] dark:text-slate-400 font-bangla font-normal leading-[1.6]">
                             মন্তব্য
                           </div>
                         </th>
@@ -1524,7 +1532,7 @@ export const SewingReportEntry = () => {
                         </td>
                       </tr>
 
-                      {/* COMPACT SECTION: SHORT / EXCESS (ঘাটতি / অতিরিক্ত) */}
+                      {/* GROUP 1: HOUR SHORT / EXCESS (প্রতি ঘণ্টা) - Main, bold, placed first */}
                       {['back', 'front', 'output', 'asm'].map((pKey, pIdx) => {
                         const breakdown =
                           pKey === 'back'
@@ -1542,19 +1550,27 @@ export const SewingReportEntry = () => {
                             : pKey === 'asm'
                             ? 'A.S.M'
                             : 'Out Put';
+                        const stripeClass =
+                          pKey === 'back'
+                            ? 'border-l-4 border-blue-500 text-blue-600 dark:text-blue-400'
+                            : pKey === 'front'
+                            ? 'border-l-4 border-purple-500 text-purple-600 dark:text-purple-400'
+                            : pKey === 'asm'
+                            ? 'border-l-4 border-amber-500 text-amber-600 dark:text-amber-400'
+                            : 'border-l-4 border-[#0F8B8D] text-[#0F8B8D] dark:text-[#2BA5B5]';
                         const metrics = breakdown.metrics;
 
                         return (
                           <tr
-                            key={`short_${pKey}`}
+                            key={`hour_short_${pKey}`}
                             className={
                               isDark
                                 ? pKey === 'output'
-                                  ? 'bg-rose-950/20'
-                                  : 'bg-white/[0.02]'
+                                  ? 'bg-rose-950/30'
+                                  : 'bg-white/[0.04]'
                                 : pKey === 'output'
-                                ? 'bg-rose-50/50'
-                                : 'bg-slate-50/70'
+                                ? 'bg-rose-50/70'
+                                : 'bg-slate-50'
                             }
                           >
                             {pIdx === 0 && (
@@ -1563,15 +1579,155 @@ export const SewingReportEntry = () => {
                                 colSpan={4}
                                 className="border border-[#1E293B] p-2 text-center align-middle font-black text-xs text-rose-600 dark:text-rose-400 bg-rose-500/10"
                               >
-                                <div>SHORT / EXCESS</div>
-                                <div className="text-[10px] font-bangla font-semibold">ঘাটতি / অতিরিক্ত (জমা)</div>
+                                <div className="font-extrabold text-xs tracking-tight">HOUR SHORT / EXCESS</div>
+                                <div className="text-[10px] font-bangla font-semibold leading-[1.6]">প্রতি ঘণ্টা</div>
                               </td>
                             )}
-                            <td className="border border-[#1E293B] p-1 text-center font-bold text-[11px]">{partLabel}</td>
-                            <td className="border border-[#1E293B] p-1 text-center font-mono text-slate-400">-</td>
-                            <td className="border border-[#1E293B] p-1 text-center font-mono text-slate-400">-</td>
+                            <td className={`border border-[#1E293B] p-1 text-center font-extrabold text-xs ${stripeClass}`}>
+                              {partLabel}
+                            </td>
+                            <td className="border border-[#1E293B] p-1 text-center font-mono text-slate-400 text-xs">-</td>
+                            <td className="border border-[#1E293B] p-1 text-center font-mono text-slate-400 text-xs">-</td>
 
                             {/* 10 Hourly Short/Excess values */}
+                            {breakdown.hourly.map((hBreak, hIdx) => {
+                              const diff = hBreak.hourDiff;
+                              let displayVal = '-';
+                              let colorClass = 'text-slate-400';
+
+                              if (diff !== null) {
+                                if (diff < 0) {
+                                  displayVal = `${diff}`;
+                                  colorClass = isDark
+                                    ? 'bg-rose-950/70 text-rose-300 font-black'
+                                    : 'bg-rose-100 text-rose-700 font-black';
+                                } else if (diff === 0) {
+                                  displayVal = '0';
+                                  colorClass = isDark
+                                    ? 'bg-emerald-950/70 text-emerald-300 font-black'
+                                    : 'bg-emerald-100 text-emerald-700 font-black';
+                                } else {
+                                  displayVal = `+${diff}`;
+                                  colorClass = isDark
+                                    ? 'bg-amber-950/70 text-amber-300 font-black'
+                                    : 'bg-amber-100 text-amber-700 font-black';
+                                }
+                              }
+
+                              return (
+                                <td
+                                  key={hIdx}
+                                  title={hBreak.tooltip || undefined}
+                                  className={`border border-[#1E293B] p-1 text-center align-middle font-mono text-xs ${colorClass}`}
+                                >
+                                  {displayVal}
+                                </td>
+                              );
+                            })}
+
+                            {/* Total Column = SUM of entered hours differences */}
+                            <td className="border border-[#1E293B] p-1 text-center font-black font-mono text-xs align-middle">
+                              {breakdown.sumHourDiff !== null ? (
+                                breakdown.sumHourDiff < 0 ? (
+                                  <span className="text-rose-600 dark:text-rose-400 font-black">{breakdown.sumHourDiff}</span>
+                                ) : breakdown.sumHourDiff === 0 ? (
+                                  <span className="text-emerald-600 dark:text-emerald-400 font-black">0</span>
+                                ) : (
+                                  <span className="text-amber-600 dark:text-amber-400 font-black">+{breakdown.sumHourDiff}</span>
+                                )
+                              ) : (
+                                '-'
+                              )}
+                              {breakdown.missingHoursCount > 0 && breakdown.enteredHoursCount > 0 && (
+                                <div className="text-[9px] text-slate-500 dark:text-slate-400 font-normal leading-tight mt-0.5 font-sans">
+                                  {breakdown.missingHoursCount} hours not entered
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Remarks column */}
+                            {pIdx === 0 && (
+                              <td
+                                rowSpan={4}
+                                className="border border-[#1E293B] p-1 text-center align-middle text-[10px] text-slate-500 font-mono"
+                              >
+                                {outputBreakdown.metrics.status === 'short' && (
+                                  <div className="text-rose-600 dark:text-rose-400 font-bold">
+                                    Short {Math.abs(outputBreakdown.metrics.shortExcessQty)} pcs
+                                    <div className="text-[9px] text-slate-400">({outputBreakdown.metrics.shortPct}%)</div>
+                                  </div>
+                                )}
+                                {outputBreakdown.metrics.status === 'achieved' && (
+                                  <div className="text-emerald-600 dark:text-emerald-400 font-bold">100% Target Met</div>
+                                )}
+                                {outputBreakdown.metrics.status === 'excess' && (
+                                  <div className="text-amber-600 dark:text-amber-400 font-bold">
+                                    +{outputBreakdown.metrics.shortExcessQty} pcs Excess
+                                  </div>
+                                )}
+                                {outputBreakdown.metrics.status === 'pending' && (
+                                  <span className="text-slate-400">Pending</span>
+                                )}
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+
+                      {/* GROUP 2: RUNNING SHORT / EXCESS (জমা) - Cumulative logic, smaller/muted */}
+                      {['back', 'front', 'output', 'asm'].map((pKey, pIdx) => {
+                        const breakdown =
+                          pKey === 'back'
+                            ? backBreakdown
+                            : pKey === 'front'
+                            ? frontBreakdown
+                            : pKey === 'asm'
+                            ? asmBreakdown
+                            : outputBreakdown;
+                        const partLabel =
+                          pKey === 'back'
+                            ? 'Back'
+                            : pKey === 'front'
+                            ? 'Front'
+                            : pKey === 'asm'
+                            ? 'A.S.M'
+                            : 'Out Put';
+                        const stripeClass =
+                          pKey === 'back'
+                            ? 'border-l-2 border-blue-400 text-blue-500 dark:text-blue-400/80'
+                            : pKey === 'front'
+                            ? 'border-l-2 border-purple-400 text-purple-500 dark:text-purple-400/80'
+                            : pKey === 'asm'
+                            ? 'border-l-2 border-amber-400 text-amber-500 dark:text-amber-400/80'
+                            : 'border-l-2 border-[#0F8B8D]/80 text-[#0F8B8D] dark:text-[#2BA5B5]/80';
+                        const metrics = breakdown.metrics;
+
+                        return (
+                          <tr
+                            key={`run_short_${pKey}`}
+                            className={
+                              isDark
+                                ? 'bg-slate-900/30'
+                                : 'bg-slate-50/50'
+                            }
+                          >
+                            {pIdx === 0 && (
+                              <td
+                                rowSpan={4}
+                                colSpan={4}
+                                className="border border-[#1E293B] p-1.5 text-center align-middle font-bold text-[11px] text-slate-500 dark:text-slate-400 bg-slate-500/5"
+                              >
+                                <div className="font-bold text-[11px]">RUNNING SHORT / EXCESS</div>
+                                <div className="text-[9px] font-bangla font-medium leading-[1.6]">জমা</div>
+                              </td>
+                            )}
+                            <td className={`border border-[#1E293B] p-1 text-center font-bold text-[10px] ${stripeClass}`}>
+                              {partLabel}
+                            </td>
+                            <td className="border border-[#1E293B] p-1 text-center font-mono text-slate-400 text-[10px]">-</td>
+                            <td className="border border-[#1E293B] p-1 text-center font-mono text-slate-400 text-[10px]">-</td>
+
+                            {/* 10 Hourly Running Short/Excess values */}
                             {breakdown.hourly.map((hBreak, hIdx) => {
                               const s = hBreak.shortExcess;
                               let displayVal = '-';
@@ -1580,60 +1736,48 @@ export const SewingReportEntry = () => {
                               if (s !== null) {
                                 if (s < 0) {
                                   displayVal = `${s}`;
-                                  colorClass = 'text-rose-600 dark:text-rose-400 font-extrabold';
+                                  colorClass = 'text-rose-600/85 dark:text-rose-400/85 font-bold';
                                 } else if (s === 0) {
                                   displayVal = '0';
-                                  colorClass = 'text-emerald-600 dark:text-emerald-400 font-extrabold';
+                                  colorClass = 'text-emerald-600/85 dark:text-emerald-400/85 font-bold';
                                 } else {
                                   displayVal = `+${s}`;
-                                  colorClass = 'text-amber-600 dark:text-amber-400 font-extrabold';
+                                  colorClass = 'text-amber-600/85 dark:text-amber-400/85 font-bold';
                                 }
                               }
 
                               return (
                                 <td
                                   key={hIdx}
-                                  className={`border border-[#1E293B] p-1 text-center align-middle font-mono text-[11px] ${colorClass}`}
+                                  className={`border border-[#1E293B] p-1 text-center align-middle font-mono text-[10px] ${colorClass}`}
                                 >
                                   {displayVal}
                                 </td>
                               );
                             })}
 
-                            {/* Final Short / Excess Total */}
-                            <td className="border border-[#1E293B] p-1 text-center font-black font-mono text-xs">
+                            {/* Final Cumulative Total */}
+                            <td className="border border-[#1E293B] p-1 text-center font-bold font-mono text-[11px]">
                               {metrics.shortExcessQty !== null ? (
                                 metrics.shortExcessQty < 0 ? (
-                                  <span className="text-rose-600 dark:text-rose-400">{metrics.shortExcessQty}</span>
+                                  <span className="text-rose-600/90 dark:text-rose-400/90">{metrics.shortExcessQty}</span>
                                 ) : metrics.shortExcessQty === 0 ? (
-                                  <span className="text-emerald-600 dark:text-emerald-400">0</span>
+                                  <span className="text-emerald-600/90 dark:text-emerald-400/90">0</span>
                                 ) : (
-                                  <span className="text-amber-600 dark:text-amber-400">+{metrics.shortExcessQty}</span>
+                                  <span className="text-amber-600/90 dark:text-amber-400/90">+{metrics.shortExcessQty}</span>
                                 )
                               ) : (
                                 '-'
                               )}
                             </td>
 
-                            {/* Remarks column for short/excess */}
+                            {/* Remarks column for running short/excess */}
                             {pIdx === 0 && (
                               <td
                                 rowSpan={4}
-                                className="border border-[#1E293B] p-1 text-center align-middle text-[10px] text-slate-500 font-mono"
+                                className="border border-[#1E293B] p-1 text-center align-middle text-[9px] text-slate-400 font-mono"
                               >
-                                {outMetrics.status === 'short' && (
-                                  <span className="text-rose-600 dark:text-rose-400 font-bold">
-                                    Short {outMetrics.shortPct}%
-                                  </span>
-                                )}
-                                {outMetrics.status === 'achieved' && (
-                                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">100% Achieved</span>
-                                )}
-                                {outMetrics.status === 'excess' && (
-                                  <span className="text-amber-600 dark:text-amber-400 font-bold">
-                                    +{outMetrics.shortExcessQty} pcs
-                                  </span>
-                                )}
+                                Cumulative status
                               </td>
                             )}
                           </tr>
@@ -1680,7 +1824,7 @@ export const SewingReportEntry = () => {
                                 className="border border-[#1E293B] p-2 text-center align-middle font-black text-xs text-blue-600 dark:text-blue-400 bg-blue-500/10"
                               >
                                 <div>REMAINING TARGET</div>
-                                <div className="text-[10px] font-bangla font-semibold">বাকি লক্ষ্য</div>
+                                <div className="text-[10px] font-bangla font-semibold leading-[1.6]">বাকি লক্ষ্য</div>
                               </td>
                             )}
                             <td className="border border-[#1E293B] p-1 text-center font-bold text-[11px]">{partLabel}</td>

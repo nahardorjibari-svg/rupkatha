@@ -118,18 +118,29 @@ export function calculatePartMetrics(line, part = 'output') {
 
   const totalTarget = hourTarget !== null ? hourTarget * workingHours : null;
 
-  // Calculate total actual
+  // Calculate total actual and sum of per-hour differences for entered hours
   let totalActual = null;
+  let enteredHoursCount = 0;
+  let sumHourDiff = null;
+
   const hoursList = line.hours || [];
   for (const h of hoursList) {
     const val = h[qtyKey] !== undefined ? h[qtyKey] : h[altQtyKey];
     if (val !== null && val !== undefined && val !== '' && !isNaN(Number(val))) {
-      totalActual = (totalActual || 0) + Number(val);
+      const num = Number(val);
+      totalActual = (totalActual || 0) + num;
+      enteredHoursCount++;
+      if (hourTarget !== null) {
+        sumHourDiff = (sumHourDiff || 0) + (num - hourTarget);
+      }
     }
   }
 
+  const missingHoursCount = Math.max(0, workingHours - enteredHoursCount);
+
   let achievement = null;
   let shortExcessQty = null;
+  let shortQty = 0;
   let shortPct = 0;
   let excessPct = 0;
   let status = 'no_target';
@@ -138,11 +149,13 @@ export function calculatePartMetrics(line, part = 'output') {
     if (totalActual === null) {
       status = 'pending';
     } else {
-      shortExcessQty = totalActual - totalTarget;
+      // Use per-hour sum for Short qty: SUM of entered hours' differences
+      shortExcessQty = sumHourDiff !== null ? sumHourDiff : (totalActual - totalTarget);
       achievement = totalTarget > 0 ? Number(((totalActual / totalTarget) * 100).toFixed(1)) : 0;
       if (shortExcessQty < 0) {
         status = 'short';
-        shortPct = totalTarget > 0 ? Number(((Math.abs(shortExcessQty) / totalTarget) * 100).toFixed(1)) : 0;
+        shortQty = Math.abs(shortExcessQty);
+        shortPct = totalTarget > 0 ? Number(((shortQty / totalTarget) * 100).toFixed(1)) : 0;
       } else if (shortExcessQty === 0) {
         status = 'achieved';
       } else {
@@ -157,8 +170,12 @@ export function calculatePartMetrics(line, part = 'output') {
     workingHours,
     totalTarget,
     totalActual,
+    enteredHoursCount,
+    missingHoursCount,
+    sumHourDiff,
     achievement,
     shortExcessQty,
+    shortQty,
     shortPct,
     excessPct,
     status, // 'no_target' | 'pending' | 'short' | 'achieved' | 'excess'
@@ -177,6 +194,8 @@ export function calculatePartHourlyBreakdown(line, part = 'output') {
   const hourly = [];
   let runningActual = 0;
   let hasStarted = false;
+  let sumHourDiff = null;
+  let enteredHoursCount = 0;
 
   for (let hr = 1; hr <= 10; hr++) {
     const hObj = (line.hours || []).find((h) => (h.hourNo ?? h.hour_no) === hr) || {};
@@ -188,13 +207,14 @@ export function calculatePartHourlyBreakdown(line, part = 'output') {
     if (hasEntered) {
       runningActual += hourActual;
       hasStarted = true;
+      enteredHoursCount++;
     }
 
     // Cumulative target counts up to min(hr, workingHours)
     const cumTarget = hourTarget !== null ? hourTarget * Math.min(hr, workingHours) : null;
     const cumActual = hasStarted ? runningActual : null;
 
-    // Short/Excess for this hour = cumulative actual - cumulative target
+    // Running Short/Excess for this hour (জমা) = cumulative actual - cumulative target
     const shortExcess = (hasStarted && cumTarget !== null) ? runningActual - cumTarget : null;
 
     // Remaining Target for this hour = Total Target - cumulative actual (never below 0 for display)
@@ -202,8 +222,16 @@ export function calculatePartHourlyBreakdown(line, part = 'output') {
       ? Math.max(0, totalTarget - runningActual)
       : (totalTarget !== null && !hasStarted ? totalTarget : null);
 
-    // Difference for this single hour vs Hour Target
-    const hourDiff = (hourActual !== null && hourTarget !== null) ? hourActual - hourTarget : null;
+    // Difference for this single hour vs Hour Target (per-hour shortage)
+    const hourDiff = (hasEntered && hourTarget !== null) ? hourActual - hourTarget : null;
+
+    if (hourDiff !== null) {
+      sumHourDiff = (sumHourDiff || 0) + hourDiff;
+    }
+
+    const tooltip = (hasEntered && hourTarget !== null)
+      ? `Hour ${String(hr).padStart(2, '0')}: target ${hourTarget}, actual ${hourActual}, short/excess ${hourDiff > 0 ? `+${hourDiff}` : hourDiff}`
+      : null;
 
     hourly.push({
       hourNo: hr,
@@ -213,12 +241,18 @@ export function calculatePartHourlyBreakdown(line, part = 'output') {
       shortExcess,
       remaining,
       hourDiff,
+      tooltip,
     });
   }
+
+  const missingHoursCount = Math.max(0, workingHours - enteredHoursCount);
 
   return {
     metrics,
     hourly,
+    sumHourDiff,
+    enteredHoursCount,
+    missingHoursCount,
   };
 }
 
@@ -232,8 +266,10 @@ export function calculateManagementSummary(linesList = []) {
   parts.forEach((p) => {
     let sumTarget = 0;
     let sumActual = 0;
+    let sumShortExcess = 0;
     let hasTarget = false;
     let hasActual = false;
+    let hasAnyWithActual = false;
 
     linesList.forEach((line) => {
       const m = calculatePartMetrics(line, p);
@@ -244,12 +280,16 @@ export function calculateManagementSummary(linesList = []) {
           sumActual += m.totalActual;
           hasActual = true;
         }
+        if (m.shortExcessQty !== null) {
+          sumShortExcess += m.shortExcessQty;
+          hasAnyWithActual = true;
+        }
       }
     });
 
     const totalTarget = hasTarget ? sumTarget : null;
     const totalActual = hasActual ? sumActual : (hasTarget ? 0 : null);
-    const shortExcessQty = (totalTarget !== null && totalActual !== null) ? totalActual - totalTarget : null;
+    const shortExcessQty = hasAnyWithActual ? sumShortExcess : null;
     const shortQty = shortExcessQty !== null && shortExcessQty < 0 ? Math.abs(shortExcessQty) : 0;
     const shortPct = (totalTarget && totalTarget > 0 && shortQty > 0)
       ? Number(((shortQty / totalTarget) * 100).toFixed(1))

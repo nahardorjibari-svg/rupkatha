@@ -604,7 +604,7 @@ export const SewingReports = () => {
                           </td>
                         </tr>
 
-                        {/* SHORT / EXCESS ROWS */}
+                        {/* GROUP 1: HOUR SHORT / EXCESS (প্রতি ঘণ্টা) - Main, bold, placed first */}
                         {['back', 'front', 'output', 'asm'].map((pKey, pIdx) => {
                           const breakdown =
                             pKey === 'back'
@@ -622,12 +622,106 @@ export const SewingReports = () => {
                               : pKey === 'asm'
                               ? 'A.S.M'
                               : 'Out Put';
+                          const stripeClass =
+                            pKey === 'back'
+                              ? 'border-l-4 border-blue-500 text-blue-600 dark:text-blue-400'
+                              : pKey === 'front'
+                              ? 'border-l-4 border-purple-500 text-purple-600 dark:text-purple-400'
+                              : pKey === 'asm'
+                              ? 'border-l-4 border-amber-500 text-amber-600 dark:text-amber-400'
+                              : 'border-l-4 border-[#0F8B8D] text-[#0F8B8D] dark:text-[#2BA5B5]';
                           const m = breakdown.metrics;
 
                           return (
-                            <tr key={`rep_short_${pKey}`} className="bg-rose-500/5">
-                              <td className="p-1 border border-[#1E293B] text-center font-bold text-[11px] text-rose-600 dark:text-rose-400">
-                                {partLabel} Short/Excess
+                            <tr key={`rep_hour_short_${pKey}`} className="bg-rose-500/10 font-mono">
+                              <td className={`p-1.5 border border-[#1E293B] text-center font-extrabold text-xs ${stripeClass}`}>
+                                {partLabel} Short/Excess (Hr)
+                              </td>
+                              <td className="p-1 border border-[#1E293B] text-center font-mono text-slate-400 text-xs">-</td>
+                              <td className="p-1 border border-[#1E293B] text-center font-mono text-slate-400 text-xs">-</td>
+                              {breakdown.hourly.map((hB, hIdx) => {
+                                const diff = hB.hourDiff;
+                                let color = 'text-slate-400';
+                                let text = '-';
+                                if (diff !== null) {
+                                  if (diff < 0) {
+                                    text = `${diff}`;
+                                    color = isDark ? 'bg-rose-950/70 text-rose-300 font-black' : 'bg-rose-100 text-rose-700 font-black';
+                                  } else if (diff === 0) {
+                                    text = '0';
+                                    color = isDark ? 'bg-emerald-950/70 text-emerald-300 font-black' : 'bg-emerald-100 text-emerald-700 font-black';
+                                  } else {
+                                    text = `+${diff}`;
+                                    color = isDark ? 'bg-amber-950/70 text-amber-300 font-black' : 'bg-amber-100 text-amber-700 font-black';
+                                  }
+                                }
+                                return (
+                                  <td
+                                    key={hIdx}
+                                    title={hB.tooltip || undefined}
+                                    className={`p-1 border border-[#1E293B] text-center font-mono text-xs ${color}`}
+                                  >
+                                    {text}
+                                  </td>
+                                );
+                              })}
+                              <td className="p-1 border border-[#1E293B] text-center font-black text-xs align-middle">
+                                {breakdown.sumHourDiff !== null ? (
+                                  breakdown.sumHourDiff < 0 ? (
+                                    <span className="text-rose-600 dark:text-rose-400 font-black">{breakdown.sumHourDiff}</span>
+                                  ) : breakdown.sumHourDiff === 0 ? (
+                                    <span className="text-emerald-600 dark:text-emerald-400 font-black">0</span>
+                                  ) : (
+                                    <span className="text-amber-600 dark:text-amber-400 font-black">+{breakdown.sumHourDiff}</span>
+                                  )
+                                ) : (
+                                  '-'
+                                )}
+                                {breakdown.missingHoursCount > 0 && breakdown.enteredHoursCount > 0 && (
+                                  <div className="text-[9px] text-slate-400 font-normal leading-tight mt-0.5 font-sans">
+                                    {breakdown.missingHoursCount} hrs not entered
+                                  </div>
+                                )}
+                              </td>
+                              <td className="p-1 border border-[#1E293B] text-center text-[10px] text-slate-400">
+                                {m.shortPct ? `Short ${m.shortPct}%` : m.status === 'achieved' ? '100% Achieved' : ''}
+                              </td>
+                            </tr>
+                          );
+                        })}
+
+                        {/* GROUP 2: RUNNING SHORT / EXCESS (জমা) - Smaller, muted text */}
+                        {['back', 'front', 'output', 'asm'].map((pKey, pIdx) => {
+                          const breakdown =
+                            pKey === 'back'
+                              ? backBreakdown
+                              : pKey === 'front'
+                              ? frontBreakdown
+                              : pKey === 'asm'
+                              ? asmBreakdown
+                              : outputBreakdown;
+                          const partLabel =
+                            pKey === 'back'
+                              ? 'Back'
+                              : pKey === 'front'
+                              ? 'Front'
+                              : pKey === 'asm'
+                              ? 'A.S.M'
+                              : 'Out Put';
+                          const stripeClass =
+                            pKey === 'back'
+                              ? 'border-l-2 border-blue-400 text-blue-500'
+                              : pKey === 'front'
+                              ? 'border-l-2 border-purple-400 text-purple-500'
+                              : pKey === 'asm'
+                              ? 'border-l-2 border-amber-400 text-amber-500'
+                              : 'border-l-2 border-[#0F8B8D]/80 text-[#0F8B8D]';
+                          const m = breakdown.metrics;
+
+                          return (
+                            <tr key={`rep_run_short_${pKey}`} className="bg-slate-500/5 font-mono text-[10px] opacity-85">
+                              <td className={`p-1 border border-[#1E293B] text-center font-bold ${stripeClass}`}>
+                                {partLabel} Running (জমা)
                               </td>
                               <td className="p-1 border border-[#1E293B] text-center font-mono text-slate-400">-</td>
                               <td className="p-1 border border-[#1E293B] text-center font-mono text-slate-400">-</td>
@@ -638,36 +732,36 @@ export const SewingReports = () => {
                                 if (s !== null) {
                                   if (s < 0) {
                                     text = `${s}`;
-                                    color = 'text-rose-600 dark:text-rose-400 font-bold';
+                                    color = 'text-rose-600/80 dark:text-rose-400/80 font-bold';
                                   } else if (s === 0) {
                                     text = '0';
-                                    color = 'text-emerald-600 dark:text-emerald-400 font-bold';
+                                    color = 'text-emerald-600/80 dark:text-emerald-400/80 font-bold';
                                   } else {
                                     text = `+${s}`;
-                                    color = 'text-amber-600 dark:text-amber-400 font-bold';
+                                    color = 'text-amber-600/80 dark:text-amber-400/80 font-bold';
                                   }
                                 }
                                 return (
-                                  <td key={hIdx} className={`p-1 border border-[#1E293B] text-center font-mono text-[11px] ${color}`}>
+                                  <td key={hIdx} className={`p-1 border border-[#1E293B] text-center font-mono ${color}`}>
                                     {text}
                                   </td>
                                 );
                               })}
-                              <td className="p-1 border border-[#1E293B] text-center font-black">
+                              <td className="p-1 border border-[#1E293B] text-center font-bold">
                                 {m.shortExcessQty !== null ? (
                                   m.shortExcessQty < 0 ? (
-                                    <span className="text-rose-600 dark:text-rose-400">{m.shortExcessQty}</span>
+                                    <span className="text-rose-600/80 dark:text-rose-400/80">{m.shortExcessQty}</span>
                                   ) : m.shortExcessQty === 0 ? (
-                                    <span className="text-emerald-600 dark:text-emerald-400">0</span>
+                                    <span className="text-emerald-600/80 dark:text-emerald-400/80">0</span>
                                   ) : (
-                                    <span className="text-amber-600 dark:text-amber-400">+{m.shortExcessQty}</span>
+                                    <span className="text-amber-600/80 dark:text-amber-400/80">+{m.shortExcessQty}</span>
                                   )
                                 ) : (
                                   '-'
                                 )}
                               </td>
-                              <td className="p-1 border border-[#1E293B] text-center text-[10px] text-slate-400">
-                                {m.shortPct ? `Short ${m.shortPct}%` : ''}
+                              <td className="p-1 border border-[#1E293B] text-center text-[9px] text-slate-400">
+                                Cumulative
                               </td>
                             </tr>
                           );
