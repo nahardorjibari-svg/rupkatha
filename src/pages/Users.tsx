@@ -188,38 +188,31 @@ export const Users: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      const permissionsArray = formRole === 'admin'
+        ? []
+        : Object.entries(formPermissions)
+            .filter(([_, enabled]) => enabled)
+            .map(([key, _]) => key);
+
       const { error: rpcErr } = await supabase.rpc('admin_update_user', {
         target_id: editingProfile.id,
-        new_role: formRole,
-        new_unit: formUnit,
-        new_full_name: trimmedName,
-        new_is_active: formIsActive,
-        new_permissions: formPermissions,
+        new_role: formRole === editingProfile.role ? null : formRole,
+        new_unit: formUnit === editingProfile.unit ? null : formUnit,
+        new_full_name: trimmedName === editingProfile.full_name ? null : trimmedName,
+        new_is_active: formIsActive === (editingProfile.is_active ?? true) ? null : formIsActive,
+        new_permissions: permissionsArray,
       });
 
       if (rpcErr) {
-        throw new Error(rpcErr.message);
+        throw rpcErr;
       }
 
       toast.success(`Profile for ${trimmedName} updated successfully!`);
 
-      setProfiles((prev) =>
-        prev.map((p) =>
-          p.id === editingProfile.id
-            ? {
-                ...p,
-                full_name: trimmedName,
-                role: formRole,
-                unit: formUnit,
-                is_active: formIsActive,
-                permissions: formPermissions,
-              }
-            : p
-        )
-      );
-
+      await loadProfiles();
       setEditingProfile(null);
     } catch (err: any) {
+      console.error('Failed to update user:', err);
       toast.error(err?.message || 'Database error: Could not execute admin_update_user RPC.');
     } finally {
       setIsSubmitting(false);
