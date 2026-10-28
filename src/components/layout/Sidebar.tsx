@@ -295,19 +295,23 @@ export const Sidebar: React.FC = () => {
 
         <div className="flex-1 overflow-y-auto py-3 px-2 space-y-4 scrollbar-custom">
           {(() => {
-            const userPermissions = profile?.permissions || {};
+            const userPermissions = profile?.permissions || [];
 
-            const canAccessItem = (item: any) => {
-              if (item.id === 'dashboard') return true;
+            const canAccessItem = (item: any): boolean => {
+              if (item.id === 'dashboard' && isAdmin) return true;
+              if (item.id === 'dashboard' && !isAdmin) return false;
               if (item.isAdminOnly) return isAdmin;
               if (isAdmin) return true;
-              return !!userPermissions[item.id];
+              return userPermissions.includes(item.id);
             };
 
-            const visibleGroups = ERP_MODULES.map((group) => ({
-              ...group,
-              items: group.items.filter(canAccessItem),
-            })).filter((group) => group.items.length > 0);
+            const visibleGroups = ERP_MODULES.map((group) => {
+              const filteredItems = group.items.filter(canAccessItem);
+              return {
+                ...group,
+                items: filteredItems,
+              };
+            }).filter((group) => group.items.length > 0);
 
             return visibleGroups.map((group) => (
               <div key={group.group} className="space-y-1">
@@ -427,7 +431,7 @@ export const Sidebar: React.FC = () => {
                           {/* Children List */}
                           {(!isMini || mobileOpen) && isExpanded && item.children && (
                             <div className="pl-6 space-y-1 border-l border-white/10 ml-4 my-1">
-                              {item.children.map((child: any) => {
+                              {item.children.map((child) => {
                                 const isChildActive = location.pathname === child.path;
                                 return (
                                   <NavLink

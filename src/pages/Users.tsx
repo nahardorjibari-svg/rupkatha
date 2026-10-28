@@ -88,12 +88,21 @@ export const Users: React.FC = () => {
         .select('id, full_name, email, role, unit, is_active, permissions, last_login')
         .order('full_name', { ascending: true });
 
-      if (fetchErr) {
-        throw new Error(fetchErr.message);
-      }
-      setProfiles((data as UserProfile[]) || []);
+      if (fetchErr) throw fetchErr;
+      
+      const normalizedData = (data || []).map((p: any) => {
+        let perms: string[] = [];
+        if (Array.isArray(p.permissions)) {
+          perms = p.permissions;
+        } else if (typeof p.permissions === 'object' && p.permissions !== null) {
+          perms = Object.keys(p.permissions).filter(k => (p.permissions as any)[k]);
+        }
+        return { ...p, permissions: perms };
+      });
+
+      setProfiles(normalizedData);
     } catch (err: any) {
-      setError(err?.message || 'Failed to load staff profiles from Supabase.');
+      setError(err?.message || 'Failed to load staff profiles.');
     } finally {
       setLoading(false);
     }
@@ -134,7 +143,13 @@ export const Users: React.FC = () => {
     setFormRole(p.role as UserRole);
     setFormUnit(p.unit as FactoryUnit);
     setFormIsActive(p.is_active ?? true);
-    setFormPermissions(p.permissions || {});
+    
+    // Transform array permissions to object for checkboxes
+    const permObj: Record<string, boolean> = {};
+    if (Array.isArray(p.permissions)) {
+      p.permissions.forEach(k => { permObj[k] = true; });
+    }
+    setFormPermissions(permObj);
   };
 
   const closeEditDrawer = () => {
@@ -188,6 +203,7 @@ export const Users: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      // Always send a real array of strings for permissions
       const permissionsArray = formRole === 'admin'
         ? []
         : Object.entries(formPermissions)
@@ -196,19 +212,16 @@ export const Users: React.FC = () => {
 
       const { error: rpcErr } = await supabase.rpc('admin_update_user', {
         target_id: editingProfile.id,
-        new_role: formRole === editingProfile.role ? null : formRole,
-        new_unit: formUnit === editingProfile.unit ? null : formUnit,
-        new_full_name: trimmedName === editingProfile.full_name ? null : trimmedName,
-        new_is_active: formIsActive === (editingProfile.is_active ?? true) ? null : formIsActive,
+        new_role: formRole,
+        new_unit: formUnit,
+        new_full_name: trimmedName,
+        new_is_active: formIsActive,
         new_permissions: permissionsArray,
       });
 
-      if (rpcErr) {
-        throw rpcErr;
-      }
+      if (rpcErr) throw rpcErr;
 
       toast.success(`Profile for ${trimmedName} updated successfully!`);
-
       await loadProfiles();
       setEditingProfile(null);
     } catch (err: any) {
@@ -233,7 +246,7 @@ export const Users: React.FC = () => {
         new_unit: p.unit,
         new_full_name: p.full_name,
         new_is_active: nextState,
-        new_permissions: p.permissions || {},
+        new_permissions: p.permissions || [],
       });
 
       if (rpcErr) throw new Error(rpcErr.message);

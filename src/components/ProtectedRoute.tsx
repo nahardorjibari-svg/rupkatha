@@ -34,12 +34,33 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
 
   const isAdmin = profile?.role === 'admin';
 
+  // For non-admins attempting to access any /admin/* route
+  if (!isAdmin && location.pathname.startsWith('/admin')) {
+    // Only redirect if they have at least one permission, otherwise they should go to dashboard
+    const permissions = profile?.permissions || [];
+    if (permissions.length > 0) {
+      toast.error('You do not have permission to access administration pages.');
+      // Special case: if they have sewing, send to sewing report
+      if (permissions.includes('sewing')) {
+        return <Navigate to="/sewing/report" replace />;
+      }
+      // Otherwise send to their first module (would need mapping, but for now /dashboard is safe fallback or first item)
+      return <Navigate to="/dashboard" replace />;
+    }
+  }
+
   // Check role permissions if specified
   if (allowedRoles && allowedRoles.length > 0) {
     const userRole = profile?.role;
     const isAllowed = userRole && allowedRoles.includes(userRole);
 
     if (!isAllowed) {
+      // For non-admins, redirect instead of showing the ShieldAlert page
+      if (!isAdmin) {
+        toast.error('Access restricted to administrators.');
+        return <Navigate to="/dashboard" replace />;
+      }
+
       const currentRoleLabel = userRole ? ROLE_LABELS[userRole]?.en || userRole : 'Operator';
 
       return (
@@ -51,7 +72,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
 
             <h2 className="text-xl font-bold text-slate-900 mb-2">Access Restricted</h2>
             <p className="text-sm text-slate-600 mb-6 leading-relaxed">
-              Your profile (<strong className="font-semibold text-slate-800">{currentRoleLabel}</strong>) does not have permission to access the System Administration panel.
+              Your profile (<strong className="font-semibold text-slate-800">{currentRoleLabel}</strong>) does not have permission to access this section.
             </p>
 
             <div className="space-y-3">
@@ -60,7 +81,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
                 className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-[#0F8B8D] hover:bg-[#0b686a] rounded-xl transition-colors shadow-sm"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Return to Factory Dashboard
+                Return to Dashboard
               </Link>
 
               <button
@@ -80,8 +101,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
 
   // Check required module permission if specified
   if (requiredModule && !isAdmin) {
-    const permissions = profile?.permissions || {};
-    if (!permissions[requiredModule]) {
+    const permissions = profile?.permissions || [];
+    if (!permissions.includes(requiredModule)) {
+      toast.error(`You do not have access to the ${requiredModule} module.`);
       return <Navigate to="/dashboard" replace />;
     }
   }

@@ -28,7 +28,7 @@ interface TopBarProps {
 
 export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu }) => {
   const { profile, signOut } = useAuth();
-  const { selectedUnit, setSelectedUnit } = useUnit();
+  const { activeUnit, setActiveUnit } = useUnit();
   const { isDark } = useTheme();
   const { mode, show, setMobileOpen, lastVisibleMode } = useSidebar();
   const location = useLocation();
@@ -61,11 +61,21 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu }) => {
     if (location.pathname === '/admin/settings') {
       return { title: 'Company & System Settings', bangla: 'সিস্টেম ও ব্র্যান্ড সেটিংস', breadcrumb: 'Settings' };
     }
+    if (location.pathname === '/sewing/report') {
+      return { title: 'Hourly Production Report', bangla: 'ঘণ্টাভিত্তিক প্রোডাকশন রিপোর্ট', breadcrumb: 'Sewing' };
+    }
+    if (location.pathname === '/sewing/dashboard') {
+      return { title: 'Production Dashboard', bangla: 'সুইং প্রোডাকশন ড্যাশবোর্ড', breadcrumb: 'Sewing' };
+    }
+    if (location.pathname === '/sewing/reports') {
+      return { title: 'Reports & Exports', bangla: 'রিপোর্ট ও এক্সপোর্ট', breadcrumb: 'Sewing' };
+    }
     return { title: 'Executive Overview', bangla: 'ফ্যাক্টরি ড্যাশবোর্ড ওভারভিউ', breadcrumb: 'Dashboard' };
   };
 
   const pageMeta = getPageMeta();
-  const roleName = profile?.role ? ROLE_LABELS[profile.role]?.en : 'Administrator';
+  const roleName = profile?.role ? ROLE_LABELS[profile.role]?.en || 'Staff' : 'Staff';
+  const isAdmin = profile?.role === 'admin';
 
   const handleLogout = async () => {
     setDropdownOpen(false);
@@ -158,7 +168,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu }) => {
 
         <div className="flex flex-col truncate">
           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#475569] uppercase tracking-wider">
-            <span>Admin</span>
+            <span>ERP</span>
             <span>/</span>
             <span className="text-[#0E7490] font-bold">{pageMeta.breadcrumb}</span>
           </div>
@@ -214,13 +224,13 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu }) => {
           }`}
         >
           {unitOptions.map((opt) => {
-            const isActive = selectedUnit === opt.id;
+            const isActive = activeUnit === opt.id;
             return (
               <button
                 key={opt.id}
                 type="button"
                 onClick={() => {
-                  setSelectedUnit(opt.id);
+                  setActiveUnit(opt.id);
                   toast.success(`Unit filter: ${opt.label} (${opt.bangla})`, {
                     id: 'unit-toast',
                     duration: 1500,
@@ -339,7 +349,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu }) => {
                 {profile?.full_name || 'Admin'}
               </span>
               <span className="text-[10px] text-[#2BA5B5] font-semibold mt-0.5">
-                Admin
+                {roleName}
               </span>
             </div>
 

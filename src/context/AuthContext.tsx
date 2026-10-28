@@ -1,22 +1,45 @@
 /**
- * AuthContext.jsx
+ * AuthContext.tsx
  * Manages Supabase session, user profile, login, logout, and route authorization
- * (src/context/AuthContext.jsx)
  */
 
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase, setRememberMePreference } from '../lib/supabaseClient';
+import type { Session, User } from '@supabase/supabase-js';
+import type { UserRole, FactoryUnit } from '../lib/constants';
 
-const AuthContext = createContext(undefined);
+export interface UserProfile {
+  id: string;
+  full_name: string;
+  role: UserRole;
+  unit: FactoryUnit;
+  is_active: boolean;
+  permissions: string[];
+  last_login?: string | null;
+  email?: string;
+}
 
-export const AuthProvider = ({ children }) => {
-  const [session, setSession] = useState(null);
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
+interface AuthContextType {
+  session: Session | null;
+  user: User | null;
+  profile: UserProfile | null;
+  loading: boolean;
+  signIn: (args: { email: string; password: string; rememberMe?: boolean }) => Promise<{ user: User; profile: UserProfile }>;
+  signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ success: boolean; message: string }>;
+  refreshProfile: () => Promise<UserProfile | null>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user profile from the "profiles" table (id, full_name, role, unit, is_active)
-  const fetchProfile = useCallback(async (userId) => {
+  // Fetch user profile from the "profiles" table
+  const fetchProfile = useCallback(async (userId: string): Promise<UserProfile | null> => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -28,7 +51,18 @@ export const AuthProvider = ({ children }) => {
         console.warn('Error fetching profile from Supabase:', error.message);
         return null;
       }
-      return data;
+      
+      // Ensure permissions is an array
+      const rawPermissions = data.permissions;
+      let permissions: string[] = [];
+      if (Array.isArray(rawPermissions)) {
+        permissions = rawPermissions;
+      } else if (typeof rawPermissions === 'object' && rawPermissions !== null) {
+        // Handle legacy object format if it exists, converting truthy keys to array
+        permissions = Object.keys(rawPermissions).filter(key => (rawPermissions as any)[key]);
+      }
+
+      return { ...data, permissions };
     } catch (err) {
       console.error('Unexpected error fetching profile:', err);
       return null;
@@ -36,7 +70,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Update only the last_login column
-  const updateLastLogin = useCallback(async (userId) => {
+  const updateLastLogin = useCallback(async (userId: string) => {
     try {
       await supabase
         .from('profiles')
@@ -49,12 +83,13 @@ export const AuthProvider = ({ children }) => {
 
   // Handle session change & profile population
   const handleSession = useCallback(
-    async (currentSession) => {
+    async (currentSession: Session | null) => {
       setSession(currentSession);
-      setUser(currentSession?.user || null);
+      const currentUser = currentSession?.user || null;
+      setUser(currentUser);
 
-      if (currentSession?.user) {
-        const userProf = await fetchProfile(currentSession.user.id);
+      if (currentUser) {
+        const userProf = await fetchProfile(currentUser.id);
         if (userProf) {
           if (!userProf.is_active) {
             // Disabled account: force logout immediately
@@ -68,17 +103,17 @@ export const AuthProvider = ({ children }) => {
           setProfile(userProf);
         } else {
           // Fallback if profile row is not yet created in Supabase
-          const fallbackProfile = {
-            id: currentSession.user.id,
-            email: currentSession.user.email || '',
+          const fallbackProfile: UserProfile = {
+            id: currentUser.id,
+            email: currentUser.email || '',
             full_name:
-              currentSession.user.user_metadata?.full_name ||
-              currentSession.user.email?.split('@')[0] ||
+              currentUser.user_metadata?.full_name ||
+              currentUser.email?.split('@')[0] ||
               'Factory Member',
-            role: currentSession.user.user_metadata?.role || 'user',
+            role: (currentUser.user_metadata?.role as any) || 'user',
             unit: 'all',
             is_active: true,
-            permissions: currentSession.user.user_metadata?.permissions || {},
+            permissions: [],
             last_login: new Date().toISOString(),
           };
           setProfile(fallbackProfile);
@@ -118,15 +153,7 @@ export const AuthProvider = ({ children }) => {
     };
   }, [handleSession]);
 
-  /**
-   * Primary signIn implementation:
-   * 1. saves "Remember me" preference
-   * 2. executes supabase.auth.signInWithPassword
-   * 3. fetches the row from "profiles" (id, full_name, role, unit, is_active)
-   * 4. if is_active = false, signs out immediately and shows "Your account is disabled. Contact admin."
-   * 5. updates profiles.last_login on successful login (only last_login)
-   */
-  const signIn = async ({ email, password, rememberMe }) => {
+  const signIn = async ({ email, password, rememberMe }: { email: string; password: string; rememberMe?: boolean }) => {
     if (rememberMe !== undefined) {
       setRememberMePreference(rememberMe);
     }
@@ -145,7 +172,7 @@ export const AuthProvider = ({ children }) => {
         email: trimmedEmail,
         password,
       });
-    } catch (err) {
+    } catch (err: any) {
       if (err?.message?.toLowerCase().includes('failed to fetch') || err?.message?.toLowerCase().includes('network')) {
         throw new Error('Network error. Please check your internet connection and try again.');
       }
@@ -183,13 +210,14 @@ export const AuthProvider = ({ children }) => {
     // Update last_login timestamp on successful login
     await updateLastLogin(authUser.id);
 
-    const finalProfile = userProfile || {
+    const finalProfile: UserProfile = userProfile || {
       id: authUser.id,
       email: authUser.email || trimmedEmail,
       full_name: authUser.user_metadata?.full_name || trimmedEmail.split('@')[0],
-      role: authUser.user_metadata?.role || 'user',
+      role: (authUser.user_metadata?.role as any) || 'user',
       unit: 'all',
       is_active: true,
+      permissions: [],
       last_login: new Date().toISOString(),
     };
 
@@ -212,7 +240,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const resetPassword = async (email) => {
+  const resetPassword = async (email: string) => {
     const trimmed = email.trim();
     if (!trimmed) {
       throw new Error('Please enter the email address associated with your factory account.');

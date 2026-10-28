@@ -1,9 +1,29 @@
 /**
  * System Modules Configuration & Permissions
- * Rupkatha Apparels Ltd. (src/config/modules.js)
+ * Rupkatha Apparels Ltd. (src/config/modules.ts)
  */
 
-export const ERP_MODULES = [
+export interface ModuleItem {
+  id: string;
+  name: string;
+  nameBangla: string;
+  path: string;
+  icon: string;
+  badge?: string | null;
+  description: string;
+  status: 'active' | 'coming_soon';
+  isTickable?: boolean;
+  isAdminOnly?: boolean;
+  children?: ModuleItem[];
+}
+
+export interface ModuleGroup {
+  group: string;
+  groupBangla: string;
+  items: ModuleItem[];
+}
+
+export const ERP_MODULES: ModuleGroup[] = [
   // 1. Core Administrative Modules (Active)
   {
     group: 'Main',
@@ -243,7 +263,7 @@ export const PERMISSION_CATEGORIES = [
   },
 ];
 
-export const ROLE_PRESETS = {
+export const ROLE_PRESETS: Record<string, { name: string; permissions: Record<string, boolean> }> = {
   merchandiser: {
     name: 'Merchandiser Preset',
     permissions: { merchandising: true, sampling: true, commercial: true },

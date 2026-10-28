@@ -54,9 +54,11 @@ export type UserRole =
   | 'hr'
   | 'commercial'
   | 'qc'
+  | 'manager'
+  | 'operator'
   | 'user';
 
-export type FactoryUnit = 'all' | 'knit' | 'woven';
+export type FactoryUnit = 'all' | 'knit' | 'woven' | 'both';
 
 export interface UserProfile {
   id: string;
@@ -78,11 +80,14 @@ export const ROLE_LABELS: Record<UserRole, { en: string; bn: string }> = {
   hr: { en: 'HR & Compliance', bn: 'এইচআর ও কমপ্লায়েন্স' },
   commercial: { en: 'Commercial Manager', bn: 'কমার্শিয়াল ম্যানেজার' },
   qc: { en: 'Quality Assurance Head', bn: 'কিউএ হেড' },
-  user: { en: 'Operator', bn: 'অপারেটর' },
+  manager: { en: 'Manager', bn: 'ম্যানেজার' },
+  operator: { en: 'Operator', bn: 'অপারেটর' },
+  user: { en: 'General User', bn: 'ইউজার' },
 };
 
 export const UNIT_LABELS: Record<FactoryUnit, { en: string; bn: string }> = {
   all: { en: 'All Units (Composite)', bn: 'সকল ইউনিট (কম্পোজিট)' },
   knit: { en: 'Knit Division', bn: 'নিট ডিভিশন' },
   woven: { en: 'Woven Division', bn: 'উভেন ডিভিশন' },
+  both: { en: 'Both Knit & Woven', bn: 'উভয় ইউনিট' },
 };
