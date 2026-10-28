@@ -2,7 +2,7 @@
  * Sewing Hourly Production Report Entry Page (Per-Hour Lock Model)
  * Rupkatha Apparels Ltd. (src/pages/sewing/SewingReportEntry.jsx)
  */
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { useTheme } from '../../context/ThemeContext';
 import { useCompany } from '../../context/CompanyContext';
