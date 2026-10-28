@@ -179,32 +179,46 @@ export const SewingReportEntry = () => {
     return () => unsubscribe();
   }, [loadReportData]);
 
-  const saveTimeoutRef = useRef(null);
-  const handleSaveAll = async (updatedLines) => {
+  // Unsaved changes warning when user navigates away or closes tab
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
+  const handleSaveAll = async (linesToSave) => {
+    const dataToSave = linesToSave || lines;
     try {
       setSaving(true);
       const res = await saveSewingReport({
         reportDate: date,
         factoryUnit,
-        lines: updatedLines || lines,
+        lines: dataToSave,
         createdByName: userName,
       });
-      if (res?.reportId && !reportId) {
+      if (res?.reportId) {
         setReportId(res.reportId);
-        const locks = await fetchHourLocks(res.reportId);
-        setHourLocks(locks);
       }
       setLastSaved(new Date());
       setIsDirty(false);
-      toast.success('Changes saved to database.');
+      toast.success('All changes saved to database.');
+      // Reload the saved values from server to keep cumulative & total calculations in sync
+      await loadReportData();
+      return true;
     } catch (err) {
       console.error('Save error detailed:', err);
       if (err?.message?.includes('RLS') || err?.message?.includes('locked')) {
         toast.error('This hour is submitted and locked. Changes reverted.');
-        loadReportData();
+        await loadReportData();
       } else {
-        toast.error(`Failed to save data: ${err?.message || 'Unknown error'}`);
+        toast.error(err?.message || 'Failed to save data.');
       }
+      return false;
     } finally {
       setSaving(false);
     }
@@ -261,84 +275,105 @@ export const SewingReportEntry = () => {
   };
 
   const handleSubmitHour = async (hourNo) => {
-    if (!reportId) {
-      // Save first to get reportId
-      try {
-        setSaving(true);
-        const res = await saveSewingReport({
-          reportDate: date,
-          factoryUnit,
-          lines,
-          createdByName: userName,
-        });
-        setReportId(res.reportId);
-        await submitHourLock(res.reportId, hourNo);
-        const locks = await fetchHourLocks(res.reportId);
-        setHourLocks(locks);
-        toast.success(`Hour ${String(hourNo).padStart(2, '0')} submitted and locked successfully.`);
-      } catch (err) {
-        toast.error('Failed to submit hour.');
-      } finally {
-        setSaving(false);
-      }
+    if (isDirty) {
+      const wantSave = window.confirm(`You have unsaved changes. Save all changes before submitting Hour ${String(hourNo).padStart(2, '0')}?`);
+      if (!wantSave) return;
+      const ok = await handleSaveAll(lines);
+      if (!ok) return;
+    }
+
+    const currentReportId = reportId;
+    if (!currentReportId) {
+      toast.error('Report must be saved first.');
       return;
     }
 
     try {
-      await submitHourLock(reportId, hourNo);
-      const locks = await fetchHourLocks(reportId);
+      await submitHourLock(currentReportId, hourNo);
+      const locks = await fetchHourLocks(currentReportId);
       setHourLocks(locks);
       toast.success(`Hour ${String(hourNo).padStart(2, '0')} submitted and locked successfully.`);
+      await loadReportData();
     } catch (err) {
-      toast.error('Failed to submit hour lock.');
+      toast.error(err?.message || 'Failed to submit hour lock.');
     }
   };
 
   const handleReopenHour = async (hourNo) => {
-    if (!isAdmin) return;
+    if (!isAdmin || !reportId) return;
     if (window.confirm(`Reopen Hour ${String(hourNo).padStart(2, '0')} for editing?`)) {
       try {
         await reopenHourLock(reportId, hourNo);
         const locks = await fetchHourLocks(reportId);
         setHourLocks(locks);
         toast.success(`Hour ${String(hourNo).padStart(2, '0')} reopened successfully.`);
+        await loadReportData();
       } catch (err) {
-        toast.error('Failed to reopen hour.');
+        toast.error(err?.message || 'Failed to reopen hour.');
       }
     }
   };
 
   const handleSubmitAllFilled = async () => {
-    if (!reportId) {
+    if (isDirty) {
+      const wantSave = window.confirm('You have unsaved changes. Save all changes before submitting hours?');
+      if (!wantSave) return;
+      const ok = await handleSaveAll(lines);
+      if (!ok) return;
+    }
+
+    const currentReportId = reportId;
+    if (!currentReportId) {
       toast.error('Please save report first.');
       return;
     }
-    for (let h = 1; h <= 10; h++) {
-      if (isHourFilled(h) && !hourLocks.some((l) => l.hour_no === h)) {
-        try {
-          await submitHourLock(reportId, h);
-        } catch (err) {
-          console.error(`Failed to lock hour ${h}`);
+
+    try {
+      for (let h = 1; h <= 10; h++) {
+        if (isHourFilled(h) && !hourLocks.some((l) => l.hour_no === h)) {
+          try {
+            await submitHourLock(currentReportId, h);
+          } catch (err) {
+            console.error(`Failed to lock hour ${h}:`, err);
+          }
         }
       }
+      const locks = await fetchHourLocks(currentReportId);
+      setHourLocks(locks);
+      toast.success('All filled hours submitted.');
+      await loadReportData();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to submit all filled hours.');
     }
-    const locks = await fetchHourLocks(reportId);
-    setHourLocks(locks);
-    toast.success('All filled hours submitted.');
   };
 
-  const getCumulativeAtHour = (line, hourNo) => {
+  // Cumulative calculation: running sum of all entered hours up to hourNo (1-10)
+  // Shown only from the first entered hour onward and carried over blank hours.
+  const getCumulativeAtHour = (line, field, hourNo) => {
     let sum = 0;
-    let hasVal = false;
+    let hasStarted = false;
     for (let i = 0; i < hourNo; i++) {
-      const q = line.hours[i]?.output_qty;
+      const q = line.hours[i]?.[field];
       if (q !== '' && q !== null && q !== undefined && !isNaN(Number(q))) {
         sum += Number(q);
-        hasVal = true;
+        hasStarted = true;
       }
     }
-    return hasVal ? sum : null;
+    return hasStarted ? sum : null;
   };
+
+  // Live recalculation for each line as the user types (memoized on local lines state)
+  const lineCalculations = useMemo(() => {
+    return lines.map((line) => {
+      const opVal = Number(line.op) || 0;
+      const hpVal = Number(line.hp) || 0;
+      const irVal = Number(line.ir) || 0;
+      const totalManpower = opVal + hpVal + irVal;
+
+      const { totalBack, totalFront, totalOutput } = calculateLineHourTotals(line.hours);
+      return { totalManpower, totalBack, totalFront, totalOutput };
+    });
+  }, [lines]);
 
   // Edit log counts & filtered items
   const draftEditsCount = editLogs.filter((l) => !l.after_submit).length;
@@ -399,27 +434,40 @@ export const SewingReportEntry = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              {saving && <span className="text-xs text-[#0F8B8D] animate-pulse">Saving...</span>}
-              {!saving && isDirty && <span className="text-xs text-amber-500 font-bold">Unsaved</span>}
-              {lastSaved && !isDirty && !saving && (
-                <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Saved
+              {saving && (
+                <span className="text-xs text-[#0F8B8D] dark:text-[#2BA5B5] animate-pulse font-bold flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 animate-spin" /> Saving...
+                </span>
+              )}
+              {!saving && isDirty && (
+                <span className="text-xs text-amber-500 dark:text-amber-400 font-bold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  Unsaved changes
+                </span>
+              )}
+              {!saving && !isDirty && (
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> All changes saved
                 </span>
               )}
 
               <button
                 type="button"
+                disabled={saving}
                 onClick={() => handleSaveAll(lines)}
-                className="px-3 py-1.5 text-xs font-bold rounded bg-slate-600 text-white hover:bg-slate-700 transition-colors cursor-pointer shadow-sm"
+                className="px-3.5 py-1.5 text-xs font-bold rounded bg-slate-700 hover:bg-slate-800 text-white disabled:opacity-50 transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
               >
-                Save All Changes
+                <Save className="w-3.5 h-3.5" />
+                <span>{saving ? 'Saving...' : 'Save All Changes'}</span>
               </button>
               <button
                 type="button"
+                disabled={saving}
                 onClick={handleSubmitAllFilled}
-                className="px-3 py-1.5 text-xs font-bold rounded bg-[#0F8B8D] text-white hover:bg-[#0b6d6f] transition-colors cursor-pointer shadow-sm"
+                className="px-3 py-1.5 text-xs font-bold rounded bg-[#0F8B8D] text-white hover:bg-[#0b6d6f] disabled:opacity-50 transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
               >
-                Submit All Filled Hours
+                <Send className="w-3.5 h-3.5" />
+                <span>Submit All Filled Hours</span>
               </button>
             </div>
           </div>
@@ -428,10 +476,7 @@ export const SewingReportEntry = () => {
         {/* 4 Line Tables with Per-Hour Submit Controls in Header */}
         <div className="space-y-6">
           {lines.map((line, lineIdx) => {
-            const { totalOutput, totalBack, totalFront } = calculateLineHourTotals(line.hours);
-            const opVal = Number(line.op) || 0;
-            const hpVal = Number(line.hp) || 0;
-            const totalManpower = opVal + hpVal;
+            const { totalManpower, totalBack, totalFront, totalOutput } = lineCalculations[lineIdx];
 
             return (
               <div
@@ -444,9 +489,13 @@ export const SewingReportEntry = () => {
                   <h3 className="font-extrabold text-sm uppercase tracking-wider text-[#0F8B8D] dark:text-[#2BA5B5]">
                     Line 0{line.lineNo} Production Register
                   </h3>
-                  <span className="text-xs font-bold font-mono">
-                    Total Manpower: {totalManpower > 0 ? totalManpower : '-'}
-                  </span>
+                  <div className="flex items-center gap-3 text-xs font-bold font-mono">
+                    <span>Total Manpower: {totalManpower > 0 ? totalManpower : '-'}</span>
+                    <span className="opacity-40">·</span>
+                    <span className="text-[#0F8B8D] dark:text-[#2BA5B5]">
+                      Total Output: {totalOutput !== null ? totalOutput : '-'}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -564,7 +613,7 @@ export const SewingReportEntry = () => {
                               inputMode="numeric"
                               value={line.op}
                               onChange={(e) => handleLineChange(lineIdx, 'op', e.target.value)}
-                              className={`w-12 px-1 py-0.5 rounded border text-center font-bold outline-none ${
+                              className={`w-12 px-1 py-0.5 rounded border text-center font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                 isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
                               }`}
                             />
@@ -576,7 +625,7 @@ export const SewingReportEntry = () => {
                               inputMode="numeric"
                               value={line.hp}
                               onChange={(e) => handleLineChange(lineIdx, 'hp', e.target.value)}
-                              className={`w-12 px-1 py-0.5 rounded border text-center font-bold outline-none ${
+                              className={`w-12 px-1 py-0.5 rounded border text-center font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                 isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
                               }`}
                             />
@@ -588,12 +637,12 @@ export const SewingReportEntry = () => {
                               inputMode="numeric"
                               value={line.ir}
                               onChange={(e) => handleLineChange(lineIdx, 'ir', e.target.value)}
-                              className={`w-12 px-1 py-0.5 rounded border text-center font-bold outline-none ${
+                              className={`w-12 px-1 py-0.5 rounded border text-center font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                 isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
                               }`}
                             />
                           </div>
-                          <div className="pt-1 border-t border-[#1E293B]/30 text-center font-extrabold text-[11px] text-[#0F8B8D]">
+                          <div className="pt-1 border-t border-[#1E293B]/30 text-center font-extrabold text-[11px] text-[#0F8B8D] dark:text-[#2BA5B5]">
                             Tot: {totalManpower > 0 ? totalManpower : '-'}
                           </div>
                         </td>
@@ -606,7 +655,7 @@ export const SewingReportEntry = () => {
                             inputMode="numeric"
                             value={line.totalTarget}
                             onChange={(e) => handleLineChange(lineIdx, 'totalTarget', e.target.value)}
-                            className={`w-full px-2 py-2 text-xs rounded border text-center font-bold outline-none ${
+                            className={`w-full px-2 py-2 text-xs rounded border text-center font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                               isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
                             }`}
                           />
@@ -617,7 +666,7 @@ export const SewingReportEntry = () => {
                             inputMode="numeric"
                             value={line.hourTarget}
                             onChange={(e) => handleLineChange(lineIdx, 'hourTarget', e.target.value)}
-                            className={`w-full px-2 py-2 text-xs rounded border text-center font-bold outline-none ${
+                            className={`w-full px-2 py-2 text-xs rounded border text-center font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                               isDark ? 'bg-[#12383E] border-white/30 text-white' : 'bg-white border-[#CBD5E1] text-[#0F172A]'
                             }`}
                           />
@@ -626,6 +675,7 @@ export const SewingReportEntry = () => {
                         {line.hours.map((hr, hrIdx) => {
                           const isLocked = hourLocks.some((l) => l.hour_no === hr.hourNo);
                           const isDisabled = isLocked && !isAdmin;
+                          const cumBack = getCumulativeAtHour(line, 'backQty', hr.hourNo);
 
                           return (
                             <td key={hrIdx} className={`border border-[#1E293B] p-1 text-center align-middle ${isLocked ? 'bg-amber-500/10' : ''}`}>
@@ -637,7 +687,7 @@ export const SewingReportEntry = () => {
                                   value={hr.backQty}
                                   onFocus={(e) => e.target.select()}
                                   onChange={(e) => handleHourChange(lineIdx, hrIdx, 'backQty', e.target.value, hr.hourNo)}
-                                  className={`w-full h-7 text-xs rounded border text-center font-bold outline-none tabular-nums ${
+                                  className={`w-full h-7 text-xs rounded border text-center font-bold outline-none tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                     isLocked && isAdmin ? 'border-amber-500 ring-1 ring-amber-500' : ''
                                   } ${
                                     isDisabled
@@ -651,13 +701,13 @@ export const SewingReportEntry = () => {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-[10px] text-[#475569] dark:text-slate-400 font-mono mt-0.5 border-t border-dashed border-[#1E293B]/20 pt-0.5">
-                                {getCumulativeAtHour(line, hr.hourNo) !== null ? getCumulativeAtHour(line, hr.hourNo) : ''}
+                              <div className="text-[10px] text-[#0F8B8D] dark:text-[#2BA5B5] font-mono font-semibold mt-0.5 border-t border-dashed border-[#1E293B]/20 pt-0.5 min-h-[16px] text-center">
+                                {cumBack !== null ? `Σ ${cumBack}` : ''}
                               </div>
                             </td>
                           );
                         })}
-                        <td className="border border-[#1E293B] p-1 text-center font-bold font-mono">
+                        <td className="border border-[#1E293B] p-1 text-center font-bold font-mono text-slate-800 dark:text-slate-200">
                           {totalBack !== null ? totalBack : '-'}
                         </td>
                         <td rowSpan={4} className="border border-[#1E293B] p-1 align-middle text-center">
@@ -679,6 +729,7 @@ export const SewingReportEntry = () => {
                         {line.hours.map((hr, hrIdx) => {
                           const isLocked = hourLocks.some((l) => l.hour_no === hr.hourNo);
                           const isDisabled = isLocked && !isAdmin;
+                          const cumFront = getCumulativeAtHour(line, 'frontQty', hr.hourNo);
 
                           return (
                             <td key={hrIdx} className={`border border-[#1E293B] p-1 text-center align-middle ${isLocked ? 'bg-amber-500/10' : ''}`}>
@@ -690,7 +741,7 @@ export const SewingReportEntry = () => {
                                   value={hr.frontQty}
                                   onFocus={(e) => e.target.select()}
                                   onChange={(e) => handleHourChange(lineIdx, hrIdx, 'frontQty', e.target.value, hr.hourNo)}
-                                  className={`w-full h-7 text-xs rounded border text-center font-bold outline-none tabular-nums ${
+                                  className={`w-full h-7 text-xs rounded border text-center font-bold outline-none tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                     isLocked && isAdmin ? 'border-amber-500 ring-1 ring-amber-500' : ''
                                   } ${
                                     isDisabled
@@ -704,13 +755,13 @@ export const SewingReportEntry = () => {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-[10px] text-[#475569] dark:text-slate-400 font-mono mt-0.5 border-t border-dashed border-[#1E293B]/20 pt-0.5">
-                                {getCumulativeAtHour(line, hr.hourNo) !== null ? getCumulativeAtHour(line, hr.hourNo) : ''}
+                              <div className="text-[10px] text-[#0F8B8D] dark:text-[#2BA5B5] font-mono font-semibold mt-0.5 border-t border-dashed border-[#1E293B]/20 pt-0.5 min-h-[16px] text-center">
+                                {cumFront !== null ? `Σ ${cumFront}` : ''}
                               </div>
                             </td>
                           );
                         })}
-                        <td className="border border-[#1E293B] p-1 text-center font-bold font-mono">
+                        <td className="border border-[#1E293B] p-1 text-center font-bold font-mono text-slate-800 dark:text-slate-200">
                           {totalFront !== null ? totalFront : '-'}
                         </td>
                       </tr>
@@ -725,6 +776,7 @@ export const SewingReportEntry = () => {
                           const hrTarget = Number(line.hourTarget) || 0;
                           const isBelow = hrTarget > 0 && outVal !== null && outVal < hrTarget;
                           const isAbove = hrTarget > 0 && outVal !== null && outVal >= hrTarget;
+                          const cumOutput = getCumulativeAtHour(line, 'outputQty', hr.hourNo);
 
                           let cellBgClass = isDark ? 'bg-[#12383E] text-white' : 'bg-white text-[#0F172A]';
                           if (isBelow) cellBgClass = 'bg-[#FEE2E2] text-rose-900 border-rose-400';
@@ -744,7 +796,7 @@ export const SewingReportEntry = () => {
                                   value={hr.outputQty}
                                   onFocus={(e) => e.target.select()}
                                   onChange={(e) => handleHourChange(lineIdx, hrIdx, 'outputQty', e.target.value, hr.hourNo)}
-                                  className={`w-full h-7 text-xs rounded border text-center font-bold outline-none tabular-nums ${
+                                  className={`w-full h-7 text-xs rounded border text-center font-bold outline-none tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                     isLocked && isAdmin ? 'border-amber-500 ring-1 ring-amber-500' : ''
                                   } ${cellBgClass}`}
                                 />
@@ -754,13 +806,13 @@ export const SewingReportEntry = () => {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-[10px] text-[#475569] dark:text-slate-400 font-mono mt-0.5 border-t border-dashed border-[#1E293B]/20 pt-0.5">
-                                {getCumulativeAtHour(line, hr.hourNo) !== null ? getCumulativeAtHour(line, hr.hourNo) : ''}
+                              <div className="text-[10px] text-[#0F8B8D] dark:text-[#2BA5B5] font-mono font-semibold mt-0.5 border-t border-dashed border-[#1E293B]/20 pt-0.5 min-h-[16px] text-center">
+                                {cumOutput !== null ? `Σ ${cumOutput}` : ''}
                               </div>
                             </td>
                           );
                         })}
-                        <td className="border border-[#1E293B] p-1 text-center font-extrabold font-mono text-[#0F8B8D]">
+                        <td className="border border-[#1E293B] p-1 text-center font-extrabold font-mono text-[#0F8B8D] dark:text-[#2BA5B5]">
                           {totalOutput !== null ? totalOutput : '-'}
                         </td>
                       </tr>
@@ -799,7 +851,7 @@ export const SewingReportEntry = () => {
                             </td>
                           );
                         })}
-                        <td className="border border-[#1E293B] p-1 text-center font-bold">-</td>
+                        <td className="border border-[#1E293B] p-1 text-center font-bold font-mono"></td>
                       </tr>
                     </tbody>
                   </table>

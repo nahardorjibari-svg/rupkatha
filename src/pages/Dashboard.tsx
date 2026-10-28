@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCompany } from '../context/CompanyContext';
 import { CompanyLogo } from '../components/CompanyLogo';
 import { ROLE_LABELS, UNIT_LABELS } from '../lib/constants';
-import { LogOut, Factory, User, Clock, CheckCircle2, Layers, Scissors, Package, BadgeDollarSign } from 'lucide-react';
+import { LogOut, Factory, User, Clock, CheckCircle2, Layers, Scissors, Package, BadgeDollarSign, FileDown, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useState, useEffect } from 'react';
 import { exportSewingReportsToExcel } from '../lib/exportExcel';
@@ -12,7 +12,7 @@ import { fetchSewingReports, subscribeSewingRealtime } from '../lib/sewingQuerie
 export const Dashboard: React.FC = () => {
   const { profile, signOut } = useAuth();
   const { companyName } = useCompany();
-  const [reports, setReports] = useState([]);
+  const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
@@ -140,16 +140,16 @@ export const Dashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {reports.flatMap(r => r.lines).map((line, idx) => (
+                  {reports.flatMap((r: any) => r.lines || []).map((line: any, idx: number) => (
                     <tr key={idx} className="hover:bg-slate-50">
                       <td className="p-3 border-r border-slate-200">{line.line_no}</td>
                       <td className="p-3 border-r border-slate-200">{line.buyer_name || '-'}</td>
                       <td className="p-3 border-r border-slate-200">{line.style_no || '-'}</td>
                       <td className="p-3 border-r border-slate-200 font-semibold">
-                        {line.hours?.reduce((sum, h) => sum + (h.output_qty || 0), 0) || 0}
+                        {line.hours?.reduce((sum: number, h: any) => sum + (h.output_qty || 0), 0) || 0}
                       </td>
                       <td className="p-3">
-                        {((line.hours?.reduce((sum, h) => sum + (h.output_qty || 0), 0) || 0) / (line.total_target || 1) * 100).toFixed(0)}%
+                        {((line.hours?.reduce((sum: number, h: any) => sum + (h.output_qty || 0), 0) || 0) / (line.total_target || 1) * 100).toFixed(0)}%
                       </td>
                     </tr>
                   ))}

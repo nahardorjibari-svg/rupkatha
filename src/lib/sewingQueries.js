@@ -163,9 +163,23 @@ export async function fetchEditLogs(reportId) {
 
 /**
  * Upsert or create a sewing report with lines and hours.
+ * Uses strict whitelists and upsert with onConflict.
  */
 export async function saveSewingReport({ reportDate, factoryUnit, lines, createdByName }) {
   try {
+    const toIntOrNull = (val) => {
+      if (val === '' || val === null || val === undefined) return null;
+      const n = parseInt(val, 10);
+      return isNaN(n) ? null : n;
+    };
+
+    const toStrOrNull = (val) => {
+      if (val === '' || val === null || val === undefined) return null;
+      const s = String(val).trim();
+      return s.length > 0 ? s : null;
+    };
+
+    // 1. Find or create sewing_report
     let { data: existingRep, error: findErr } = await supabase
       .from('sewing_reports')
       .select('id')
@@ -189,6 +203,7 @@ export async function saveSewingReport({ reportDate, factoryUnit, lines, created
         .insert({
           report_date: reportDate,
           factory_unit: factoryUnit,
+          status: 'draft',
           created_by_name: createdByName || 'ERP User',
         })
         .select('id')
@@ -197,102 +212,56 @@ export async function saveSewingReport({ reportDate, factoryUnit, lines, created
       reportId = newRep.id;
     }
 
-    for (const lineData of lines) {
-      const { lineNo, buyerName, styleNo, op, hp, ir, totalTarget, hourTarget, remarks, hours, enteredByName } = lineData;
-      
-      const manpowerTotal = (op !== null && op !== undefined && !isNaN(Number(op)) ? Number(op) : 0) +
-                            (hp !== null && hp !== undefined && !isNaN(Number(hp)) ? Number(hp) : 0);
+    // 2. Build whitelist payload for sewing_report_lines
+    // ONLY: report_id, line_no, buyer_name, style_no, op, hp, ir, total_target, hour_target, remarks
+    const linePayloads = lines.map((l) => ({
+      report_id: reportId,
+      line_no: parseInt(l.lineNo ?? l.line_no, 10),
+      buyer_name: toStrOrNull(l.buyerName ?? l.buyer_name),
+      style_no: toStrOrNull(l.styleNo ?? l.style_no),
+      op: toIntOrNull(l.op),
+      hp: toIntOrNull(l.hp),
+      ir: toIntOrNull(l.ir),
+      total_target: toIntOrNull(l.totalTarget ?? l.total_target),
+      hour_target: toIntOrNull(l.hourTarget ?? l.hour_target),
+      remarks: toStrOrNull(l.remarks),
+    }));
 
-      let { data: existingLine, error: lineFindErr } = await supabase
-        .from('sewing_report_lines')
-        .select('id')
-        .eq('report_id', reportId)
-        .eq('line_no', lineNo)
-        .maybeSingle();
+    const { data: savedLines, error: linesErr } = await supabase
+      .from('sewing_report_lines')
+      .upsert(linePayloads, { onConflict: 'report_id,line_no' })
+      .select('id, line_no');
 
-      if (lineFindErr) throw lineFindErr;
+    if (linesErr) throw linesErr;
 
-      let lineId;
-      if (existingLine) {
-        lineId = existingLine.id;
-        const { error: lineUpdErr } = await supabase
-          .from('sewing_report_lines')
-          .update({
-            buyer_name: buyerName || null,
-            style_no: styleNo || null,
-            op: op !== '' && op !== null ? Number(op) : null,
-            hp: hp !== '' && hp !== null ? Number(hp) : null,
-            ir: ir !== '' && ir !== null ? Number(ir) : null,
-            manpower_total: manpowerTotal,
-            total_target: totalTarget !== '' && totalTarget !== null ? Number(totalTarget) : null,
-            hour_target: hourTarget !== '' && hourTarget !== null ? Number(hourTarget) : null,
-            remarks: remarks || null,
-            entered_by_name: enteredByName || 'ERP User',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', lineId);
-        if (lineUpdErr) throw lineUpdErr;
-      } else {
-        const { data: newLine, error: lineInsErr } = await supabase
-          .from('sewing_report_lines')
-          .insert({
-            report_id: reportId,
-            line_no: lineNo,
-            buyer_name: buyerName || null,
-            style_no: styleNo || null,
-            op: op !== '' && op !== null ? Number(op) : null,
-            hp: hp !== '' && hp !== null ? Number(hp) : null,
-            ir: ir !== '' && ir !== null ? Number(ir) : null,
-            manpower_total: manpowerTotal,
-            total_target: totalTarget !== '' && totalTarget !== null ? Number(totalTarget) : null,
-            hour_target: hourTarget !== '' && hourTarget !== null ? Number(hourTarget) : null,
-            remarks: remarks || null,
-            entered_by_name: enteredByName || 'ERP User',
-          })
-          .select('id')
-          .single();
-        if (lineInsErr) throw lineInsErr;
-        lineId = newLine.id;
+    const lineIdByNo = new Map((savedLines || []).map((sl) => [sl.line_no, sl.id]));
+
+    // 3. Build whitelist payload for sewing_report_hours
+    // ONLY: line_id, hour_no, back_qty, front_qty, output_qty, asm
+    const hoursPayloads = [];
+    for (const l of lines) {
+      const lineNo = parseInt(l.lineNo ?? l.line_no, 10);
+      const lineId = lineIdByNo.get(lineNo);
+      if (!lineId || !l.hours || !Array.isArray(l.hours)) continue;
+
+      for (const h of l.hours) {
+        hoursPayloads.push({
+          line_id: lineId,
+          hour_no: parseInt(h.hourNo ?? h.hour_no, 10),
+          back_qty: toIntOrNull(h.backQty ?? h.back_qty),
+          front_qty: toIntOrNull(h.frontQty ?? h.front_qty),
+          output_qty: toIntOrNull(h.outputQty ?? h.output_qty),
+          asm: toStrOrNull(h.asm),
+        });
       }
+    }
 
-      if (hours && Array.isArray(hours)) {
-        for (const hr of hours) {
-          const { hourNo, backQty, frontQty, outputQty, asm } = hr;
-          
-          let { data: existingHour, error: hourFindErr } = await supabase
-            .from('sewing_report_hours')
-            .select('id')
-            .eq('line_id', lineId)
-            .eq('hour_no', hourNo)
-            .maybeSingle();
+    if (hoursPayloads.length > 0) {
+      const { error: hoursErr } = await supabase
+        .from('sewing_report_hours')
+        .upsert(hoursPayloads, { onConflict: 'line_id,hour_no' });
 
-          if (hourFindErr) throw hourFindErr;
-
-          const hourPayload = {
-            line_id: lineId,
-            hour_no: hourNo,
-            back_qty: backQty !== '' && backQty !== null && backQty !== undefined && !isNaN(Number(backQty)) ? Number(backQty) : null,
-            front_qty: frontQty !== '' && frontQty !== null && frontQty !== undefined && !isNaN(Number(frontQty)) ? Number(frontQty) : null,
-            output_qty: outputQty !== '' && outputQty !== null && outputQty !== undefined && !isNaN(Number(outputQty)) ? Number(outputQty) : null,
-            asm: asm || null,
-            entered_by_name: enteredByName || 'ERP User',
-            updated_at: new Date().toISOString(),
-          };
-
-          if (existingHour) {
-            const { error: updErr } = await supabase
-              .from('sewing_report_hours')
-              .update(hourPayload)
-              .eq('id', existingHour.id);
-            if (updErr) throw updErr;
-          } else {
-            const { error: insErr } = await supabase
-              .from('sewing_report_hours')
-              .insert(hourPayload);
-            if (insErr) throw insErr;
-          }
-        }
-      }
+      if (hoursErr) throw hoursErr;
     }
 
     return { success: true, reportId };

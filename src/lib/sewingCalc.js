@@ -28,14 +28,18 @@ export function calculateLineHourTotals(hoursList = []) {
   let totalOutput = null;
 
   for (const h of hoursList) {
-    if (h.back_qty !== null && h.back_qty !== undefined) {
-      totalBack = (totalBack || 0) + Number(h.back_qty);
+    const b = h.backQty !== undefined ? h.backQty : h.back_qty;
+    const f = h.frontQty !== undefined ? h.frontQty : h.front_qty;
+    const o = h.outputQty !== undefined ? h.outputQty : h.output_qty;
+
+    if (b !== null && b !== undefined && b !== '' && !isNaN(Number(b))) {
+      totalBack = (totalBack || 0) + Number(b);
     }
-    if (h.front_qty !== null && h.front_qty !== undefined) {
-      totalFront = (totalFront || 0) + Number(h.front_qty);
+    if (f !== null && f !== undefined && f !== '' && !isNaN(Number(f))) {
+      totalFront = (totalFront || 0) + Number(f);
     }
-    if (h.output_qty !== null && h.output_qty !== undefined) {
-      totalOutput = (totalOutput || 0) + Number(h.output_qty);
+    if (o !== null && o !== undefined && o !== '' && !isNaN(Number(o))) {
+      totalOutput = (totalOutput || 0) + Number(o);
     }
   }
 
