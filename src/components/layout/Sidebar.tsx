@@ -68,7 +68,7 @@ interface TooltipData {
 export const Sidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { companyName, logoUrl } = useCompany();
+  const { companyName, logoUrl, updatedAt } = useCompany();
   const { toggleTheme, isDark } = useTheme();
   const { profile, signOut } = useAuth();
   const { mode, toggleMini, hide, mobileOpen, setMobileOpen } = useSidebar();
@@ -204,7 +204,7 @@ export const Sidebar: React.FC = () => {
           <div className="flex items-center gap-2.5 min-w-0 overflow-hidden">
             {logoUrl ? (
               <img
-                src={logoUrl}
+                src={updatedAt ? `${logoUrl}?v=${updatedAt}` : logoUrl}
                 alt={companyName}
                 className="w-8 h-8 object-contain shrink-0 rounded-lg"
               />

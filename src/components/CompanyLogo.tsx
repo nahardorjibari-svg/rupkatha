@@ -16,7 +16,7 @@ export const CompanyLogo: React.FC<CompanyLogoProps> = ({
   textColor,
   variant = 'auto',
 }) => {
-  const { companyName, logoUrl } = useCompany();
+  const { companyName, logoUrl, updatedAt } = useCompany();
   const [imageError, setImageError] = useState(false);
 
   const sizeDimensions = {
@@ -43,7 +43,7 @@ export const CompanyLogo: React.FC<CompanyLogoProps> = ({
     <div className={`flex items-center gap-3 select-none ${className}`}>
       {hasValidLogo ? (
         <img
-          src={logoUrl!}
+          src={updatedAt ? `${logoUrl}?v=${updatedAt}` : logoUrl!}
           alt={companyName}
           onError={() => setImageError(true)}
           className={`${currentSize.img} object-contain shrink-0`}

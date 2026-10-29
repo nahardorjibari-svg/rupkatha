@@ -165,17 +165,18 @@ export const ERP_MODULES: ModuleGroup[] = [
         status: 'coming_soon',
         isTickable: true,
       },
-      {
-        id: 'finishing',
-        name: 'Finishing',
-        nameBangla: 'ফিনিশিং ও প্যাকিং',
-        path: '/admin/finishing',
-        icon: 'PackageCheck',
-        badge: 'Soon',
-        description: 'Ironing, folding, polying, carton packing lists, and carton CBM calculation',
-        status: 'coming_soon',
-        isTickable: true,
-      },
+      // Finishing is now merged into Sewing, but we can keep it as a placeholder if requested
+      // {
+      //   id: 'finishing',
+      //   name: 'Finishing',
+      //   nameBangla: 'ফিনিশিং ও প্যাকিং',
+      //   path: '/admin/finishing',
+      //   icon: 'PackageCheck',
+      //   badge: 'Soon',
+      //   description: 'Ironing, folding, polying, carton packing lists, and carton CBM calculation',
+      //   status: 'coming_soon',
+      //   isTickable: true,
+      // },
       {
         id: 'store_inventory',
         name: 'Store and Inventory',
@@ -244,7 +245,7 @@ export const PERMISSION_CATEGORIES = [
   {
     category: 'Production',
     categoryBangla: 'প্রোডাকশন বিভাগ',
-    keys: ['fabric_yarn', 'cutting', 'sewing', 'washing_print_emb', 'finishing'],
+    keys: ['fabric_yarn', 'cutting', 'sewing', 'washing_print_emb'],
   },
   {
     category: 'Store and Quality',
@@ -270,7 +271,7 @@ export const ROLE_PRESETS: Record<string, { name: string; permissions: Record<st
   },
   production_manager: {
     name: 'Production Manager Preset',
-    permissions: { fabric_yarn: true, cutting: true, sewing: true, washing_print_emb: true, finishing: true, qc: true },
+    permissions: { fabric_yarn: true, cutting: true, sewing: true, washing_print_emb: true, qc: true },
   },
   store_keeper: {
     name: 'Store Keeper Preset',
@@ -293,7 +294,6 @@ export const ROLE_PRESETS: Record<string, { name: string; permissions: Record<st
       cutting: true,
       sewing: true,
       washing_print_emb: true,
-      finishing: true,
       store_inventory: true,
       qc: true,
       commercial: true,

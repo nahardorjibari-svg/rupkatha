@@ -134,6 +134,12 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
+        {/* Finishing Module Redirects (Merged into Sewing) */}
+        <Route path="/finishing" element={<Navigate to="/sewing/report" replace />} />
+        <Route path="/finishing/*" element={<Navigate to="/sewing/report" replace />} />
+        <Route path="/admin/finishing" element={<Navigate to="/sewing/report" replace />} />
+        <Route path="/admin/finishing/*" element={<Navigate to="/sewing/report" replace />} />
+
         {/* Protected Dashboard Route (All active authenticated factory staff) */}
         <Route
           path="/dashboard"

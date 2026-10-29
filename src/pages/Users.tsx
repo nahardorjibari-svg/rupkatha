@@ -49,7 +49,6 @@ const ALL_PERMISSION_KEYS = [
   'cutting',
   'sewing',
   'washing_print_emb',
-  'finishing',
   'store_inventory',
   'qc',
   'commercial',

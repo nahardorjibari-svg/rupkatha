@@ -51,7 +51,7 @@ const TAGLINES = [
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const { session, profile, loading: authLoading, signIn } = useAuth();
-  const { companyName, heroUrl, heroPalette, heroFocusX, heroFocusY, heroStyle } = useCompany();
+  const { companyName, heroUrl, heroPalette, heroFocusX, heroFocusY, heroStyle, updatedAt } = useCompany();
 
   // Form State
   const [email, setEmail] = useState(() => {
@@ -564,7 +564,7 @@ export const Login: React.FC = () => {
             >
               {heroUrl ? (
                 <img
-                  src={heroUrl}
+                  src={updatedAt ? `${heroUrl}?v=${updatedAt}` : heroUrl}
                   alt={companyName}
                   className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-1000"
                   style={{ objectPosition: `${heroFocusX}% ${heroFocusY}%` }}

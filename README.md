@@ -42,10 +42,17 @@ The **Sewing Hourly Production Report** (`/sewing/report`) includes production t
    - Dashboard charts: Target vs Actual bar chart per line, Cumulative Actual vs Target line chart, and Short Qty by Line bar chart with Out Put / Back / Front / A.S.M part selector.
    - Full read-only grid, Print, Excel (`.xlsx`), and PDF (`.pdf`) export with Management Summary including A.S.M.
 
-6. **Granular Per-Hour Lock Model & Audit**:
-   - Each hour column (01 to 10) can be independently submitted and locked (`sewing_hour_locks`).
-   - Edit history logs draft edits vs. after-submit edits with human-readable labels (`Back hour target`, `Out Put hour target`, `A.S.M hour target`, `Working hours`).
-   - Manual save only via "Save All Changes" with unsaved-changes indicators and page exit warnings. Whitelist prevents sending `manpower_total` or other forbidden generated columns to Supabase.
+6. **Finishing Section Merger**:
+   - The standalone Finishing module is now integrated into the Sewing production flow.
+   - **Unified Entry Page**: `/sewing/report` displays both Sewing Line 01-04 and the Finishing section (Process: Inside, Iron, Top Side, Poly).
+   - **Shared Permissions**: Access is governed by the `sewing` permission key; no separate finishing key is required.
+   - **Unified Reporting**: Finishing performance cards and register data are integrated into the Dashboard, Reports grid, Excel, and PDF exports.
+   - **Lock Synchronization**: Submitting a specific hour (H01-H10) for a Sewing report automatically locks the corresponding hour for the Finishing section to ensure data integrity.
+
+7. **Granular Per-Hour Lock Model & Audit**:
+   - Each hour column (01 to 10) can be independently submitted and locked (`sewing_hour_locks` and `finishing_hour_locks` are kept in sync).
+   - Edit history logs draft edits vs. after-submit edits with human-readable labels.
+   - Manual save only via "Save All Changes" with unsaved-changes indicators.
 
 ---
 

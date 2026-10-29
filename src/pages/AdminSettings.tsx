@@ -31,7 +31,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCENT_TEAL = '#2BA5B5';
 
 export const AdminSettings: React.FC = () => {
-  const { companyName, logoUrl, heroUrl, heroPalette, heroFocusX, heroFocusY, heroStyle, updateSettings } = useCompany();
+  const { companyName, logoUrl, heroUrl, heroPalette, heroFocusX, heroFocusY, heroStyle, updatedAt, updateSettings } = useCompany();
   const { isDark } = useTheme();
 
   // Company Name state
@@ -206,6 +206,69 @@ export const AdminSettings: React.FC = () => {
     }
   };
 
+  // --- LOGO HANDLERS ---
+  const handleLogoFileSelect = (file: File) => {
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      toast.error('Invalid logo format.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Logo image exceeds 2MB limit.');
+      return;
+    }
+
+    setSelectedLogoFile(file);
+    setLogoPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleLogoSave = async () => {
+    if (!selectedLogoFile) return;
+    setIsUploadingLogo(true);
+    try {
+      const fileExt = selectedLogoFile.name.split('.').pop();
+      const fileName = `logo_${Date.now()}.${fileExt}`;
+      const { error: uploadErr } = await supabase.storage
+        .from('branding')
+        .upload(fileName, selectedLogoFile, { cacheControl: '3600', upsert: true });
+
+      if (uploadErr) throw new Error(uploadErr.message);
+
+      const { data: urlData } = supabase.storage.from('branding').getPublicUrl(fileName);
+      const newLogoUrl = urlData.publicUrl;
+
+      const oldLogoFileName = extractBucketFileName(logoUrl);
+      if (oldLogoFileName && oldLogoFileName !== fileName) {
+        await supabase.storage.from('branding').remove([oldLogoFileName]);
+      }
+
+      await updateSettings({ logo_url: newLogoUrl });
+      toast.success('Company Logo updated successfully!');
+      setSelectedLogoFile(null);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to save logo.');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    if (!window.confirm('Remove company logo? System will fallback to default monogram.')) return;
+    setIsRemovingLogo(true);
+    try {
+      const oldFileName = extractBucketFileName(logoUrl);
+      if (oldFileName) await supabase.storage.from('branding').remove([oldFileName]);
+
+      await updateSettings({ logo_url: null });
+      setLogoPreviewUrl(null);
+      setSelectedLogoFile(null);
+      toast.success('Company logo removed.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to remove logo.');
+    } finally {
+      setIsRemovingLogo(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-8 max-w-4xl mx-auto pb-12">
@@ -300,7 +363,119 @@ export const AdminSettings: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. LOGIN PAGE HERO IMAGE MANAGER (NEW) */}
+        {/* 2. COMPANY LOGO */}
+        <div
+          className={`p-6 sm:p-8 rounded-3xl border shadow-soft-lg space-y-6 ${
+            isDark ? 'bg-[#103A40] border-white/10' : 'bg-white border-slate-200'
+          }`}
+        >
+          <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+            <div
+              className="w-10 h-10 rounded-2xl flex items-center justify-center text-xs"
+              style={{ backgroundColor: 'rgba(43, 165, 181, 0.15)', color: ACCENT_TEAL }}
+            >
+              <Layout className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold">Company Logo</h2>
+              <p className="text-xs text-slate-400 font-bangla">কোম্পানির লোগো আপলোড ও পরিবর্তন</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            {/* Logo Preview Area */}
+            <div className="space-y-4">
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Current / New Preview
+              </label>
+              <div
+                className={`w-full aspect-square max-w-[240px] mx-auto rounded-3xl border-2 border-dashed flex items-center justify-center p-6 ${
+                  isDark ? 'border-white/10 bg-black/20' : 'border-slate-200 bg-slate-50'
+                }`}
+              >
+                {logoPreviewUrl || logoUrl ? (
+                  <img
+                    src={logoPreviewUrl || (updatedAt ? `${logoUrl}?v=${updatedAt}` : logoUrl!)}
+                    alt="Logo Preview"
+                    className="max-w-full max-h-full object-contain drop-shadow-sm"
+                  />
+                ) : (
+                  <div className="text-center space-y-2">
+                    <Building className="w-10 h-10 mx-auto text-slate-300" />
+                    <p className="text-[10px] text-slate-400">No logo uploaded. Using default monogram.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Upload Area */}
+            <div className="space-y-6">
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDraggingLogo(true);
+                }}
+                onDragLeave={() => setIsDraggingLogo(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDraggingLogo(false);
+                  const f = e.dataTransfer.files?.[0];
+                  if (f) handleLogoFileSelect(f);
+                }}
+                onClick={() => logoInputRef.current?.click()}
+                className={`p-6 rounded-2xl border-2 border-dashed text-center cursor-pointer transition-all ${
+                  isDraggingLogo
+                    ? 'border-[#2BA5B5] bg-[#2BA5B5]/10'
+                    : isDark
+                    ? 'border-white/15 hover:border-[#2BA5B5] bg-white/5'
+                    : 'border-slate-300 hover:border-[#2BA5B5] bg-slate-50'
+                }`}
+              >
+                <input
+                  type="file"
+                  ref={logoInputRef}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleLogoFileSelect(f);
+                  }}
+                  accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                  className="hidden"
+                />
+                <UploadCloud className="w-8 h-8 mx-auto text-[#2BA5B5] mb-2" />
+                <p className="text-xs font-bold">Upload Logo</p>
+                <p className="text-[10px] text-slate-400 mt-1">PNG, JPG, SVG or WebP (Max 2MB)</p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                {selectedLogoFile && (
+                  <button
+                    type="button"
+                    onClick={handleLogoSave}
+                    disabled={isUploadingLogo}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-2xl text-xs font-bold text-white shadow-md cursor-pointer bg-[#2BA5B5] hover:opacity-90 disabled:opacity-50"
+                  >
+                    {isUploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    <span>{isUploadingLogo ? 'Saving...' : 'Save Logo'}</span>
+                  </button>
+                )}
+
+                {(logoUrl || logoPreviewUrl) && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveLogo}
+                    disabled={isRemovingLogo}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-2xl text-xs font-bold text-rose-500 border border-rose-500/30 hover:bg-rose-500/5 disabled:opacity-50"
+                  >
+                    {isRemovingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    <span>{isRemovingLogo ? 'Removing...' : 'Remove Logo'}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. LOGIN PAGE HERO IMAGE MANAGER */}
         <div
           className={`p-6 sm:p-8 rounded-3xl border shadow-soft-lg space-y-6 ${
             isDark ? 'bg-[#103A40] border-white/10' : 'bg-white border-slate-200'
@@ -398,7 +573,7 @@ export const AdminSettings: React.FC = () => {
                 style={{ backgroundColor: palette?.deep || '#0B2E33' }}
               >
                 <img
-                  src={heroPreviewUrl}
+                  src={heroPreviewUrl === heroUrl && updatedAt ? `${heroUrl}?v=${updatedAt}` : heroPreviewUrl!}
                   alt="Login Hero Preview"
                   className="w-full h-full object-cover transition-all"
                   style={{ objectPosition: `${focusX}% ${focusY}%` }}

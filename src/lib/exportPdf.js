@@ -11,7 +11,14 @@ import {
   formatNum,
 } from './sewingCalc';
 
-export function exportSewingReportsToPdf({ reports, date, unit }) {
+/**
+ * @param {Object} options
+ * @param {Array} options.reports
+ * @param {Array} [options.finishingReports]
+ * @param {string} options.date
+ * @param {string} options.unit
+ */
+export function exportSewingReportsToPdf({ reports, finishingReports = [], editLogs = [], date, unit }) {
   const doc = new jsPDF({
     orientation: 'landscape',
     unit: 'mm',
@@ -31,7 +38,7 @@ export function exportSewingReportsToPdf({ reports, date, unit }) {
   doc.setTextColor(71, 85, 105); // slate-600
   doc.text('Raj place, Rishipara, Padma, Dhaka · Knit & Woven Garments ERP', 14, 21);
   doc.text(
-    `Sewing Hourly Production & Shortage Report | Date: ${date || 'All Dates'} | Unit: ${unit?.toUpperCase() || 'All'}`,
+    `ERP Hourly Production & Shortage Report | Date: ${date || 'All Dates'} | Unit: ${unit?.toUpperCase() || 'All'}`,
     14,
     26
   );
@@ -54,20 +61,36 @@ export function exportSewingReportsToPdf({ reports, date, unit }) {
     });
   });
 
+  const allFinishingLines = [];
+  finishingReports.forEach((rep) => {
+    (rep.lines || []).forEach((l) => {
+      allFinishingLines.push({
+        ...l,
+        report_date: rep.report_date,
+        factory_unit: rep.factory_unit,
+        status: rep.status,
+      });
+    });
+  });
+
   const summary = calculateManagementSummary(allLines);
+  const finishingSummary = calculateManagementSummary(allFinishingLines);
 
   // 1. TOP MANAGEMENT SUMMARY TABLE
-  const summaryRows = ['output', 'back', 'front', 'asm'].map((pKey) => {
+  const summaryRows = [];
+  
+  // Sewing Rows
+  ['output', 'back', 'front', 'asm'].forEach((pKey) => {
     const pData = summary.byPart[pKey] || {};
     const label =
       pKey === 'output'
-        ? 'Out Put (Total Garments)'
+        ? 'Sewing: Out Put'
         : pKey === 'back'
-        ? 'Back Part'
+        ? 'Sewing: Back Part'
         : pKey === 'front'
-        ? 'Front Part'
-        : 'A.S.M';
-    return [
+        ? 'Sewing: Front Part'
+        : 'Sewing: A.S.M';
+    summaryRows.push([
       label,
       pData.totalTarget !== null ? formatNum(pData.totalTarget) : 'No Target',
       pData.totalActual !== null ? formatNum(pData.totalActual) : '-',
@@ -75,13 +98,35 @@ export function exportSewingReportsToPdf({ reports, date, unit }) {
       pData.shortQty ? `-${formatNum(pData.shortQty)} pcs` : '0',
       pData.shortPct ? `${pData.shortPct}%` : '0%',
       pData.status?.toUpperCase() || '-',
-    ];
+    ]);
+  });
+
+  // Finishing Rows
+  ['output', 'back', 'front', 'asm'].forEach((pKey) => {
+    const pData = finishingSummary.byPart[pKey] || {};
+    const label =
+      pKey === 'output'
+        ? 'Finishing: Top Side'
+        : pKey === 'back'
+        ? 'Finishing: Inside'
+        : pKey === 'front'
+        ? 'Finishing: Iron'
+        : 'Finishing: Poly';
+    summaryRows.push([
+      label,
+      pData.totalTarget !== null ? formatNum(pData.totalTarget) : 'No Target',
+      pData.totalActual !== null ? formatNum(pData.totalActual) : '-',
+      pData.achievement !== null ? `${pData.achievement}%` : '-',
+      pData.shortQty ? `-${formatNum(pData.shortQty)} pcs` : '0',
+      pData.shortPct ? `${pData.shortPct}%` : '0%',
+      pData.status?.toUpperCase() || '-',
+    ]);
   });
 
   doc.autoTable({
     startY: 32,
     head: [[
-      'Management Overview Part',
+      'Management Overview Module/Part',
       'Total Target',
       'Actual Output',
       'Achievement %',
@@ -107,8 +152,8 @@ export function exportSewingReportsToPdf({ reports, date, unit }) {
     margin: { left: 14, right: 14 },
   });
 
-  // 2. DETAILED LINE PERFORMANCE TABLE
-  const lineRows = [];
+  // 2. DETAILED PERFORMANCE TABLE (SEWING)
+  const sewingRows = [];
   allLines.forEach((l) => {
     const outM = calculatePartMetrics(l, 'output');
     const backM = calculatePartMetrics(l, 'back');
@@ -119,104 +164,103 @@ export function exportSewingReportsToPdf({ reports, date, unit }) {
       ? (outM.shortExcessQty > 0 ? `+${outM.shortExcessQty}` : `${outM.shortExcessQty}`)
       : '-';
 
-    lineRows.push([
-      `Line 0${l.line_no} (${l.factory_unit?.toUpperCase() || '-'})`,
+    sewingRows.push([
+      `Line 0${l.line_no}`,
       l.buyer_name || '-',
       l.style_no || '-',
       l.order_qty || '-',
-      `${l.op || 0}/${l.hp || 0}/${l.ir || 0} (${Number(l.op || 0) + Number(l.hp || 0) + Number(l.ir || 0)})`,
-      `${outM.workingHours} hrs`,
-      `B: ${backM.hourTarget ?? '-'} | F: ${frontM.hourTarget ?? '-'} | O: ${outM.hourTarget ?? '-'} | A: ${asmM.hourTarget ?? '-'}`,
-      outM.totalTarget !== null ? formatNum(outM.totalTarget) : 'No Target',
-      outM.totalActual !== null ? formatNum(outM.totalActual) : '-',
+      `${l.op || 0}/${l.hp || 0}/${l.ir || 0}`,
+      `${outM.workingHours}h`,
+      `B:${backM.hourTarget??'-'} F:${frontM.hourTarget??'-'} O:${outM.hourTarget??'-'} A:${asmM.hourTarget??'-'}`,
+      outM.totalTarget ?? '-',
+      outM.totalActual ?? '-',
       shortExcessText,
-      outM.achievement !== null ? `${outM.achievement}%` : '-',
+      `${outM.achievement}%`,
       l.remarks || '-',
-      l.line_chief_name || '-',
-      l.line_chief_phone || '-',
     ]);
   });
 
-  const nextY = doc.lastAutoTable.finalY + 8;
-
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(15, 23, 42);
-  doc.text('Production Lines Target & Shortage Breakdown', 14, nextY);
-
   doc.autoTable({
-    startY: nextY + 3,
-    head: [[
-      'Line',
-      'Buyer',
-      'Style No',
-      'Order Qty',
-      'M.P (O/H/I)',
-      'Hrs',
-      'Hr Tgts',
-      'Out Tgt',
-      'Actual',
-      'Short',
-      'Ach%',
-      'Remarks',
-      'Chief',
-      'Mobile',
-    ]],
-    body: lineRows,
+    startY: doc.lastAutoTable.finalY + 10,
+    head: [['Sewing Line', 'Buyer', 'Style', 'Order', 'M.P', 'Hrs', 'Hr Tgts', 'Tot Tgt', 'Actual', 'Short', 'Ach%', 'Remarks']],
+    body: sewingRows,
     theme: 'grid',
-    headStyles: {
-      fillColor: [30, 41, 59], // Slate-800
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 8,
-    },
-    bodyStyles: {
-      fontSize: 7.5,
-      textColor: [30, 41, 59],
-    },
-    alternateRowStyles: {
-      fillColor: [248, 250, 252],
-    },
-    didParseCell: (data) => {
-      // Color short/excess column
-      if (data.section === 'body' && data.column.index === 7) {
-        const text = String(data.cell.raw || '');
-        if (text.startsWith('-')) {
-          data.cell.styles.textColor = [220, 38, 38]; // Red
-          data.cell.styles.fontStyle = 'bold';
-        } else if (text.startsWith('+')) {
-          data.cell.styles.textColor = [217, 119, 6]; // Amber
-          data.cell.styles.fontStyle = 'bold';
-        } else if (text === '0') {
-          data.cell.styles.textColor = [22, 101, 52]; // Green
-          data.cell.styles.fontStyle = 'bold';
-        }
-      }
-    },
+    headStyles: { fillColor: [30, 41, 59], fontSize: 8 },
+    bodyStyles: { fontSize: 7 },
     margin: { left: 14, right: 14 },
   });
 
-  // Signature Block at Bottom
-  const finalY = doc.lastAutoTable.finalY + 16;
-  if (finalY < 185) {
-    const sigY = finalY;
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(71, 85, 105);
+  // 3. DETAILED PERFORMANCE TABLE (FINISHING)
+  if (allFinishingLines.length > 0) {
+    doc.addPage();
+    doc.text('FINISHING MODULE PRODUCTION DETAILS', 14, 15);
+    
+    const finRows = [];
+    allFinishingLines.forEach((l) => {
+      const topM = calculatePartMetrics(l, 'output');
+      const inM = calculatePartMetrics(l, 'back');
+      const irM = calculatePartMetrics(l, 'front');
+      const poM = calculatePartMetrics(l, 'asm');
 
-    const sigWidth = 45;
-    const startX = 14;
-    const gap = 12;
+      const shortExcessText = topM.shortExcessQty !== null
+        ? (topM.shortExcessQty > 0 ? `+${topM.shortExcessQty}` : `${topM.shortExcessQty}`)
+        : '-';
 
-    const roles = ['Prepared By (Reporter)', 'Checked By (APM)', 'Approved By (PM)', 'Verified By (DGM)', 'Authorized By (GM)'];
-    roles.forEach((role, i) => {
-      const x = startX + i * (sigWidth + gap);
-      doc.setDrawColor(148, 163, 184);
-      doc.line(x, sigY, x + sigWidth, sigY);
-      doc.text(role, x, sigY + 4);
+      const totMan = Number(l.quality_man || 0) + Number(l.folding_man || 0) + Number(l.poly_man || 0) + Number(l.packing_man || 0);
+
+      finRows.push([
+        'Finishing',
+        l.buyer_name || '-',
+        l.style_no || '-',
+        l.order_qty || '-',
+        `Q:${l.quality_man||0}/F:${l.folding_man||0}/P:${l.poly_man||0}/Pk:${l.packing_man||0} (${totMan})`,
+        `${topM.workingHours}h`,
+        `In:${inM.hourTarget??'-'} Ir:${irM.hourTarget??'-'} TS:${topM.hourTarget??'-'} Po:${poM.hourTarget??'-'}`,
+        topM.totalTarget ?? '-',
+        topM.totalActual ?? '-',
+        shortExcessText,
+        `${topM.achievement}%`,
+        l.remarks || '-',
+      ]);
+    });
+
+    doc.autoTable({
+      startY: 20,
+      head: [['Section', 'Buyer', 'Style', 'Order', 'Manpower Breakdown', 'Hrs', 'Hr Tgts', 'Tot Tgt', 'Actual', 'Short', 'Ach%', 'Remarks']],
+      body: finRows,
+      theme: 'grid',
+      headStyles: { fillColor: [180, 83, 9], fontSize: 8 }, // Amber-700
+      bodyStyles: { fontSize: 7 },
+      margin: { left: 14, right: 14 },
     });
   }
 
-  const fileName = `Rupkatha_Sewing_Report_${date || 'all'}_${unit || 'all'}.pdf`;
+  // Footer & Signatures
+  const addFooter = () => {
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(`Page ${i} of ${pageCount}`, pageWidth - 25, doc.internal.pageSize.getHeight() - 10);
+      
+      const sigY = doc.internal.pageSize.getHeight() - 25;
+      const sigWidth = 45;
+      const startX = 14;
+      const gap = 12;
+      const roles = ['Reporter', 'APM', 'PM', 'DGM', 'GM'];
+      
+      roles.forEach((role, idx) => {
+        const x = startX + idx * (sigWidth + gap);
+        doc.setDrawColor(200);
+        doc.line(x, sigY, x + sigWidth, sigY);
+        doc.text(role, x + (sigWidth / 2), sigY + 5, { align: 'center' });
+      });
+    }
+  };
+
+  addFooter();
+  const fileName = `Rupkatha_ERP_Report_${date || 'all'}_${unit || 'all'}.pdf`;
   doc.save(fileName);
 }
+

@@ -10,17 +10,24 @@ import { useState, useEffect, useMemo } from 'react';
 import { exportSewingReportsToExcel } from '../lib/exportExcel';
 import { exportSewingReportsToPdf } from '../lib/exportPdf';
 import { fetchSewingReports, subscribeSewingRealtime } from '../lib/sewingQueries';
+import { fetchFinishingReports } from '../lib/finishingQueries';
 import { calculatePartMetrics, calculateManagementSummary, formatNum } from '../lib/sewingCalc';
 
 export const Dashboard: React.FC = () => {
   const { profile, signOut } = useAuth();
   const { companyName } = useCompany();
   const [reports, setReports] = useState<any[]>([]);
+  const [finishingReports, setFinishingReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const loadData = async () => {
     setLoading(true);
-    const data = await fetchSewingReports({ date: new Date().toISOString().split('T')[0] });
-    setReports(data);
+    const today = new Date().toISOString().split('T')[0];
+    const [sewingData, finishingData] = await Promise.all([
+      fetchSewingReports({ date: today }),
+      fetchFinishingReports({ date: today })
+    ]);
+    setReports(sewingData || []);
+    setFinishingReports(finishingData || []);
     setLoading(false);
   };
 
@@ -147,14 +154,14 @@ export const Dashboard: React.FC = () => {
                 
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => exportSewingReportsToExcel({ reports, date: new Date().toISOString().split('T')[0], unit: 'all' })}
+                    onClick={() => exportSewingReportsToExcel({ reports, finishingReports, date: new Date().toISOString().split('T')[0], unit: 'all' })}
                     className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-xl transition-colors border border-teal-200 cursor-pointer"
                   >
                     <FileDown className="w-4 h-4" />
                     <span>Download Excel</span>
                   </button>
                   <button
-                    onClick={() => exportSewingReportsToPdf({ reports, date: new Date().toISOString().split('T')[0], unit: 'all' })}
+                    onClick={() => exportSewingReportsToPdf({ reports, finishingReports, date: new Date().toISOString().split('T')[0], unit: 'all' })}
                     className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors border border-rose-200 cursor-pointer"
                   >
                     <Printer className="w-4 h-4" />

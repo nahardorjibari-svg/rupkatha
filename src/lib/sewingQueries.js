@@ -109,18 +109,40 @@ export async function fetchHourLocks(reportId) {
 }
 
 /**
- * Submit and lock an hour for a report
+ * Submit and lock an hour for a report (Synchronized with Finishing)
  */
 export async function submitHourLock(reportId, hourNo) {
   try {
-    const { data, error } = await supabase
+    // 1. Lock Sewing
+    const { error: sewingErr } = await supabase
       .from('sewing_hour_locks')
-      .insert({ report_id: reportId, hour_no: hourNo })
-      .select()
+      .upsert({ report_id: reportId, hour_no: hourNo }, { onConflict: 'report_id,hour_no' });
+
+    if (sewingErr) throw sewingErr;
+
+    // 2. Lock Finishing (Find finishing report for same date/unit)
+    const { data: rep } = await supabase
+      .from('sewing_reports')
+      .select('report_date, factory_unit')
+      .eq('id', reportId)
       .single();
 
-    if (error) throw error;
-    return { success: true, data };
+    if (rep) {
+      const { data: finRep } = await supabase
+        .from('finishing_reports')
+        .select('id')
+        .eq('report_date', rep.report_date)
+        .eq('factory_unit', rep.factory_unit)
+        .maybeSingle();
+
+      if (finRep) {
+        await supabase
+          .from('finishing_hour_locks')
+          .upsert({ report_id: finRep.id, hour_no: hourNo }, { onConflict: 'report_id,hour_no' });
+      }
+    }
+
+    return { success: true };
   } catch (err) {
     console.error('Failed to submit hour lock:', err);
     throw err;
@@ -128,17 +150,43 @@ export async function submitHourLock(reportId, hourNo) {
 }
 
 /**
- * Reopen (delete) an hour lock (Admin only)
+ * Reopen (delete) an hour lock (Admin only, Synchronized with Finishing)
  */
 export async function reopenHourLock(reportId, hourNo) {
   try {
-    const { error } = await supabase
+    // 1. Reopen Sewing
+    const { error: sewingErr } = await supabase
       .from('sewing_hour_locks')
       .delete()
       .eq('report_id', reportId)
       .eq('hour_no', hourNo);
 
-    if (error) throw error;
+    if (sewingErr) throw sewingErr;
+
+    // 2. Reopen Finishing
+    const { data: rep } = await supabase
+      .from('sewing_reports')
+      .select('report_date, factory_unit')
+      .eq('id', reportId)
+      .single();
+
+    if (rep) {
+      const { data: finRep } = await supabase
+        .from('finishing_reports')
+        .select('id')
+        .eq('report_date', rep.report_date)
+        .eq('factory_unit', rep.factory_unit)
+        .maybeSingle();
+
+      if (finRep) {
+        await supabase
+          .from('finishing_hour_locks')
+          .delete()
+          .eq('report_id', finRep.id)
+          .eq('hour_no', hourNo);
+      }
+    }
+
     return { success: true };
   } catch (err) {
     console.error('Failed to reopen hour lock:', err);
@@ -310,6 +358,26 @@ export function subscribeSewingRealtime(onUpdate) {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'sewing_hour_locks' },
+        () => { onUpdate(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'finishing_report_hours' },
+        () => { onUpdate(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'finishing_report_lines' },
+        () => { onUpdate(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'finishing_hour_locks' },
+        () => { onUpdate(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'finishing_reports' },
         () => { onUpdate(); }
       )
       .subscribe();
