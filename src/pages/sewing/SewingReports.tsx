@@ -226,7 +226,10 @@ export const SewingReports: React.FC = () => {
                 return (
                   <div key={idx} className={`p-4 rounded-2xl border shadow-sm ${isDark ? 'bg-[#103A40] border-white/20' : 'bg-white border-[#1E293B]'}`}>
                     <div className="flex items-center justify-between pb-3 mb-3 border-b border-current/20">
-                      <div className="flex items-center gap-3"><h3 className="font-extrabold text-sm text-[#0F8B8D]">Line 0{line.line_no}</h3><span className="text-xs text-slate-500">{line.buyer_name} · {line.style_no}</span></div>
+                      <div className="flex items-center gap-3">
+                         <h3 className="font-extrabold text-sm text-[#0F8B8D]">Line 0{line.line_no}</h3>
+                         <span className="text-xs text-slate-500">{line.buyer_name} · {line.style_no} · <span className="font-bold text-emerald-600 dark:text-emerald-400">Order Qty: {line.order_qty || '-'}</span></span>
+                      </div>
                       <div className="text-xs font-mono font-bold">Working: {line.working_hours} hrs</div>
                     </div>
                     <div className="overflow-x-auto">
@@ -235,9 +238,9 @@ export const SewingReports: React.FC = () => {
                           <tr className={isDark ? 'bg-[#0B2E33] text-slate-200' : 'bg-[#F1F5F9] text-[#0F172A]'}>
                             <th className="p-2 border border-[#1E293B] text-center" style={{ width: '80px' }}>Parts</th>
                             <th className="p-2 border border-[#1E293B] text-center" style={{ width: '80px' }}>Hr Tgt</th>
-                            {Array.from({ length: 10 }).map((_, i) => <th key={i} className="p-1 border border-[#1E293B] text-center" style={{ width: '68px' }}>H{String(i + 1).padStart(2, '0')}</th>)}
-                            <th className="p-2 border border-[#1E293B] text-center" style={{ width: '85px' }}>Total</th>
-                            <th className="p-2 border border-[#1E293B] text-center" style={{ width: '100px' }}>Status</th>
+                            <th className="p-2 border border-[#1E293B] text-center" style={{ width: '80px' }}>Tot Tgt</th>
+                            {Array.from({ length: 10 }).map((_, i) => <th key={i} className="p-1 border border-[#1E293B] text-center" style={{ width: '80px' }}>H{String(i + 1).padStart(2, '0')}</th>)}
+                            <th className="p-2 border border-[#1E293B] text-center" style={{ width: '100px' }}>Total</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -245,6 +248,7 @@ export const SewingReports: React.FC = () => {
                             <tr key={bIdx} className={isDark ? 'bg-[#0B2E33]/40' : 'bg-[#F8FAFC]'}>
                               <td className="p-2 border border-[#1E293B] font-extrabold text-center uppercase">{parts[bIdx]}</td>
                               <td className="p-2 border border-[#1E293B] text-center">{bd.metrics.hourTarget ?? '-'}</td>
+                              <td className="p-2 border border-[#1E293B] text-center font-bold text-[#0F8B8D]">{bd.metrics.totalTarget ?? '-'}</td>
                               {bd.hourly.map((hB: any, hIdx: number) => (
                                 <td key={hIdx} className={`p-1 border border-[#1E293B] text-center ${getCellBg(hB.hourActual, bd.metrics.hourTarget)}`}>
                                   <div className="font-bold">{hB.hourActual ?? '-'}</div>
@@ -252,9 +256,25 @@ export const SewingReports: React.FC = () => {
                                 </td>
                               ))}
                               <td className="p-2 border border-[#1E293B] text-center font-black">{bd.metrics.totalActual ?? '-'}</td>
-                              <td className="p-2 border border-[#1E293B] text-center text-[10px] font-bold">{bd.metrics.achievement !== null ? `${bd.metrics.achievement}%` : '-'}</td>
                             </tr>
                           ))}
+                          {/* BOTTOM INFO ROW */}
+                          <tr className={isDark ? 'bg-[#0B2E33]/20' : 'bg-slate-50/80'}>
+                            <td colSpan={7} className="border border-[#1E293B] p-2 align-top">
+                              <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Remarks <span className="font-bangla">মন্তব্য</span></div>
+                              <div className="text-xs italic whitespace-pre-wrap font-bold">{line.remarks || '-'}</div>
+                            </td>
+                            <td colSpan={4} className="border border-[#1E293B] p-2 align-top">
+                              <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Line Chief <span className="font-bangla">লাইন চিফ</span></div>
+                              <div className="text-sm font-black">{line.line_chief_name || '-'}</div>
+                            </td>
+                            <td colSpan={3} className="border border-[#1E293B] p-2 align-top">
+                              <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Mobile No <span className="font-bangla">মোবাইল নম্বর</span></div>
+                              <div className="text-sm font-black font-mono">
+                                 {line.line_chief_phone ? <a href={`tel:${line.line_chief_phone}`} className="hover:text-[#0F8B8D] transition-colors">{line.line_chief_phone}</a> : '-'}
+                              </div>
+                            </td>
+                          </tr>
                         </tbody>
                       </table>
                     </div>

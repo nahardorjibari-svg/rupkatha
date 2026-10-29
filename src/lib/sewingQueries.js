@@ -27,6 +27,7 @@ export async function fetchSewingReports({ date, unit = 'all' }) {
           op,
           hp,
           ir,
+          order_qty,
           manpower_total,
           total_target,
           hour_target,
@@ -36,6 +37,8 @@ export async function fetchSewingReports({ date, unit = 'all' }) {
           asm_hour_target,
           working_hours,
           remarks,
+          line_chief_name,
+          line_chief_phone,
           entered_by_name,
           updated_at,
           sewing_report_hours (
@@ -218,7 +221,7 @@ export async function saveSewingReport({ reportDate, factoryUnit, lines, created
     }
 
     // 2. Build whitelist payload for sewing_report_lines
-    // ONLY: report_id, line_no, buyer_name, style_no, op, hp, ir, back_hour_target, front_hour_target, output_hour_target, asm_hour_target, working_hours, remarks
+    // ONLY: report_id, line_no, buyer_name, style_no, op, hp, ir, back_hour_target, front_hour_target, output_hour_target, asm_hour_target, working_hours, remarks, line_chief_name, line_chief_phone
     const linePayloads = lines.map((l) => ({
       report_id: reportId,
       line_no: parseInt(l.lineNo ?? l.line_no, 10),
@@ -227,12 +230,15 @@ export async function saveSewingReport({ reportDate, factoryUnit, lines, created
       op: toIntOrNull(l.op),
       hp: toIntOrNull(l.hp),
       ir: toIntOrNull(l.ir),
+      order_qty: toIntOrNull(l.orderQty ?? l.order_qty),
       back_hour_target: toIntOrNull(l.backHourTarget ?? l.back_hour_target),
       front_hour_target: toIntOrNull(l.frontHourTarget ?? l.front_hour_target),
       output_hour_target: toIntOrNull(l.outputHourTarget ?? l.output_hour_target),
       asm_hour_target: toIntOrNull(l.asmHourTarget ?? l.asm_hour_target),
       working_hours: toIntOrNull(l.workingHours ?? l.working_hours) || 8,
       remarks: toStrOrNull(l.remarks),
+      line_chief_name: toStrOrNull(l.lineChiefName ?? l.line_chief_name),
+      line_chief_phone: toStrOrNull(l.lineChiefPhone ?? l.line_chief_phone),
     }));
 
     const { data: savedLines, error: linesErr } = await supabase

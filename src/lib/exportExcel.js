@@ -66,6 +66,7 @@ export function exportSewingReportsToExcel({ reports, date, unit }) {
     'Unit',
     'Buyer',
     'Style No',
+    'Order Qty',
     'Working Hours',
     'Out Put Target',
     'Actual Output',
@@ -82,6 +83,7 @@ export function exportSewingReportsToExcel({ reports, date, unit }) {
       l.factory_unit?.toUpperCase() || '-',
       l.buyer_name || '-',
       l.style_no || '-',
+      l.order_qty || '-',
       `${m.workingHours} hrs`,
       m.totalTarget !== null ? m.totalTarget : 'No Target',
       m.totalActual !== null ? m.totalActual : '-',
@@ -113,6 +115,7 @@ export function exportSewingReportsToExcel({ reports, date, unit }) {
       'Line',
       'Buyer',
       'Style No',
+      'Order Qty',
       'OP',
       'HP',
       'IR%',
@@ -148,6 +151,7 @@ export function exportSewingReportsToExcel({ reports, date, unit }) {
       linePrefix,
       l.buyer_name || '-',
       l.style_no || '-',
+      l.order_qty || '-',
       l.op ?? '-',
       l.hp ?? '-',
       l.ir ? `${l.ir}%` : '-',
@@ -161,6 +165,7 @@ export function exportSewingReportsToExcel({ reports, date, unit }) {
 
     // 2. Front Row
     detailRows.push([
+      '',
       '',
       '',
       '',
@@ -183,6 +188,7 @@ export function exportSewingReportsToExcel({ reports, date, unit }) {
       '',
       '',
       '',
+      '',
       'Out Put',
       outB.metrics.hourTarget ?? '-',
       outB.metrics.totalTarget ?? '-',
@@ -199,6 +205,7 @@ export function exportSewingReportsToExcel({ reports, date, unit }) {
       '',
       '',
       '',
+      '',
       'A.S.M',
       asmB.metrics.hourTarget ?? '-',
       asmB.metrics.totalTarget ?? '-',
@@ -207,54 +214,13 @@ export function exportSewingReportsToExcel({ reports, date, unit }) {
       asms ? `ASM: ${asms}` : '',
     ]);
 
-    // 5. HOUR SHORT / EXCESS Rows for Back, Front, Out Put, A.S.M (Main, Per-Hour)
+    // 5. REMAINING Rows for Back, Front, Out Put, A.S.M
     ['back', 'front', 'output', 'asm'].forEach((pKey) => {
       const breakdown = pKey === 'back' ? backB : pKey === 'front' ? frontB : pKey === 'asm' ? asmB : outB;
       const partName = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Out Put';
       const m = breakdown.metrics;
       detailRows.push([
         '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        `HOUR SHORT/EXCESS (${partName})`,
-        '-',
-        '-',
-        ...breakdown.hourly.map((h) => (h.hourDiff !== null ? (h.hourDiff > 0 ? `+${h.hourDiff}` : `${h.hourDiff}`) : '-')),
-        breakdown.sumHourDiff !== null ? (breakdown.sumHourDiff > 0 ? `+${breakdown.sumHourDiff}` : `${breakdown.sumHourDiff}`) : '-',
-        breakdown.missingHoursCount > 0 && breakdown.enteredHoursCount > 0 ? `${breakdown.missingHoursCount} hrs not entered` : (m.shortPct ? `Short ${m.shortPct}%` : ''),
-      ]);
-    });
-
-    // 6. RUNNING SHORT / EXCESS Rows for Back, Front, Out Put, A.S.M (Cumulative)
-    ['back', 'front', 'output', 'asm'].forEach((pKey) => {
-      const breakdown = pKey === 'back' ? backB : pKey === 'front' ? frontB : pKey === 'asm' ? asmB : outB;
-      const partName = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Out Put';
-      const m = breakdown.metrics;
-      detailRows.push([
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        `RUNNING SHORT/EXCESS (${partName})`,
-        '-',
-        '-',
-        ...breakdown.hourly.map((h) => (h.shortExcess !== null ? (h.shortExcess > 0 ? `+${h.shortExcess}` : `${h.shortExcess}`) : '-')),
-        m.shortExcessQty !== null ? (m.shortExcessQty > 0 ? `+${m.shortExcessQty}` : `${m.shortExcessQty}`) : '-',
-        'Cumulative',
-      ]);
-    });
-
-    // 6. REMAINING Rows for Back, Front, Out Put, A.S.M
-    ['back', 'front', 'output', 'asm'].forEach((pKey) => {
-      const breakdown = pKey === 'back' ? backB : pKey === 'front' ? frontB : pKey === 'asm' ? asmB : outB;
-      const partName = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Out Put';
-      const m = breakdown.metrics;
-      detailRows.push([
         '',
         '',
         '',
@@ -269,6 +235,11 @@ export function exportSewingReportsToExcel({ reports, date, unit }) {
         '',
       ]);
     });
+
+    // 6. BOTTOM INFO ROWS
+    detailRows.push(['', '', '', '', '', '', '', 'Line Remarks:', l.remarks || '-']);
+    detailRows.push(['', '', '', '', '', '', '', 'Line Chief:', l.line_chief_name || '-']);
+    detailRows.push(['', '', '', '', '', '', '', 'Mobile No:', l.line_chief_phone || '-']);
 
     // Separator line
     detailRows.push([]);

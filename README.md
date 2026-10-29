@@ -24,9 +24,12 @@ The **Sewing Hourly Production Report** (`/sewing/report`) includes production t
    - **Cumulative (Σ) zone**: Running cumulative sum under each hour cell compared dynamically with cumulative target (`hour target x elapsed working hours`) with color coding for Back, Front, Out Put, and A.S.M.
    - **Total Column**: Shows sum of entered hourly values, compared with Total Target (`-N` or `+N`).
 
-3. **Dual Short / Excess & Remaining Tracking Rows (Under Each Line Table)**:
-   - **HOUR SHORT / EXCESS (প্রতি ঘণ্টা)**: The primary, bold group placed first. For each hour with entered data: `hour actual - hour target` (e.g. target 80, actual 70 -> `-10` in Red; actual 80 -> `0` in Green; actual 90 -> `+10` in Yellow). Blank hours remain uncounted. Each cell has an informative tooltip (`Hour XX: target YY, actual ZZ, short/excess WW`). Total column = SUM of all entered hours' differences (e.g. `-55`) with missing hours indicator (`x hours not entered`).
-   - **RUNNING SHORT / EXCESS (জমা)**: The secondary group in smaller, muted typography displaying cumulative actual minus cumulative target.
+3. **Enhanced Line Layout & Logistics**:
+   - **Left Info Block**: Stacked boxed cells for Buyer, Style, **Order Qty** (entered daily), and **Manpower (M.P)** showing O.P/H.P/I.R breakdown and bold total.
+   - **Target Analytics**: Two new columns **HOUR TARGET** and **TOTAL TARGET** (computed as `hour target x working hours`) displayed between Parts and the hourly grid.
+   - **Narrow Remarks**: Optimized Remarks column (~9% width) to prioritize production data visibility.
+   - **Line Management Strip**: Full-width boxed strip at the bottom of each card showing **Line Chief** name and **Mobile No** (with tel link) for quick reference.
+   - **Reporting & Exports**: Changes reflected across Dashboard, Reports, Print, Excel, and PDF exports.
    - **REMAINING TARGET (বাকি লক্ষ্য)**: Sub-rows for Back, Front, Out Put, and A.S.M calculating Total Target minus cumulative actual (never below 0).
 
 4. **Line Summary Badges & Per-Hour Shortage Metrics**:

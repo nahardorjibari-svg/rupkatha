@@ -59,6 +59,9 @@ const FIELD_LABEL_MAP: Record<string, string> = {
   buyer_name: 'Buyer Name',
   style_no: 'Style No',
   remarks: 'Remarks',
+  line_chief_name: 'Line Chief name',
+  line_chief_phone: 'Line Chief mobile',
+  order_qty: 'Order Qty',
 };
 
 export const SewingReportEntry: React.FC = () => {
@@ -87,6 +90,8 @@ export const SewingReportEntry: React.FC = () => {
     asmHourTarget: '',
     workingHours: 8,
     remarks: '',
+    lineChiefName: '',
+    lineChiefPhone: '',
     hours: Array.from({ length: 10 }, (_, i) => ({
       hourNo: i + 1,
       backQty: '',
@@ -94,6 +99,7 @@ export const SewingReportEntry: React.FC = () => {
       outputQty: '',
       asm: '',
     })),
+    orderQty: '',
   });
 
   const [lines, setLines] = useState<any[]>([1, 2, 3, 4].map(initLine));
@@ -155,6 +161,9 @@ export const SewingReportEntry: React.FC = () => {
               asmHourTarget: existingLine.asm_hour_target !== null ? String(existingLine.asm_hour_target) : '',
               workingHours: existingLine.working_hours ?? 8,
               remarks: existingLine.remarks || '',
+              lineChiefName: existingLine.line_chief_name || '',
+              lineChiefPhone: existingLine.line_chief_phone || '',
+              orderQty: existingLine.order_qty !== null ? String(existingLine.order_qty) : '',
               hours: hoursArr,
             };
           } else {
@@ -610,6 +619,7 @@ export const SewingReportEntry: React.FC = () => {
                       <tr className={isDark ? 'bg-[#0B2E33] text-slate-200' : 'bg-[#F1F5F9] text-[#0F172A]'}>
                         <th className="p-2 border border-[#1E293B] text-center" style={{ width: '130px' }}>Buyer Name</th>
                         <th className="p-2 border border-[#1E293B] text-center" style={{ width: '130px' }}>Style No</th>
+                        <th className="p-2 border border-[#1E293B] text-center" style={{ width: '90px' }}>Order Qty</th>
                         <th className="p-2 border border-[#1E293B] text-center" style={{ width: '80px' }}>M.P</th>
                         <th className="p-2 border border-[#1E293B] text-center" style={{ width: '45px' }}>Line</th>
                         <th className="p-2 border border-[#1E293B] text-center" style={{ width: '75px' }}>Parts</th>
@@ -619,7 +629,7 @@ export const SewingReportEntry: React.FC = () => {
                           const hrNo = i + 1;
                           const isLocked = hourLocks.some((l) => l.hour_no === hrNo);
                           return (
-                            <th key={i} className={`p-1 border border-[#1E293B] text-center relative ${isLocked ? 'bg-amber-500/20' : ''}`} style={{ width: '68px' }}>
+                            <th key={i} className={`p-1 border border-[#1E293B] text-center relative ${isLocked ? 'bg-amber-500/20' : ''}`} style={{ width: '81px' }}>
                               <div className="flex flex-col items-center gap-0.5">
                                 <span className="text-[10px]">H{String(hrNo).padStart(2, '0')}</span>
                                 {isLocked ? (
@@ -636,7 +646,6 @@ export const SewingReportEntry: React.FC = () => {
                           );
                         })}
                         <th className="p-2 border border-[#1E293B] text-center" style={{ width: '85px' }}>Total</th>
-                        <th className="p-2 border border-[#1E293B] text-center" style={{ width: '130px' }}>Remarks</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -647,6 +656,9 @@ export const SewingReportEntry: React.FC = () => {
                         </td>
                         <td rowSpan={4} className="border border-[#1E293B] p-1 align-middle text-center">
                           <input type="text" value={line.styleNo} onChange={(e) => handleLineChange(lineIdx, 'styleNo', e.target.value)} className={`w-full px-2 py-1.5 text-xs rounded border text-center font-bold outline-none ${isDark ? 'bg-[#12383E] border-[#1E293B] text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'}`} />
+                        </td>
+                        <td rowSpan={4} className="border border-[#1E293B] p-1 align-middle text-center bg-slate-50 dark:bg-black/10">
+                          <input type="text" value={line.orderQty} onChange={(e) => handleLineChange(lineIdx, 'orderQty', e.target.value.replace(/\D/g, ''))} placeholder="0" className={`w-full px-2 py-1.5 text-sm rounded border text-center font-black outline-none ${isDark ? 'bg-[#12383E] border-[#1E293B] text-emerald-400' : 'bg-white border-[#1E293B] text-emerald-700'}`} />
                         </td>
                         <td rowSpan={4} className="border border-[#1E293B] p-1.5 align-middle text-xs space-y-1">
                           {['op', 'hp', 'ir'].map((f) => (
@@ -679,9 +691,6 @@ export const SewingReportEntry: React.FC = () => {
                           );
                         })}
                         <td className="border border-[#1E293B] p-1 text-center font-bold font-mono">{renderTotalCell(totalBack, backMetrics.totalTarget)}</td>
-                        <td rowSpan={4} className="border border-[#1E293B] p-1 align-middle text-center">
-                          <textarea rows={4} value={line.remarks} onChange={(e) => handleLineChange(lineIdx, 'remarks', e.target.value)} className={`w-full h-full p-1.5 text-xs rounded border outline-none resize-none ${isDark ? 'bg-[#12383E] border-[#1E293B] text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'}`} placeholder="Remarks..." />
-                        </td>
                       </tr>
                       {/* FRONT ROW */}
                       <tr className={isDark ? 'bg-[#0B2E33]/60' : 'bg-[#F1F5F9]'}>
@@ -756,62 +765,6 @@ export const SewingReportEntry: React.FC = () => {
                         <td className="border border-[#1E293B] p-1 text-center font-bold font-mono">{renderTotalCell(totalAsm, asmMetrics.totalTarget)}</td>
                       </tr>
 
-                      {/* HOUR SHORT / EXCESS (প্রতি ঘণ্টা) */}
-                      {['back', 'front', 'output', 'asm'].map((pKey, pIdx) => {
-                        const breakdown = pKey === 'back' ? backBreakdown : pKey === 'front' ? frontBreakdown : pKey === 'asm' ? asmBreakdown : outputBreakdown;
-                        const partLabel = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Out Put';
-                        const stripeClass = pKey === 'back' ? 'border-l-4 border-blue-500 text-blue-600' : pKey === 'front' ? 'border-l-4 border-purple-500 text-purple-600' : pKey === 'asm' ? 'border-l-4 border-amber-500 text-amber-600' : 'border-l-4 border-[#0F8B8D] text-[#0F8B8D]';
-                        return (
-                          <tr key={`hour_short_${pKey}`} className={isDark ? (pKey === 'output' ? 'bg-rose-950/30' : 'bg-white/[0.04]') : (pKey === 'output' ? 'bg-rose-50/70' : 'bg-slate-50')}>
-                            {pIdx === 0 && <td rowSpan={4} colSpan={4} className="border border-[#1E293B] p-2 text-center align-middle font-black text-xs text-rose-600 bg-rose-500/10"><div>HOUR SHORT / EXCESS</div><div className="text-[10px] font-bangla font-semibold">প্রতি ঘণ্টা</div></td>}
-                            <td className={`border border-[#1E293B] p-1 text-center font-extrabold text-xs ${stripeClass}`}>{partLabel}</td>
-                            <td className="border border-[#1E293B] p-1 text-center font-mono text-slate-400 text-xs">-</td>
-                            <td className="border border-[#1E293B] p-1 text-center font-mono text-slate-400 text-xs">-</td>
-                            {breakdown.hourly.map((hB: any, hIdx: number) => {
-                              const diff = hB.hourDiff;
-                              let displayVal = '-';
-                              let colorClass = 'text-slate-400';
-                              if (diff !== null) {
-                                if (diff < 0) { displayVal = `${diff}`; colorClass = isDark ? 'bg-rose-950/70 text-rose-300 font-black' : 'bg-rose-100 text-rose-700 font-black'; }
-                                else if (diff === 0) { displayVal = '0'; colorClass = isDark ? 'bg-emerald-950/70 text-emerald-300 font-black' : 'bg-emerald-100 text-emerald-700 font-black'; }
-                                else { displayVal = `+${diff}`; colorClass = isDark ? 'bg-amber-950/70 text-amber-300 font-black' : 'bg-amber-100 text-amber-700 font-black'; }
-                              }
-                              return <td key={hIdx} className={`border border-[#1E293B] p-1 text-center align-middle font-mono text-xs ${colorClass}`}>{displayVal}</td>;
-                            })}
-                            <td className="border border-[#1E293B] p-1 text-center font-black font-mono text-xs">{breakdown.sumHourDiff !== null ? (breakdown.sumHourDiff < 0 ? <span className="text-rose-600">{breakdown.sumHourDiff}</span> : breakdown.sumHourDiff === 0 ? 0 : <span className="text-amber-600">+{breakdown.sumHourDiff}</span>) : '-'}</td>
-                            {pIdx === 0 && <td rowSpan={4} className="border border-[#1E293B] p-1 text-center align-middle text-[10px] text-slate-500 font-mono">Shortage status</td>}
-                          </tr>
-                        );
-                      })}
-
-                      {/* RUNNING SHORT / EXCESS (জমা) */}
-                      {['back', 'front', 'output', 'asm'].map((pKey, pIdx) => {
-                        const breakdown = pKey === 'back' ? backBreakdown : pKey === 'front' ? frontBreakdown : pKey === 'asm' ? asmBreakdown : outputBreakdown;
-                        const partLabel = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Out Put';
-                        const stripeClass = pKey === 'back' ? 'border-l-2 border-blue-400 text-blue-500' : pKey === 'front' ? 'border-l-2 border-purple-400 text-purple-500' : pKey === 'asm' ? 'border-l-2 border-amber-400 text-amber-500' : 'border-l-2 border-[#0F8B8D]/80 text-[#0F8B8D]';
-                        return (
-                          <tr key={`run_short_${pKey}`} className={isDark ? 'bg-slate-900/30' : 'bg-slate-50/50'}>
-                            {pIdx === 0 && <td rowSpan={4} colSpan={4} className="border border-[#1E293B] p-1.5 text-center align-middle font-bold text-[11px] text-slate-500 bg-slate-500/5"><div>RUNNING SHORT / EXCESS</div><div className="text-[9px] font-bangla font-medium">জমা</div></td>}
-                            <td className={`border border-[#1E293B] p-1 text-center font-bold text-[10px] ${stripeClass}`}>{partLabel}</td>
-                            <td className="border border-[#1E293B] p-1 text-center font-mono text-slate-400 text-[10px]">-</td>
-                            <td className="border border-[#1E293B] p-1 text-center font-mono text-slate-400 text-[10px]">-</td>
-                            {breakdown.hourly.map((hB: any, hIdx: number) => {
-                              const s = hB.shortExcess;
-                              let displayVal = '-';
-                              let colorClass = 'text-slate-400';
-                              if (s !== null) {
-                                if (s < 0) { displayVal = `${s}`; colorClass = 'text-rose-600/85 font-bold'; }
-                                else if (s === 0) { displayVal = '0'; colorClass = 'text-emerald-600/85 font-bold'; }
-                                else { displayVal = `+${s}`; colorClass = 'text-amber-600/85 font-bold'; }
-                              }
-                              return <td key={hIdx} className={`border border-[#1E293B] p-1 text-center align-middle font-mono text-[10px] ${colorClass}`}>{displayVal}</td>;
-                            })}
-                            <td className="border border-[#1E293B] p-1 text-center font-bold font-mono text-[11px]">{breakdown.metrics.shortExcessQty !== null ? (breakdown.metrics.shortExcessQty < 0 ? <span className="text-rose-600">{breakdown.metrics.shortExcessQty}</span> : breakdown.metrics.shortExcessQty === 0 ? 0 : <span className="text-amber-600">+{breakdown.metrics.shortExcessQty}</span>) : '-'}</td>
-                            {pIdx === 0 && <td rowSpan={4} className="border border-[#1E293B] p-1 text-center align-middle text-[9px] text-slate-400 font-mono">Cumulative</td>}
-                          </tr>
-                        );
-                      })}
-
                       {/* REMAINING TARGET (বাকি) */}
                       {['back', 'front', 'output', 'asm'].map((pKey, pIdx) => {
                         const breakdown = pKey === 'back' ? backBreakdown : pKey === 'front' ? frontBreakdown : pKey === 'asm' ? asmBreakdown : outputBreakdown;
@@ -827,10 +780,59 @@ export const SewingReportEntry: React.FC = () => {
                               return <td key={hIdx} className="border border-[#1E293B] p-1 text-center align-middle font-mono text-[11px] font-semibold text-slate-700">{r !== null ? r : '-'}</td>;
                             })}
                             <td className="border border-[#1E293B] p-1 text-center font-black font-mono text-xs text-slate-800">{breakdown.metrics.totalTarget !== null ? Math.max(0, breakdown.metrics.totalTarget - (breakdown.metrics.totalActual || 0)) : '-'}</td>
-                            {pIdx === 0 && <td rowSpan={4} className="border border-[#1E293B] p-1 text-center align-middle text-[10px] text-slate-400"></td>}
                           </tr>
                         );
                       })}
+
+                      {/* BOTTOM INFO ROW */}
+                      <tr className={isDark ? 'bg-[#0B2E33]/30' : 'bg-slate-50'}>
+                        <td colSpan={7} className="border border-[#1E293B] p-0">
+                          <div className="flex flex-col h-full">
+                            <div className="bg-slate-200 dark:bg-black/20 px-2 py-0.5 border-b border-[#1E293B] text-[10px] font-bold">
+                              Remarks <span className="font-bangla ml-1">মন্তব্য</span>
+                            </div>
+                            <textarea 
+                              rows={2}
+                              value={line.remarks} 
+                              onChange={(e) => handleLineChange(lineIdx, 'remarks', e.target.value)} 
+                              className={`w-full p-2 text-xs outline-none resize-none h-full ${isDark ? 'bg-transparent text-white' : 'bg-transparent text-[#0F172A]'}`}
+                              placeholder="Write remarks here..."
+                            />
+                          </div>
+                        </td>
+                        <td colSpan={7} className="border border-[#1E293B] p-0">
+                          <div className="flex flex-col h-full">
+                            <div className="bg-slate-200 dark:bg-black/20 px-2 py-0.5 border-b border-[#1E293B] text-[10px] font-bold">
+                              Line Chief <span className="font-bangla ml-1">লাইন চিফ</span>
+                            </div>
+                            <input 
+                              type="text"
+                              value={line.lineChiefName}
+                              onChange={(e) => handleLineChange(lineIdx, 'lineChiefName', e.target.value.slice(0, 80))}
+                              className={`w-full p-2 text-xs outline-none h-full font-bold ${isDark ? 'bg-transparent text-white' : 'bg-transparent text-[#0F172A]'}`}
+                              placeholder="Name"
+                            />
+                          </div>
+                        </td>
+                        <td colSpan={4} className="border border-[#1E293B] p-0">
+                          <div className="flex flex-col h-full">
+                            <div className="bg-slate-200 dark:bg-black/20 px-2 py-0.5 border-b border-[#1E293B] text-[10px] font-bold">
+                              Mobile No <span className="font-bangla ml-1">মোবাইল নম্বর</span>
+                            </div>
+                            <input 
+                              type="tel"
+                              inputMode="tel"
+                              value={line.lineChiefPhone}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/[^0-9+\- ]/g, '').slice(0, 20);
+                                handleLineChange(lineIdx, 'lineChiefPhone', val);
+                              }}
+                              className={`w-full p-2 text-xs outline-none h-full font-bold font-mono ${isDark ? 'bg-transparent text-white' : 'bg-transparent text-[#0F172A]'}`}
+                              placeholder="01XXXXXXXXX"
+                            />
+                          </div>
+                        </td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>

@@ -270,13 +270,15 @@ export const SewingDashboard: React.FC = () => {
                 className="font-black border-b-[2.5px]"
                 style={{ backgroundColor: headerBg, borderColor: cellBorderColor, height: `calc(44px * ${fsScale})` }}
               >
-                <th className="w-[11%] border-r-[1.5px] px-2 text-left uppercase tracking-tighter" style={{ borderColor: cellBorderColor, fontSize: labelFs }}>Info</th>
-                <th className="w-[9%] border-r-[1.5px] px-2 text-left uppercase tracking-widest" style={{ borderColor: cellBorderColor, fontSize: labelFs }}>Parts</th>
+                <th className="w-[12%] border-r-[1.5px] px-2 text-left uppercase tracking-tighter" style={{ borderColor: cellBorderColor, fontSize: labelFs }}>Info</th>
+                <th className="w-[8%] border-r-[1.5px] px-1 text-center uppercase tracking-widest" style={{ borderColor: cellBorderColor, fontSize: labelFs }}>Parts</th>
+                <th className="w-[5.5%] border-r-[1.5px] px-1 text-center uppercase leading-none" style={{ borderColor: cellBorderColor, fontSize: `calc(${labelFs} * 0.8)` }}>Hr.<br/>Tgt</th>
+                <th className="w-[6.5%] border-r-[1.5px] px-1 text-center uppercase leading-none" style={{ borderColor: cellBorderColor, fontSize: `calc(${labelFs} * 0.8)` }}>Tot.<br/>Tgt</th>
                 {[...Array(10)].map((_, i) => (
-                  <th key={i} className="w-[5.6%] border-r-[1.5px] px-1" style={{ borderColor: cellBorderColor, fontSize: labelFs }}>H{i + 1}</th>
+                  <th key={i} className="w-[5.1%] border-r-[1.5px] px-1 text-center" style={{ borderColor: cellBorderColor, fontSize: labelFs }}>H{i + 1}</th>
                 ))}
-                <th className="w-[9%] border-r-[1.5px] px-1 text-center uppercase tracking-widest" style={{ borderColor: cellBorderColor, fontSize: labelFs }}>Total</th>
-                <th className="w-[15%] px-2 text-center uppercase tracking-widest" style={{ fontSize: labelFs }}>Remarks</th>
+                <th className="w-[7%] border-r-[1.5px] px-1 text-center uppercase tracking-widest" style={{ borderColor: cellBorderColor, fontSize: labelFs }}>Total</th>
+                <th className="w-[9%] px-1 text-center uppercase tracking-widest" style={{ fontSize: labelFs }}>Remarks</th>
               </tr>
             </thead>
             <tbody className="text-center font-black">
@@ -287,54 +289,56 @@ export const SewingDashboard: React.FC = () => {
                 return (
                   <tr 
                     key={p.id} 
-                    className={isLast ? '' : 'border-b-[2.5px]'}
+                    className="border-b-[1.5px]"
                     style={{ borderColor: cellBorderColor, height: `calc(64px * ${fsScale})` }}
                   >
-                    {/* Left Info Block (Buyer, Style, Qty, Target) */}
+                    {/* Left Info Block (Buyer, Style, Order Qty, M.P, Target) */}
                     {pIdx === 0 && (
-                      <td className="border-r-[1.5px] p-2 text-left bg-slate-50 dark:bg-black/20" style={{ borderColor: cellBorderColor }}>
-                        <div className="flex flex-col justify-center h-full">
-                          <span className="text-slate-400 uppercase font-black tracking-tighter block" style={{ fontSize: smallFs }}>Buyer</span>
-                          <span className="font-black truncate block leading-tight" style={{ fontSize: labelFs }}>{line.buyer_name || '-'}</span>
-                        </div>
-                      </td>
-                    )}
-                    {pIdx === 1 && (
-                      <td className="border-r-[1.5px] p-2 text-left" style={{ borderColor: cellBorderColor }}>
-                        <div className="flex flex-col justify-center h-full">
-                          <span className="text-slate-400 uppercase font-black tracking-tighter block" style={{ fontSize: smallFs }}>Style</span>
-                          <span className="font-black truncate block leading-tight" style={{ fontSize: labelFs }}>{line.style_no || '-'}</span>
-                        </div>
-                      </td>
-                    )}
-                    {pIdx === 2 && (
-                      <td className="border-r-[1.5px] p-2 text-left bg-slate-100 dark:bg-black/30" style={{ borderColor: cellBorderColor }}>
-                        <div className="flex flex-col justify-center h-full">
-                          <span className="text-slate-400 uppercase font-black tracking-tighter block" style={{ fontSize: smallFs }}>Order Qty</span>
-                          <div className="flex gap-0.5 font-mono font-black" style={{ fontSize: labelFs }}>
-                            <span>{line.op || '-'}</span>/<span>{line.hp || '-'}</span>/<span>{line.ir || '-'}</span>
-                          </div>
-                        </div>
-                      </td>
-                    )}
-                    {pIdx === 3 && (
-                      <td className="border-r-[1.5px] p-2 text-center bg-slate-200 dark:bg-black/50" style={{ borderColor: cellBorderColor }}>
-                        <div className="flex flex-col justify-center items-center h-full">
-                          <span className="block uppercase font-black text-slate-500" style={{ fontSize: smallFs }}>Target</span>
-                          <span className="font-black leading-none text-[#0F8B8D]" style={{ fontSize: `clamp(16px, 2.4cqw, ${26 * fsScale}px)` }}>
-                            {breakdownByPart.output.metrics.totalTarget || '-'}
-                          </span>
+                      <td rowSpan={4} className="border-r-[1.5px] p-0 text-left bg-slate-50 dark:bg-black/20" style={{ borderColor: cellBorderColor }}>
+                        <div className="flex flex-col h-full">
+                           <div className="p-2 border-b-[1.5px]" style={{ borderColor: cellBorderColor }}>
+                              <span className="text-slate-400 uppercase font-black tracking-tighter block" style={{ fontSize: smallFs }}>Buyer</span>
+                              <span className="font-black truncate block leading-tight" style={{ fontSize: labelFs }}>{line.buyer_name || '-'}</span>
+                           </div>
+                           <div className="p-2 border-b-[1.5px]" style={{ borderColor: cellBorderColor }}>
+                              <span className="text-slate-400 uppercase font-black tracking-tighter block" style={{ fontSize: smallFs }}>Style</span>
+                              <span className="font-black truncate block leading-tight" style={{ fontSize: labelFs }}>{line.style_no || '-'}</span>
+                           </div>
+                           <div className="p-2 border-b-[1.5px] bg-emerald-50 dark:bg-emerald-950/20" style={{ borderColor: cellBorderColor }}>
+                              <span className="text-slate-400 uppercase font-black tracking-tighter block" style={{ fontSize: smallFs }}>Order Qty</span>
+                              <span className="font-black block leading-none text-emerald-600 dark:text-emerald-400" style={{ fontSize: `calc(${labelFs} * 1.3)` }}>{line.order_qty || '-'}</span>
+                           </div>
+                           <div className="p-2 border-b-[1.5px] bg-slate-100 dark:bg-black/30" style={{ borderColor: cellBorderColor }}>
+                              <span className="text-slate-400 uppercase font-black tracking-tighter block" style={{ fontSize: smallFs }}>M.P (O/H/I)</span>
+                              <div className="font-black flex flex-col gap-0.5" style={{ fontSize: `calc(${smallFs} * 1.1)` }}>
+                                 <div className="flex gap-0.5 opacity-60"><span>{line.op || '0'}</span>/<span>{line.hp || '0'}</span>/<span>{line.ir || '0'}</span></div>
+                                 <div className="text-[#0F8B8D] font-black" style={{ fontSize: labelFs }}>Tot: {Number(line.op || 0) + Number(line.hp || 0) + Number(line.ir || 0)}</div>
+                              </div>
+                           </div>
+                           <div className="p-2 flex-1 flex flex-col justify-center items-center bg-slate-200 dark:bg-black/50">
+                              <span className="block uppercase font-black text-slate-500" style={{ fontSize: smallFs }}>Prod. Target</span>
+                              <span className="font-black leading-none text-[#0F8B8D]" style={{ fontSize: `clamp(16px, 2.2cqw, ${24 * fsScale}px)` }}>
+                                {breakdownByPart.output.metrics.totalTarget || '-'}
+                              </span>
+                           </div>
                         </div>
                       </td>
                     )}
 
-                    {/* Part Label */}
                     <td 
-                      className="border-r-[1.5px] px-2 text-left relative"
+                      className="border-r-[1.5px] px-1 text-center relative"
                       style={{ borderColor: cellBorderColor, backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : '#F8FAFC' }}
                     >
-                      <div className="absolute left-0 top-0 bottom-0 w-1.5" style={{ backgroundColor: p.stripe }} />
-                      <span className="pl-1 uppercase font-black whitespace-nowrap" style={{ fontSize: labelFs }}>{p.label}</span>
+                      <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: p.stripe }} />
+                      <span className="pl-0.5 uppercase font-black whitespace-nowrap" style={{ fontSize: `calc(${labelFs} * 0.9)` }}>{p.label}</span>
+                    </td>
+
+                    {/* Hour Target & Total Target Columns */}
+                    <td className="border-r-[1.5px] bg-slate-50/30 dark:bg-black/10" style={{ borderColor: cellBorderColor }}>
+                       <span className="font-black" style={{ fontSize: labelFs }}>{bd.metrics.hourTarget ?? '-'}</span>
+                    </td>
+                    <td className="border-r-[1.5px] bg-slate-50/50 dark:bg-black/20" style={{ borderColor: cellBorderColor }}>
+                       <span className="font-black text-[#0F8B8D]" style={{ fontSize: labelFs }}>{bd.metrics.totalTarget ?? '-'}</span>
                     </td>
 
                     {/* Hourly Cells */}
@@ -386,8 +390,7 @@ export const SewingDashboard: React.FC = () => {
 
                     {/* Total Cell */}
                     <td 
-                      className="border-r-[1.5px] align-middle bg-slate-50/50 dark:bg-black/20"
-                      style={{ borderColor: cellBorderColor }}
+                      className="align-middle bg-slate-50/50 dark:bg-black/20"
                     >
                       <div className="flex flex-col items-center justify-center">
                         {bd.metrics.totalActual !== null ? (
@@ -419,11 +422,11 @@ export const SewingDashboard: React.FC = () => {
                     {pIdx === 0 && (
                       <td 
                         rowSpan={4} 
-                        className="p-2 italic leading-tight align-middle text-center bg-slate-50/20 dark:bg-black/10"
+                        className="p-1 italic leading-tight align-middle text-center bg-slate-50/20 dark:bg-black/10"
                       >
                         <div 
-                          className="max-h-full overflow-y-auto custom-scrollbar break-words"
-                          style={{ fontSize: `clamp(10px, 1.1cqw, ${14 * fsScale}px)` }}
+                          className="max-h-full overflow-y-auto custom-scrollbar break-words font-bold"
+                          style={{ fontSize: `calc(${smallFs} * 0.85)` }}
                         >
                           {line.remarks || '-'}
                         </div>
@@ -432,6 +435,42 @@ export const SewingDashboard: React.FC = () => {
                   </tr>
                 );
               })}
+
+              {/* BOTTOM INFO ROW */}
+              <tr style={{ height: `calc(48px * ${fsScale})` }}>
+                <td colSpan={13} className="border-r-[1.5px] p-0" style={{ borderColor: cellBorderColor }}>
+                  <div className="flex h-full">
+                    <div className="bg-slate-200 dark:bg-black/20 px-2 py-1 flex items-center justify-center border-r-[1.5px] shrink-0" style={{ borderColor: cellBorderColor, width: '11%' }}>
+                      <span className="font-black uppercase text-center leading-none" style={{ fontSize: smallFs }}>Remarks<br/><span className="text-[0.8em] font-bangla">মন্তব্য</span></span>
+                    </div>
+                    <div className="flex-1 p-2 flex items-center italic truncate" style={{ fontSize: labelFs }}>
+                      {line.remarks || '-'}
+                    </div>
+                  </div>
+                </td>
+                <td colSpan={14} className="border-r-[1.5px] p-0" style={{ borderColor: cellBorderColor }}>
+                  <div className="flex h-full">
+                    <div className="flex-1 border-r-[1.5px] flex flex-col" style={{ borderColor: cellBorderColor }}>
+                       <div className="bg-slate-100 dark:bg-black/10 px-2 py-0.5 border-b-[1.5px] text-center" style={{ borderColor: cellBorderColor, fontSize: smallFs }}>
+                          Line Chief <span className="font-bangla ml-0.5">লাইন চিফ</span>
+                       </div>
+                       <div className="flex-1 flex items-center justify-center font-black truncate px-2" style={{ fontSize: `calc(${labelFs} * 1.35)` }}>
+                          {line.line_chief_name || '-'}
+                       </div>
+                    </div>
+                    <div className="flex-1 flex flex-col">
+                       <div className="bg-slate-100 dark:bg-black/10 px-2 py-0.5 border-b-[1.5px] text-center" style={{ borderColor: cellBorderColor, fontSize: smallFs }}>
+                          Mobile No <span className="font-bangla ml-0.5">মোবাইল নম্বর</span>
+                       </div>
+                       <div className="flex-1 flex items-center justify-center font-black font-mono truncate px-2" style={{ fontSize: `calc(${labelFs} * 1.35)` }}>
+                          {line.line_chief_phone ? (
+                             <a href={`tel:${line.line_chief_phone}`} className="hover:text-[#0F8B8D] transition-colors">{line.line_chief_phone}</a>
+                          ) : '-'}
+                       </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
