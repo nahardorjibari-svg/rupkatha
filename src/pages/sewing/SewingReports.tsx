@@ -37,6 +37,7 @@ import {
   Layers,
   ExternalLink,
   Lock,
+  Target,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
@@ -329,9 +330,21 @@ export const SewingReports: React.FC = () => {
               </div>
             ) : (
               <>
+                {/* Legend above line cards */}
+                <div className="flex items-center gap-2 mb-4 px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 w-fit text-xs font-bold text-emerald-800 dark:text-emerald-300 print:border-[#16A34A] print:text-black">
+                  <div className="w-3.5 h-3.5 rounded bg-[#16A34A] border border-[#15803D] shrink-0 print:bg-[#16A34A]" />
+                  <span>OUT PUT = final production (চূড়ান্ত উৎপাদন)</span>
+                </div>
+
                 {filteredLines.map((line, idx) => {
-                  const parts = ['back', 'front', 'output', 'asm'];
-                  const breakdowns = parts.map(p => calculatePartHourlyBreakdown(line, p));
+                  const parts = [
+                    { id: 'back', label: 'BACK' },
+                    { id: 'front', label: 'FRONT' },
+                    { id: 'output', label: 'OUT PUT' },
+                    { id: 'asm', label: 'A.S.M' },
+                  ];
+                  const breakdowns = parts.map(p => calculatePartHourlyBreakdown(line, p.id));
+                  const totalManpower = Number(line.op || 0) + Number(line.hp || 0) + Number(line.ir || 0);
 
                   return (
                     <div key={idx} className={`p-4 rounded-2xl border shadow-sm ${isDark ? 'bg-[#103A40] border-white/20' : 'bg-white border-[#1E293B]'}`}>
@@ -343,42 +356,168 @@ export const SewingReports: React.FC = () => {
                         <div className="text-xs font-mono font-bold">Working: {line.working_hours} hrs</div>
                       </div>
                       <div className="overflow-x-auto">
-                        <table className="w-full border-collapse text-xs font-mono" style={{ minWidth: '1300px', border: '1px solid #1E293B' }}>
+                        <table className="w-full border-collapse text-xs font-mono" style={{ tableLayout: 'fixed', minWidth: '1300px', border: `1.5px solid ${isDark ? 'rgba(255,255,255,0.45)' : '#1E293B'}` }}>
+                          <colgroup>
+                            <col style={{ width: '10%' }} />
+                            <col style={{ width: '8%' }} />
+                            <col style={{ width: '6%' }} />
+                            <col style={{ width: '6%' }} />
+                            {[...Array(10)].map((_, i) => (
+                              <col key={i} style={{ width: '5.2%' }} />
+                            ))}
+                            <col style={{ width: '8%' }} />
+                            <col style={{ width: '10%' }} />
+                          </colgroup>
                           <thead>
                             <tr className={isDark ? 'bg-[#0B2E33] text-slate-200' : 'bg-[#F1F5F9] text-[#0F172A]'}>
-                              <th className="p-2 border border-[#1E293B] text-center" style={{ width: '80px' }}>Parts</th>
-                              <th className="p-2 border border-[#1E293B] text-center" style={{ width: '80px' }}>Hr Tgt</th>
-                              <th className="p-2 border border-[#1E293B] text-center" style={{ width: '80px' }}>Tot Tgt</th>
-                              {Array.from({ length: 10 }).map((_, i) => <th key={i} className="p-1 border border-[#1E293B] text-center" style={{ width: '80px' }}>H{String(i + 1).padStart(2, '0')}</th>)}
-                              <th className="p-2 border border-[#1E293B] text-center" style={{ width: '100px' }}>Total</th>
+                              <th className="p-2 border border-[#1E293B] text-center">Info</th>
+                              <th className="p-2 border border-[#1E293B] text-center">Parts</th>
+                              <th className="p-2 border border-[#1E293B] text-center leading-tight">Hr<br/>Tgt</th>
+                              <th className="p-2 border border-[#1E293B] text-center leading-tight">Tot<br/>Tgt</th>
+                              {Array.from({ length: 10 }).map((_, i) => <th key={i} className="p-1 border border-[#1E293B] text-center">H{String(i + 1).padStart(2, '0')}</th>)}
+                              <th className="p-2 border border-[#1E293B] text-center">Total</th>
+                              <th className="p-2 border border-[#1E293B] text-center">Remarks</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {breakdowns.map((bd, bIdx) => (
-                              <tr key={bIdx} className={isDark ? 'bg-[#0B2E33]/40' : 'bg-[#F8FAFC]'}>
-                                <td className="p-2 border border-[#1E293B] font-extrabold text-center uppercase">{parts[bIdx]}</td>
-                                <td className="p-2 border border-[#1E293B] text-center">{bd.metrics.hourTarget ?? '-'}</td>
-                                <td className="p-2 border border-[#1E293B] text-center font-bold text-[#0F8B8D]">{bd.metrics.totalTarget ?? '-'}</td>
-                                {bd.hourly.map((hB: any, hIdx: number) => (
-                                  <td key={hIdx} className={`p-1 border border-[#1E293B] text-center ${getCellBg(hB.hourActual, bd.metrics.hourTarget)}`}>
-                                    <div className="font-bold">{hB.hourActual ?? '-'}</div>
-                                    <div className={`text-[9px] border-t border-dashed border-[#1E293B]/20 ${getCumColor(hB.cumActual, hB.cumTarget)}`}>{hB.cumActual ?? ''}</div>
+                            {/* MAIN ROWS */}
+                            {breakdowns.map((bd, bIdx) => {
+                              const isOutput = parts[bIdx].id === 'output';
+                              return (
+                                <tr 
+                                  key={bIdx} 
+                                  className={`border-b-[1.5px] ${isOutput ? (isDark ? 'bg-[rgba(34,197,94,0.22)] print:bg-[#DCFCE7]' : 'bg-[#DCFCE7] print:bg-[#DCFCE7]') : ''}`} 
+                                  style={{ 
+                                    borderColor: isOutput ? '#16A34A' : (isDark ? 'rgba(255,255,255,0.45)' : '#1E293B'),
+                                    borderTop: isOutput ? '3px solid #16A34A' : undefined,
+                                    borderBottom: isOutput ? '3px solid #16A34A' : undefined,
+                                    height: isOutput ? '56px' : undefined,
+                                  }}
+                                >
+                                  {bIdx === 0 && (
+                                    <td rowSpan={4} className="border-r-[1.5px] p-2 text-left bg-slate-50 dark:bg-black/20" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>
+                                       <div className="flex flex-col gap-1">
+                                          <div><span className="text-[9px] text-slate-400 uppercase">Buyer:</span><div className="font-bold truncate">{line.buyer_name}</div></div>
+                                          <div><span className="text-[9px] text-slate-400 uppercase">Style:</span><div className="font-bold truncate">{line.style_no}</div></div>
+                                          <div><span className="text-[9px] text-slate-400 uppercase">M.P:</span><div className="font-black text-[#0F8B8D]">Tot: {totalManpower}</div></div>
+                                       </div>
+                                    </td>
+                                  )}
+                                  <td 
+                                    className={`p-2 border-r-[1.5px] font-extrabold text-center uppercase relative ${isOutput ? 'bg-[#16A34A] text-white border-l-[6px] border-l-[#16A34A] print:bg-[#16A34A] print:text-white' : ''}`} 
+                                    style={{ 
+                                      borderColor: isOutput ? '#16A34A' : (isDark ? 'rgba(255,255,255,0.45)' : '#1E293B'),
+                                      borderTop: isOutput ? '3px solid #16A34A' : undefined,
+                                      borderBottom: isOutput ? '3px solid #16A34A' : undefined,
+                                      backgroundColor: isOutput ? '#16A34A' : undefined,
+                                    }}
+                                  >
+                                    <div className="flex items-center justify-center gap-1">
+                                      {isOutput && <Target className="w-3.5 h-3.5 text-white shrink-0" />}
+                                      <span className={isOutput ? 'text-white text-xs font-[900] tracking-wide' : ''}>{parts[bIdx].label}</span>
+                                    </div>
                                   </td>
+                                  <td 
+                                    className={`p-2 border-r-[1.5px] text-center ${isOutput ? 'font-[900] text-sm' : ''}`} 
+                                    style={{ 
+                                      borderColor: isOutput ? '#16A34A' : (isDark ? 'rgba(255,255,255,0.45)' : '#1E293B'),
+                                      borderTop: isOutput ? '3px solid #16A34A' : undefined,
+                                      borderBottom: isOutput ? '3px solid #16A34A' : undefined,
+                                    }}
+                                  >
+                                    {bd.metrics.hourTarget ?? '-'}
+                                  </td>
+                                  <td 
+                                    className={`p-2 border-r-[1.5px] text-center font-black ${isOutput ? 'text-emerald-800 dark:text-emerald-300 text-sm' : 'text-[#0F8B8D]'}`} 
+                                    style={{ 
+                                      borderColor: isOutput ? '#16A34A' : (isDark ? 'rgba(255,255,255,0.45)' : '#1E293B'),
+                                      borderTop: isOutput ? '3px solid #16A34A' : undefined,
+                                      borderBottom: isOutput ? '3px solid #16A34A' : undefined,
+                                    }}
+                                  >
+                                    {bd.metrics.totalTarget ?? '-'}
+                                  </td>
+                                  {bd.hourly.map((hB: any, hIdx: number) => (
+                                    <td 
+                                      key={hIdx} 
+                                      className={`p-1 border-r-[1.5px] text-center ${getCellBg(hB.hourActual, bd.metrics.hourTarget)}`} 
+                                      style={{ 
+                                        borderColor: isOutput ? '#16A34A' : (isDark ? 'rgba(255,255,255,0.45)' : '#1E293B'),
+                                        borderTop: isOutput ? '3px solid #16A34A' : undefined,
+                                        borderBottom: isOutput ? '3px solid #16A34A' : undefined,
+                                      }}
+                                    >
+                                      <div className={`leading-none ${isOutput ? 'font-[900] text-sm' : 'font-bold'}`}>{hB.hourActual ?? '-'}</div>
+                                      <div className={`text-[9px] border-t border-dashed border-current/20 mt-0.5 pt-0.5 ${getCumColor(hB.cumActual, hB.cumTarget)} ${isOutput ? 'font-black' : ''}`}>{hB.cumActual !== null ? `Σ${hB.cumActual}` : ''}</div>
+                                    </td>
+                                  ))}
+                                  <td 
+                                    className={`p-2 border-r-[1.5px] text-center font-black ${isOutput ? 'bg-[#15803D] text-white print:bg-[#15803D] print:text-white' : ''}`} 
+                                    style={{ 
+                                      borderColor: isOutput ? '#16A34A' : (isDark ? 'rgba(255,255,255,0.45)' : '#1E293B'),
+                                      borderTop: isOutput ? '3px solid #16A34A' : undefined,
+                                      borderBottom: isOutput ? '3px solid #16A34A' : undefined,
+                                      backgroundColor: isOutput ? '#15803D' : undefined,
+                                    }}
+                                  >
+                                    {isOutput ? (
+                                      <div className="flex flex-col items-center justify-center leading-tight">
+                                        <span className="font-[900] text-base text-white">{bd.metrics.totalActual ?? '-'}</span>
+                                        {bd.metrics.totalTarget ? (
+                                          <span className="text-[10px] text-white/90 font-bold">T:{bd.metrics.totalTarget}</span>
+                                        ) : null}
+                                      </div>
+                                    ) : (
+                                      bd.metrics.totalActual ?? '-'
+                                    )}
+                                  </td>
+                                  {bIdx === 0 && (
+                                    <td rowSpan={4} className="p-1 italic leading-tight align-middle text-center bg-slate-50/20 dark:bg-black/10">
+                                      <div className="text-[10px] font-bold break-words">{line.remarks || '-'}</div>
+                                    </td>
+                                  )}
+                                </tr>
+                              );
+                            })}
+
+                            {/* REMAINING BLOCK */}
+                            <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={16} className="p-0 h-0" /></tr>
+                            {breakdowns.map((bd, bIdx) => (
+                              <tr key={`rem-${bIdx}`} className="border-b-[1.5px] bg-blue-500/[0.03]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>
+                                {bIdx === 0 && <td rowSpan={4} className="p-2 border-r-[1.5px] border-[#1E293B] font-black text-center text-blue-600 bg-blue-500/5 text-[10px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>REMAINING TARGET</td>}
+                                <td className="p-2 border-r-[1.5px] font-bold text-center uppercase opacity-60 text-[10px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>{parts[bIdx].label}</td>
+                                <td className="p-2 border-r-[1.5px] text-center opacity-30" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>-</td>
+                                <td className="p-2 border-r-[1.5px] text-center opacity-30" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>-</td>
+                                {bd.hourly.map((hB: any, hIdx: number) => (
+                                  <td key={hIdx} className="p-1 border-r-[1.5px] text-center font-mono text-slate-500 text-[10px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>{hB.remaining !== null ? hB.remaining : '-'}</td>
                                 ))}
-                                <td className="p-2 border border-[#1E293B] text-center font-black">{bd.metrics.totalActual ?? '-'}</td>
+                                <td className="p-2 border-r-[1.5px] text-center font-bold text-slate-700" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>{bd.metrics.totalTarget !== null ? Math.max(0, bd.metrics.totalTarget - (bd.metrics.totalActual || 0)) : '-'}</td>
+                                {bIdx === 0 && <td rowSpan={4} className="bg-slate-50/20 dark:bg-black/10" />}
                               </tr>
                             ))}
                           </tbody>
                         </table>
+                      </div>
+                      {/* FOOTER */}
+                      <div className="mt-3 grid grid-cols-2 gap-4 border-t border-current/10 pt-3">
+                         <div className="text-xs font-bold flex gap-4">
+                           <span className="text-slate-400">Chief: <span className="text-slate-900 dark:text-white">{line.line_chief_name || '-'}</span></span>
+                           <span className="text-slate-400">Phone: <span className="text-slate-900 dark:text-white font-mono">{line.line_chief_phone || '-'}</span></span>
+                         </div>
+                         <div className="text-right text-[10px] text-slate-500 italic">Entered by: {line.entered_by_name || 'System'}</div>
                       </div>
                     </div>
                   );
                 })}
 
                 {filteredFinishingLines.map((line, idx) => {
-                  const processes = ['back', 'front', 'output', 'asm'];
-                  const processLabels: Record<string, string> = { back: 'INSIDE', front: 'IRON', output: 'TOP SIDE', asm: 'POLY' };
-                  const breakdowns = processes.map(p => calculatePartHourlyBreakdown(line, p));
+                  const processes = [
+                    { id: 'back', label: 'INSIDE' },
+                    { id: 'front', label: 'IRON' },
+                    { id: 'output', label: 'TOP SIDE' },
+                    { id: 'asm', label: 'POLY' },
+                  ];
+                  const breakdowns = processes.map(p => calculatePartHourlyBreakdown(line, p.id));
                   const totMan = Number(line.op || 0) + Number(line.hp || 0) + Number(line.ir || 0) + 
                                 Number(line.quality_man || 0) + Number(line.folding_man || 0) + 
                                 Number(line.poly_man || 0) + Number(line.packing_man || 0);
@@ -396,69 +535,92 @@ export const SewingReports: React.FC = () => {
                         </div>
                       </div>
                       <div className="overflow-x-auto">
-                        <table className="w-full border-collapse text-xs font-mono" style={{ minWidth: '1300px', border: '1px solid #1E293B' }}>
+                        <table className="w-full border-collapse text-xs font-mono" style={{ tableLayout: 'fixed', minWidth: '1300px', border: `1.5px solid ${isDark ? 'rgba(255,255,255,0.45)' : '#1E293B'}` }}>
+                          <colgroup>
+                            <col style={{ width: '10%' }} />
+                            <col style={{ width: '8%' }} />
+                            <col style={{ width: '6%' }} />
+                            <col style={{ width: '6%' }} />
+                            {[...Array(10)].map((_, i) => (
+                              <col key={i} style={{ width: '5.2%' }} />
+                            ))}
+                            <col style={{ width: '8%' }} />
+                            <col style={{ width: '10%' }} />
+                          </colgroup>
                           <thead>
                             <tr className={isDark ? 'bg-[#0B2E33] text-slate-200' : 'bg-[#FFFBEB] text-[#92400E]'}>
-                              <th className="p-2 border border-[#1E293B] text-center" style={{ width: '100px' }}>Process</th>
-                              <th className="p-2 border border-[#1E293B] text-center" style={{ width: '80px' }}>Hr Tgt</th>
-                              <th className="p-2 border border-[#1E293B] text-center" style={{ width: '80px' }}>Tot Tgt</th>
+                              <th className="p-2 border border-[#1E293B] text-center">Info</th>
+                              <th className="p-2 border border-[#1E293B] text-center">Process</th>
+                              <th className="p-2 border border-[#1E293B] text-center leading-tight">Hr<br/>Tgt</th>
+                              <th className="p-2 border border-[#1E293B] text-center leading-tight">Tot<br/>Tgt</th>
                               {Array.from({ length: 10 }).map((_, i) => {
                                 const hrNo = i + 1;
                                 const isLocked = hourLocks.some(l => l.report_id === line.report_id && l.hour_no === hrNo);
                                 return (
-                                  <th key={i} className={`p-1 border border-[#1E293B] text-center relative ${isLocked ? 'bg-amber-500/20' : ''}`} style={{ width: '80px' }}>
+                                  <th key={i} className={`p-1 border border-[#1E293B] text-center relative ${isLocked ? 'bg-amber-500/20' : ''}`}>
                                     H{String(hrNo).padStart(2, '0')}
                                     {isLocked && <Lock className="w-3 h-3 text-amber-600 absolute right-1 top-1" />}
                                   </th>
                                 );
                               })}
-                              <th className="p-2 border border-[#1E293B] text-center" style={{ width: '100px' }}>Total</th>
+                              <th className="p-2 border border-[#1E293B] text-center">Total</th>
+                              <th className="p-2 border border-[#1E293B] text-center">Remarks</th>
                             </tr>
                           </thead>
                           <tbody>
                             {breakdowns.map((bd, bIdx) => (
-                              <tr key={bIdx} className={isDark ? 'bg-[#0B2E33]/40' : 'bg-[#FFFBEB]/50'}>
-                                <td className="p-2 border border-[#1E293B] font-extrabold text-center uppercase">{processLabels[processes[bIdx]]}</td>
-                                <td className="p-2 border border-[#1E293B] text-center">{bd.metrics.hourTarget ?? '-'}</td>
-                                <td className="p-2 border border-[#1E293B] text-center font-bold text-[#D97706]">{bd.metrics.totalTarget ?? '-'}</td>
+                              <tr key={bIdx} className="border-b-[1.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>
+                                {bIdx === 0 && (
+                                  <td rowSpan={4} className="border-r-[1.5px] p-2 text-left bg-slate-50 dark:bg-black/20" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>
+                                     <div className="flex flex-col gap-1">
+                                        <div><span className="text-[9px] text-slate-400 uppercase">Buyer:</span><div className="font-bold truncate">{line.buyer_name}</div></div>
+                                        <div><span className="text-[9px] text-slate-400 uppercase">Style:</span><div className="font-bold truncate">{line.style_no}</div></div>
+                                        <div><span className="text-[9px] text-slate-400 uppercase">Order:</span><div className="font-black text-emerald-600 dark:text-emerald-400">{line.order_qty}</div></div>
+                                     </div>
+                                  </td>
+                                )}
+                                <td className="p-2 border-r-[1.5px] font-extrabold text-center uppercase" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>{processes[bIdx].label}</td>
+                                <td className="p-2 border-r-[1.5px] text-center" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>{bd.metrics.hourTarget ?? '-'}</td>
+                                <td className="p-2 border-r-[1.5px] text-center font-bold text-[#D97706]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>{bd.metrics.totalTarget ?? '-'}</td>
                                 {bd.hourly.map((hB: any, hIdx: number) => (
-                                  <td key={hIdx} className={`p-1 border border-[#1E293B] text-center ${getCellBg(hB.hourActual, bd.metrics.hourTarget)}`}>
+                                  <td key={hIdx} className={`p-1 border-r-[1.5px] text-center ${getCellBg(hB.hourActual, bd.metrics.hourTarget)}`} style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>
                                     <div className="font-bold">{hB.hourActual ?? '-'}</div>
-                                    <div className={`text-[9px] border-t border-dashed border-[#1E293B]/20 ${getCumColor(hB.cumActual, hB.cumTarget)}`}>{hB.cumActual ?? ''}</div>
+                                    <div className={`text-[9px] border-t border-dashed border-current/20 ${getCumColor(hB.cumActual, hB.cumTarget)}`}>{hB.cumActual ?? ''}</div>
                                   </td>
                                 ))}
-                                <td className="p-2 border border-[#1E293B] text-center font-black">{bd.metrics.totalActual ?? '-'}</td>
+                                <td className="p-2 border-r-[1.5px] text-center font-black" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>{bd.metrics.totalActual ?? '-'}</td>
+                                {bIdx === 0 && (
+                                  <td rowSpan={4} className="p-1 italic leading-tight align-middle text-center bg-slate-50/20 dark:bg-black/10">
+                                    <div className="text-[10px] font-bold break-words">{line.remarks || '-'}</div>
+                                  </td>
+                                )}
                               </tr>
                             ))}
                             {/* REMAINING TARGETS */}
+                            <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={16} className="p-0 h-0" /></tr>
                             {breakdowns.map((bd, bIdx) => (
-                              <tr key={`rem-${bIdx}`} className={isDark ? 'bg-white/[0.02]' : 'bg-slate-50'}>
-                                {bIdx === 0 && <td rowSpan={4} className="p-2 border border-[#1E293B] font-black text-center text-blue-600 bg-blue-500/5">REMAINING</td>}
-                                <td className="p-2 border border-[#1E293B] font-bold text-center uppercase opacity-60 text-[10px]">{processLabels[processes[bIdx]]}</td>
-                                <td className="p-2 border border-[#1E293B] text-center opacity-30">-</td>
+                              <tr key={`rem-${bIdx}`} className="border-b-[1.5px] bg-blue-500/[0.03]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>
+                                {bIdx === 0 && <td rowSpan={4} className="p-2 border-r-[1.5px] border-[#1E293B] font-black text-center text-blue-600 bg-blue-500/5 text-[10px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>REMAINING TARGET</td>}
+                                <td className="p-2 border-r-[1.5px] font-bold text-center uppercase opacity-60 text-[10px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>{processes[bIdx].label}</td>
+                                <td className="p-2 border-r-[1.5px] text-center opacity-30" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>-</td>
+                                <td className="p-2 border-r-[1.5px] text-center opacity-30" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>-</td>
                                 {bd.hourly.map((hB: any, hIdx: number) => (
-                                  <td key={hIdx} className="p-1 border border-[#1E293B] text-center font-mono text-slate-500 text-[10px]">{hB.remaining !== null ? hB.remaining : '-'}</td>
+                                  <td key={hIdx} className="p-1 border-r-[1.5px] text-center font-mono text-slate-500 text-[10px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>{hB.remaining !== null ? hB.remaining : '-'}</td>
                                 ))}
-                                <td className="p-2 border border-[#1E293B] text-center font-bold text-slate-700">{bd.metrics.totalTarget !== null ? Math.max(0, bd.metrics.totalTarget - (bd.metrics.totalActual || 0)) : '-'}</td>
+                                <td className="p-2 border-r-[1.5px] text-center font-bold text-slate-700" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>{bd.metrics.totalTarget !== null ? Math.max(0, bd.metrics.totalTarget - (bd.metrics.totalActual || 0)) : '-'}</td>
+                                {bIdx === 0 && <td rowSpan={4} className="bg-slate-50/20 dark:bg-black/10" />}
                               </tr>
                             ))}
                           </tbody>
                         </table>
                       </div>
                       {/* BOTTOM INFO */}
-                      <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-current/10 pt-4">
-                        <div className="space-y-1">
-                          <span className="text-[10px] uppercase font-black text-slate-400">Chief Info</span>
-                          <p className="text-xs font-bold">{line.line_chief_name || '-'} {line.line_chief_phone && <span className="ml-2 text-slate-500">{line.line_chief_phone}</span>}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <span className="text-[10px] uppercase font-black text-slate-400">Remarks</span>
-                          <p className="text-xs">{line.remarks || '-'}</p>
-                        </div>
-                        <div className="space-y-1 text-right">
-                          <span className="text-[10px] uppercase font-black text-slate-400">System Logs</span>
-                          <p className="text-[10px] text-slate-500 italic">Entered by: {line.entered_by_name || 'System'} · Updated: {new Date(line.updated_at).toLocaleString()}</p>
-                        </div>
+                      <div className="mt-3 grid grid-cols-2 gap-4 border-t border-current/10 pt-3">
+                         <div className="text-xs font-bold flex gap-4">
+                           <span className="text-slate-400">Chief: <span className="text-slate-900 dark:text-white">{line.line_chief_name || '-'}</span></span>
+                           <span className="text-slate-400">Phone: <span className="text-slate-900 dark:text-white font-mono">{line.line_chief_phone || '-'}</span></span>
+                         </div>
+                         <div className="text-right text-[10px] text-slate-500 italic">Entered by: {line.entered_by_name || 'System'}</div>
                       </div>
                     </div>
                   );

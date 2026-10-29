@@ -15,6 +15,7 @@ import {
  * @param {Object} options
  * @param {Array} options.reports
  * @param {Array} [options.finishingReports]
+ * @param {Array} [options.editLogs]
  * @param {string} options.date
  * @param {string} options.unit
  */
@@ -155,6 +156,7 @@ export function exportSewingReportsToExcel({ reports, finishingReports = [], edi
   const detailRows = [
     ['RUPKATHA APPARELS LTD. - SEWING PRODUCTION REGISTER'],
     [`Date: ${date || 'All Dates'} | Factory Unit: ${unit?.toUpperCase() || 'All'}`],
+    ['NOTE: OUT PUT = Final Production (চূড়ান্ত উৎপাদন)'],
     [],
     [
       'Line',
@@ -175,7 +177,7 @@ export function exportSewingReportsToExcel({ reports, finishingReports = [], edi
 
   allLines.forEach((l) => {
     const parts = ['back', 'front', 'output', 'asm'];
-    const partLabels = ['Back', 'Front', 'Out Put', 'A.S.M'];
+    const partLabels = ['Back', 'Front', 'OUT PUT (Final Prod / চূড়ান্ত উৎপাদন) ★', 'A.S.M'];
     
     parts.forEach((p, pIdx) => {
       const bd = calculatePartHourlyBreakdown(l, p);

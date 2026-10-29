@@ -15,6 +15,7 @@ import {
  * @param {Object} options
  * @param {Array} options.reports
  * @param {Array} [options.finishingReports]
+ * @param {Array} [options.editLogs]
  * @param {string} options.date
  * @param {string} options.unit
  */
@@ -149,6 +150,16 @@ export function exportSewingReportsToPdf({ reports, finishingReports = [], editL
     alternateRowStyles: {
       fillColor: [248, 250, 252],
     },
+    didParseCell: (data) => {
+      if (data.section === 'body') {
+        const raw = data.row.raw;
+        if (raw && raw[0] && String(raw[0]).includes('Sewing: Out Put')) {
+          data.cell.styles.fillColor = [220, 252, 231];
+          data.cell.styles.textColor = [22, 101, 52];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    },
     margin: { left: 14, right: 14 },
   });
 
@@ -180,13 +191,24 @@ export function exportSewingReportsToPdf({ reports, finishingReports = [], editL
     ]);
   });
 
+  doc.setFontSize(8);
+  doc.setTextColor(21, 128, 61);
+  doc.text('OUT PUT = Final Production (চূড়ান্ত উৎপাদন)', 14, doc.lastAutoTable.finalY + 7);
+
   doc.autoTable({
     startY: doc.lastAutoTable.finalY + 10,
-    head: [['Sewing Line', 'Buyer', 'Style', 'Order', 'M.P', 'Hrs', 'Hr Tgts', 'Tot Tgt', 'Actual', 'Short', 'Ach%', 'Remarks']],
+    head: [['Sewing Line', 'Buyer', 'Style', 'Order', 'M.P', 'Hrs', 'Hr Tgts', 'Tot Tgt', 'Out Put Actual', 'Short', 'Ach%', 'Remarks']],
     body: sewingRows,
     theme: 'grid',
     headStyles: { fillColor: [30, 41, 59], fontSize: 8 },
     bodyStyles: { fontSize: 7 },
+    didParseCell: (data) => {
+      if (data.section === 'body' && data.column.index === 8) {
+        data.cell.styles.fillColor = [220, 252, 231];
+        data.cell.styles.textColor = [21, 128, 61];
+        data.cell.styles.fontStyle = 'bold';
+      }
+    },
     margin: { left: 14, right: 14 },
   });
 

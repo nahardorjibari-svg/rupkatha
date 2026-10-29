@@ -25,12 +25,13 @@ The **Sewing Hourly Production Report** (`/sewing/report`) includes production t
    - **Total Column**: Shows sum of entered hourly values, compared with Total Target (`-N` or `+N`).
 
 3. **Enhanced Line Layout & Logistics**:
-   - **Left Info Block**: Stacked boxed cells for Buyer, Style, **Order Qty** (entered daily), and **Manpower (M.P)** showing O.P/H.P/I.R breakdown and bold total.
-   - **Target Analytics**: Two new columns **HOUR TARGET** and **TOTAL TARGET** (computed as `hour target x working hours`) displayed between Parts and the hourly grid.
-   - **Narrow Remarks**: Optimized Remarks column (~9% width) to prioritize production data visibility.
-   - **Line Management Strip**: Full-width boxed strip at the bottom of each card showing **Line Chief** name and **Mobile No** (with tel link) for quick reference.
-   - **Reporting & Exports**: Changes reflected across Dashboard, Reports, Print, Excel, and PDF exports.
-   - **REMAINING TARGET (বাকি লক্ষ্য)**: Sub-rows for Back, Front, Out Put, and A.S.M calculating Total Target minus cumulative actual (never below 0).
+   - **Left Info Block**: Stacked boxed cells for Buyer, Style, **Order Qty** (entered daily), and **Manpower (M.P)** showing O.P/H.P/I.R breakdown and bold total (and 7 roles for Finishing).
+   - **Target Analytics**: Columns for **HOUR TARGET** and **TOTAL TARGET** (computed as `hour target x working hours`) displayed between Parts/Process and the hourly grid.
+   - **Streamlined Dashboard Cards**: The Sewing Dashboard displays a compact, high-density format with 2 cards per row (Line 01-02, Line 03-04) without vertical clutter. Main process rows are immediately followed by the bottom strip.
+   - **In-Cell Shortage Indicators**: Shortage is directly visible beneath each Total cell (e.g., `-440` in red, `0` in green, `+30` in amber), keeping variance immediately clear without extra sub-rows.
+   - **High-Visibility OUT PUT Row**: Prominently highlighted in emerald green with bold text and target indicator.
+   - **Line Management Strip**: Full-width boxed bottom strip (Remarks, Line Chief, Mobile No) aligned with the grid with Bengali sub-labels.
+   - **Reporting & Exports**: Full sub-row breakdowns (Hourly Short/Excess, Running Short/Excess, Remaining Target) remain accessible on the Entry and Reports pages, Print, Excel, and PDF exports.
 
 4. **Line Summary Badges & Per-Hour Shortage Metrics**:
    - Line Header displays **Total MP** and **Total Output**, with live summary chips: `Target X | Actual Y | Ach Z% | Short S pcs (P%)` in Red/Green/Yellow for Out Put and A.S.M.
