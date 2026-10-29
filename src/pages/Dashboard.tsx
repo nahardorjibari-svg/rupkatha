@@ -40,11 +40,18 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     // If not admin and has permissions, redirect to first module
     if (!isAdmin && permissions.length > 0) {
+      if (permissions.includes('attendance')) {
+        navigate('/attendance', { replace: true });
+        return;
+      }
+      if (permissions.includes('hr_payroll')) {
+        navigate('/hr/staff', { replace: true });
+        return;
+      }
       if (permissions.includes('sewing')) {
         navigate('/sewing/report', { replace: true });
         return;
       }
-      // Future modules can be added here
     }
   }, [isAdmin, permissions, navigate]);
 

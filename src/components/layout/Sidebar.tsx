@@ -29,6 +29,7 @@ import {
   Settings,
   FileText,
   FileSpreadsheet,
+  Clock,
 } from 'lucide-react';
 import { useCompany } from '../../context/CompanyContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -55,6 +56,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Contact,
   FileText,
   FileSpreadsheet,
+  Clock,
 };
 
 interface TooltipData {
@@ -76,6 +78,7 @@ export const Sidebar: React.FC = () => {
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
     sewing: true, // default expand sewing
+    hr_payroll: true, // default expand hr_payroll
   });
 
   const isMini = mode === 'mini';

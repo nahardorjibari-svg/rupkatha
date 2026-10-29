@@ -69,6 +69,11 @@ export interface UserProfile {
   is_active: boolean;
   permissions?: Record<string, boolean>;
   last_login?: string | null;
+  employee_id?: string | null;
+  designation?: string | null;
+  joining_date?: string | null;
+  department?: string | null;
+  mobile?: string | null;
 }
 
 export const ROLE_LABELS: Record<UserRole, { en: string; bn: string }> = {

@@ -12,6 +12,9 @@ import { Dashboard } from '../pages/Dashboard';
 import { SewingReportEntry } from '../pages/sewing/SewingReportEntry';
 import { SewingDashboard } from '../pages/sewing/SewingDashboard';
 import { SewingReports } from '../pages/sewing/SewingReports';
+import { AttendancePunch } from '../pages/attendance/AttendancePunch';
+import { StaffInfo } from '../pages/hr/StaffInfo';
+import { MonthlyAttendanceReport } from '../pages/hr/MonthlyAttendanceReport';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
 
@@ -139,6 +142,54 @@ export const AppRoutes: React.FC = () => {
         <Route path="/finishing/*" element={<Navigate to="/sewing/report" replace />} />
         <Route path="/admin/finishing" element={<Navigate to="/sewing/report" replace />} />
         <Route path="/admin/finishing/*" element={<Navigate to="/sewing/report" replace />} />
+
+        {/* Attendance Module Route (Protected by requiredModule="attendance") */}
+        <Route
+          path="/attendance"
+          element={
+            <ProtectedRoute requiredModule="attendance">
+              <AttendancePunch />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/attendance"
+          element={<Navigate to="/attendance" replace />}
+        />
+
+        {/* HR & Payroll Module Routes (Protected by requiredModule="hr_payroll") */}
+        <Route
+          path="/hr"
+          element={<Navigate to="/hr/staff" replace />}
+        />
+        <Route
+          path="/admin/hr"
+          element={<Navigate to="/hr/staff" replace />}
+        />
+        <Route
+          path="/hr/staff"
+          element={
+            <ProtectedRoute requiredModule="hr_payroll">
+              <StaffInfo />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/hr/staff"
+          element={<Navigate to="/hr/staff" replace />}
+        />
+        <Route
+          path="/hr/attendance"
+          element={
+            <ProtectedRoute requiredModule="hr_payroll">
+              <MonthlyAttendanceReport />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/hr/attendance"
+          element={<Navigate to="/hr/attendance" replace />}
+        />
 
         {/* Protected Dashboard Route (All active authenticated factory staff) */}
         <Route

@@ -40,11 +40,16 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
     const permissions = profile?.permissions || [];
     if (permissions.length > 0) {
       toast.error('You do not have permission to access administration pages.');
-      // Special case: if they have sewing, send to sewing report
+      if (permissions.includes('attendance')) {
+        return <Navigate to="/attendance" replace />;
+      }
+      if (permissions.includes('hr_payroll')) {
+        return <Navigate to="/hr/staff" replace />;
+      }
       if (permissions.includes('sewing')) {
         return <Navigate to="/sewing/report" replace />;
       }
-      // Otherwise send to their first module (would need mapping, but for now /dashboard is safe fallback or first item)
+      // Otherwise send to /dashboard
       return <Navigate to="/dashboard" replace />;
     }
   }

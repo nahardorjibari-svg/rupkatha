@@ -332,13 +332,13 @@ export const SewingDashboard: React.FC = () => {
           <table className="w-full table-fixed border-collapse" style={{ borderCollapse: 'collapse', border: `1.5px solid ${cellBorderColor}` }}>
             <colgroup>
               <col style={{ width: '10%' }} />
-              <col style={{ width: '8%' }} />
+              <col style={{ width: '9%' }} />
               <col style={{ width: '6%' }} />
               <col style={{ width: '6%' }} />
               {[...Array(10)].map((_, i) => (
                 <col key={i} style={{ width: '5.2%' }} />
               ))}
-              <col style={{ width: '10%' }} />
+              <col style={{ width: '9%' }} />
               <col style={{ width: '8%' }} />
             </colgroup>
             <thead>
@@ -423,17 +423,17 @@ export const SewingDashboard: React.FC = () => {
                       </td>
                     )}
                     <td 
-                      className="border-r-[1.5px] px-1 text-center relative"
+                      className="border-r-[1.5px] p-1 text-center relative overflow-hidden"
                       style={{ borderColor: cellBorderColor, backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : '#F8FAFC' }}
                     >
                       <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: p.stripe }} />
-                      <span className="pl-0.5 uppercase font-black whitespace-nowrap" style={{ fontSize: `calc(${labelFs} * 0.9)` }}>{p.label}</span>
+                      <span className="block uppercase font-[800] whitespace-nowrap overflow-hidden pl-1" style={{ fontSize: `clamp(10px, 1.4cqw, ${15 * fsScale}px)` }}>{p.label}</span>
                     </td>
-                    <td className="border-r-[1.5px] bg-slate-50/30 dark:bg-black/10" style={{ borderColor: cellBorderColor }}>
-                       <span className="font-black" style={{ fontSize: labelFs }}>{bd.metrics.hourTarget ?? '-'}</span>
+                    <td className="border-r-[1.5px] p-1 text-center bg-slate-50/30 dark:bg-black/10" style={{ borderColor: cellBorderColor }}>
+                       <span className="font-black block leading-none" style={{ fontSize: `clamp(12px, 1.6cqw, ${18 * fsScale}px)`, color: isDark ? '#F1F5F9' : '#0F172A' }}>{bd.metrics.hourTarget ?? '-'}</span>
                     </td>
-                    <td className="border-r-[1.5px] bg-slate-50/50 dark:bg-black/20" style={{ borderColor: cellBorderColor }}>
-                       <span className="font-black text-[#D97706]" style={{ fontSize: labelFs }}>{bd.metrics.totalTarget ?? '-'}</span>
+                    <td className="border-r-[1.5px] p-1 text-center bg-slate-50/50 dark:bg-black/20" style={{ borderColor: cellBorderColor }}>
+                       <span className="font-black text-[#D97706] block leading-none" style={{ fontSize: `clamp(12px, 1.6cqw, ${18 * fsScale}px)` }}>{bd.metrics.totalTarget ?? '-'}</span>
                     </td>
                     {[...Array(10)].map((_, i) => {
                       const hr = bd.hourly[i];
@@ -585,13 +585,13 @@ export const SewingDashboard: React.FC = () => {
           <table className="w-full table-fixed border-collapse" style={{ borderCollapse: 'collapse', border: `1.5px solid ${cellBorderColor}` }}>
             <colgroup>
               <col style={{ width: '10%' }} />
-              <col style={{ width: '8%' }} />
+              <col style={{ width: '9%' }} />
               <col style={{ width: '6%' }} />
               <col style={{ width: '6%' }} />
               {[...Array(10)].map((_, i) => (
                 <col key={i} style={{ width: '5.2%' }} />
               ))}
-              <col style={{ width: '10%' }} />
+              <col style={{ width: '9%' }} />
               <col style={{ width: '8%' }} />
             </colgroup>
             <thead>
@@ -669,44 +669,70 @@ export const SewingDashboard: React.FC = () => {
                       </td>
                     )}
                     <td 
-                      className={`border-r-[1.5px] px-1 text-center relative ${isOutput ? 'border-l-[6px] border-l-[#16A34A] bg-[#16A34A] text-white' : ''}`}
+                      className={`border-r-[1.5px] p-1 text-center overflow-hidden relative ${
+                        isOutput ? 'bg-[#16A34A] text-white' : ''
+                      }`}
                       style={{ 
                         borderColor: isOutput ? '#16A34A' : cellBorderColor, 
                         borderTop: isOutput ? '3px solid #16A34A' : undefined,
                         borderBottom: isOutput ? '3px solid #16A34A' : undefined,
-                        backgroundColor: isOutput ? '#16A34A' : (isDark ? 'rgba(0,0,0,0.2)' : '#F8FAFC') 
+                        backgroundColor: isOutput ? '#16A34A' : (isDark ? 'rgba(0,0,0,0.2)' : '#F8FAFC'),
                       }}
                     >
                       {!isOutput && <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: p.stripe }} />}
-                      <div className="flex items-center justify-center gap-1">
-                        {isOutput && <Target className="w-3.5 h-3.5 text-white shrink-0" />}
-                        <span 
-                          className={`uppercase font-[900] whitespace-nowrap ${isOutput ? 'text-white tracking-wider' : ''}`} 
-                          style={{ fontSize: isOutput ? `clamp(11px, 1.7cqw, ${18 * fsScale}px)` : `calc(${labelFs} * 0.9)` }}
-                        >
-                          {p.label}
-                        </span>
-                      </div>
+                      <span 
+                        className="block uppercase whitespace-nowrap overflow-hidden font-[800]" 
+                        style={{ 
+                          fontSize: `clamp(10px, 1.4cqw, ${15 * fsScale}px)`,
+                          color: isOutput ? '#FFFFFF' : undefined,
+                        }}
+                      >
+                        {p.label}
+                      </span>
                     </td>
                     <td 
-                      className={`border-r-[1.5px] ${isOutput ? '' : 'bg-slate-50/30 dark:bg-black/10'}`} 
+                      className={`border-r-[1.5px] p-1 text-center ${
+                        isOutput 
+                          ? (isDark ? 'bg-emerald-950/40' : 'bg-emerald-50/80') 
+                          : (isDark ? 'bg-black/10' : 'bg-slate-50/30')
+                      }`} 
                       style={{ 
                         borderColor: isOutput ? '#16A34A' : cellBorderColor,
                         borderTop: isOutput ? '3px solid #16A34A' : undefined,
                         borderBottom: isOutput ? '3px solid #16A34A' : undefined,
                       }}
                     >
-                       <span className={`font-black ${isOutput ? 'text-slate-900 dark:text-white' : ''}`} style={{ fontSize: isOutput ? `calc(${labelFs} * 1.1)` : labelFs }}>{bd.metrics.hourTarget ?? '-'}</span>
+                       <span 
+                         className="font-black block leading-none" 
+                         style={{ 
+                           fontSize: `clamp(12px, 1.6cqw, ${18 * fsScale}px)`,
+                           color: isOutput ? (isDark ? '#86EFAC' : '#14532D') : (isDark ? '#F1F5F9' : '#0F172A'),
+                         }}
+                       >
+                         {bd.metrics.hourTarget ?? '-'}
+                       </span>
                     </td>
                     <td 
-                      className={`border-r-[1.5px] ${isOutput ? '' : 'bg-slate-50/50 dark:bg-black/20'}`} 
+                      className={`border-r-[1.5px] p-1 text-center ${
+                        isOutput 
+                          ? (isDark ? 'bg-emerald-950/40' : 'bg-emerald-50/80') 
+                          : (isDark ? 'bg-black/20' : 'bg-slate-50/50')
+                      }`} 
                       style={{ 
                         borderColor: isOutput ? '#16A34A' : cellBorderColor,
                         borderTop: isOutput ? '3px solid #16A34A' : undefined,
                         borderBottom: isOutput ? '3px solid #16A34A' : undefined,
                       }}
                     >
-                       <span className={`font-black ${isOutput ? 'text-emerald-700 dark:text-emerald-300' : 'text-[#0F8B8D]'}`} style={{ fontSize: isOutput ? `calc(${labelFs} * 1.1)` : labelFs }}>{bd.metrics.totalTarget ?? '-'}</span>
+                       <span 
+                         className="font-black block leading-none" 
+                         style={{ 
+                           fontSize: `clamp(12px, 1.6cqw, ${18 * fsScale}px)`,
+                           color: isOutput ? (isDark ? '#86EFAC' : '#14532D') : (isDark ? '#5EEAD4' : '#0F8B8D'),
+                         }}
+                       >
+                         {bd.metrics.totalTarget ?? '-'}
+                       </span>
                     </td>
                     {[...Array(10)].map((_, i) => {
                       const hr = bd.hourly[i];

@@ -43,6 +43,8 @@ const ITEMS_PER_PAGE = 8;
 const ACCENT_TEAL = '#2BA5B5';
 
 const ALL_PERMISSION_KEYS = [
+  'attendance',
+  'hr_payroll',
   'merchandising',
   'sampling',
   'fabric_yarn',
@@ -53,7 +55,6 @@ const ALL_PERMISSION_KEYS = [
   'qc',
   'commercial',
   'accounts',
-  'hr_payroll',
 ];
 
 export const Users: React.FC = () => {
