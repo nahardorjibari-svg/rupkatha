@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Trash2, Loader2, Calendar } from 'lucide-react';
+import { Trash2, Calendar } from 'lucide-react';
 import type { PlanningOrder, DayColumn } from '../../types/planning';
 import type { DailyMatrix } from '../../hooks/planning/usePlanningDaily';
 import { getOrderStatus } from '../../lib/planningStatus';
@@ -39,6 +39,60 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
 
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Compute total Order Qty grouped by PO across all colour rows
+  const poTotalQtyMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    orders.forEach((o) => {
+      map[o.po] = (map[o.po] || 0) + Number(o.order_qty || 0);
+    });
+    return map;
+  }, [orders]);
+
+  // Compute table totals
+  const totals = useMemo(() => {
+    let totalOrderQty = 0;
+    let totalCuttingQty = 0;
+    let totalInputQty = 0;
+    let totalOutputQty = 0;
+    let totalWashSend = 0;
+
+    const dailyInputTotals: Record<string, number> = {};
+    const dailyOutputTotals: Record<string, number> = {};
+
+    days.forEach((d) => {
+      dailyInputTotals[d.dateStr] = 0;
+      dailyOutputTotals[d.dateStr] = 0;
+    });
+
+    orders.forEach((o) => {
+      totalOrderQty += Number(o.order_qty || 0);
+      totalCuttingQty += Number(o.cutting_qty || 0);
+      totalInputQty += Number(o.total_input || 0);
+      totalOutputQty += Number(o.total_output || 0);
+      totalWashSend += Number(o.wash_send || 0);
+
+      days.forEach((d) => {
+        const inVal = dailyData[o.id]?.[d.dateStr]?.input_qty;
+        const outVal = dailyData[o.id]?.[d.dateStr]?.output_qty;
+        if (inVal) dailyInputTotals[d.dateStr] += Number(inVal);
+        if (outVal) dailyOutputTotals[d.dateStr] += Number(outVal);
+      });
+    });
+
+    return {
+      totalOrderQty,
+      totalCuttingQty,
+      totalInputQty,
+      totalOutputQty,
+      totalWashSend,
+      dailyInputTotals,
+      dailyOutputTotals,
+    };
+  }, [orders, days, dailyData]);
+
   // Highlight helper for search query
   const highlightMatch = (text?: string | null) => {
     if (!text) return '-';
@@ -64,9 +118,6 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
       </>
     );
   };
-
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async (orderId: string) => {
     setIsDeleting(true);
@@ -98,83 +149,81 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
 
   return (
     <div className="relative w-full rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0E2E33] shadow-soft-sm overflow-hidden">
-      {/* Scrollable table container with sticky columns */}
       <div className="overflow-x-auto max-h-[calc(100vh-250px)] scrollbar-custom">
         <table className="w-full text-left border-collapse text-[11px]">
           {/* Header */}
           <thead className="sticky top-0 z-30 bg-slate-100 dark:bg-[#082024] text-slate-700 dark:text-slate-200 border-b border-slate-300 dark:border-white/15 select-none text-[10px] uppercase font-bold tracking-wider">
             <tr>
-              {/* Sticky Left Column 1: Admin Delete */}
-              {isAdmin && (
-                <th className="sticky left-0 z-40 bg-slate-100 dark:bg-[#082024] px-2 py-2.5 text-center w-8 border-r border-slate-300 dark:border-white/10">
-                  Act
-                </th>
-              )}
-
-              {/* Sticky Left Column 2: Line */}
-              <th
-                className={`sticky z-40 bg-slate-100 dark:bg-[#082024] px-2 py-2.5 w-24 border-r border-slate-300 dark:border-white/10 ${
-                  isAdmin ? 'left-8' : 'left-0'
-                }`}
-              >
-                Line
+              {/* Sticky Column 1: SL */}
+              <th className="sticky left-0 z-40 bg-slate-100 dark:bg-[#082024] px-2 py-2.5 text-center w-10 border-r border-slate-300 dark:border-white/10">
+                SL
               </th>
 
-              {/* Sticky Left Column 3: Start Date */}
-              <th
-                className={`sticky z-40 bg-slate-100 dark:bg-[#082024] px-2 py-2.5 w-24 border-r border-slate-300 dark:border-white/10 ${
-                  isAdmin ? 'left-32' : 'left-24'
-                }`}
-              >
-                Start Date
-              </th>
-
-              {/* Sticky Left Column 4: PO */}
-              <th
-                className={`sticky z-40 bg-slate-100 dark:bg-[#082024] px-2.5 py-2.5 min-w-[100px] border-r border-slate-300 dark:border-white/10 ${
-                  isAdmin ? 'left-56' : 'left-48'
-                }`}
-              >
+              {/* Sticky Column 2: PO */}
+              <th className="sticky left-10 z-40 bg-slate-100 dark:bg-[#082024] px-2.5 py-2.5 min-w-[100px] border-r border-slate-300 dark:border-white/10">
                 PO
               </th>
 
-              {/* Non-sticky order metadata */}
-              <th className="px-2.5 py-2.5 min-w-[100px] border-r border-slate-200 dark:border-white/10">
+              {/* Sticky Column 3: Style */}
+              <th className="sticky left-[140px] z-40 bg-slate-100 dark:bg-[#082024] px-2.5 py-2.5 min-w-[110px] border-r border-slate-300 dark:border-white/10">
                 Style
               </th>
-              <th className="px-2 py-2.5 min-w-[80px] border-r border-slate-200 dark:border-white/10">
-                Colour
-              </th>
-              <th className="px-2 py-2.5 min-w-[70px] border-r border-slate-200 dark:border-white/10">
-                Wash
-              </th>
-              <th className="px-2 py-2.5 text-right min-w-[70px] border-r border-slate-200 dark:border-white/10">
+
+              {/* Sticky Column 4: Order Qty (PO total) */}
+              <th className="sticky left-[250px] z-40 bg-slate-100 dark:bg-[#082024] px-2.5 py-2.5 text-right min-w-[80px] border-r-2 border-slate-400 dark:border-white/20 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)]">
                 Order Qty
               </th>
+
+              {/* Column 5: Colour */}
+              <th className="px-2 py-2.5 min-w-[85px] border-r border-slate-200 dark:border-white/10">
+                Colour
+              </th>
+
+              {/* Column 6: Wash */}
+              <th className="px-2 py-2.5 min-w-[75px] border-r border-slate-200 dark:border-white/10">
+                Wash
+              </th>
+
+              {/* Column 7: Line */}
+              <th className="px-2 py-2.5 min-w-[80px] border-r border-slate-200 dark:border-white/10">
+                Line
+              </th>
+
+              {/* Column 8: Start Date */}
+              <th className="px-2 py-2.5 min-w-[105px] border-r border-slate-200 dark:border-white/10">
+                Start Date
+              </th>
+
+              {/* Column 9: Qty (Colour Row Order Qty) */}
+              <th className="px-2 py-2.5 text-right min-w-[65px] border-r border-slate-200 dark:border-white/10">
+                Qty
+              </th>
+
+              {/* Column 10: Cutting */}
               <th className="px-2 py-2.5 text-right min-w-[70px] border-r border-slate-200 dark:border-white/10">
                 Cutting
               </th>
-              <th className="px-2 py-2.5 text-right min-w-[65px] border-r border-slate-200 dark:border-white/10">
-                Wash Send
-              </th>
-              <th className="px-2 py-2.5 text-center min-w-[55px] border-r border-slate-300 dark:border-white/15 bg-slate-200/50 dark:bg-black/20">
-                Type
-              </th>
-              <th className="px-2 py-2.5 text-right min-w-[65px] border-r border-slate-200 dark:border-white/10">
-                Total
-              </th>
-              <th className="px-2 py-2.5 text-right min-w-[60px] border-r border-slate-200 dark:border-white/10">
+
+              {/* Column 11: Extra % */}
+              <th className="px-1.5 py-2.5 text-right min-w-[60px] border-r border-slate-200 dark:border-white/10">
                 Extra %
               </th>
-              <th className="px-2 py-2.5 text-right min-w-[65px] border-r border-slate-300 dark:border-white/20">
-                Balance
+
+              {/* Column 12: Cut Status */}
+              <th className="px-2 py-2.5 text-center min-w-[75px] border-r border-slate-200 dark:border-white/10">
+                Cut Status
+              </th>
+
+              {/* Column 13: Type (INPUT / OUTPUT) */}
+              <th className="px-2 py-2.5 text-center min-w-[60px] border-r border-slate-300 dark:border-white/15 bg-slate-200/50 dark:bg-black/20">
+                Type
               </th>
 
               {/* 30 Day Columns */}
               {days.map((day) => (
                 <th
                   key={day.dateStr}
-                  className={`px-1.5 py-1.5 text-center min-w-[52px] border-r border-slate-200 dark:border-white/10 ${
+                  className={`px-1 py-1 text-center min-w-[50px] border-r border-slate-200 dark:border-white/10 ${
                     day.isFriday
                       ? 'bg-slate-200/90 dark:bg-slate-800 text-rose-600 dark:text-rose-400 font-extrabold'
                       : day.isToday
@@ -191,37 +240,79 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                 </th>
               ))}
 
-              {/* Status Header */}
-              <th className="sticky right-0 z-30 bg-slate-100 dark:bg-[#082024] px-3 py-2.5 text-center min-w-[120px] border-l border-slate-300 dark:border-white/15 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
+              {/* Column: Total */}
+              <th className="px-2 py-2.5 text-right min-w-[65px] border-r border-slate-200 dark:border-white/10">
+                Total
+              </th>
+
+              {/* Column: Balance */}
+              <th className="px-2 py-2.5 text-right min-w-[70px] border-r border-slate-200 dark:border-white/10">
+                Bal.
+              </th>
+
+              {/* Column: Wash Send */}
+              <th className="px-2 py-2.5 text-right min-w-[70px] border-r border-slate-200 dark:border-white/10">
+                Wash Send
+              </th>
+
+              {/* Column: Send Bal. */}
+              <th className="px-2 py-2.5 text-right min-w-[70px] border-r border-slate-300 dark:border-white/15">
+                Send Bal.
+              </th>
+
+              {/* Column: Status */}
+              <th className="px-3 py-2.5 text-center min-w-[130px] border-r border-slate-300 dark:border-white/15">
                 Status
               </th>
+
+              {/* Column: Action (Admin Delete) */}
+              {isAdmin && (
+                <th className="px-2 py-2.5 text-center w-9">
+                  Act
+                </th>
+              )}
             </tr>
           </thead>
 
           {/* Table Body */}
           <tbody className="divide-y divide-slate-200 dark:divide-white/10">
-            {orders.map((order) => {
+            {orders.map((order, index) => {
               const status = getOrderStatus(order);
               const orderId = order.id;
 
               const totalInput = Number(order.total_input || 0);
               const totalOutput = Number(order.total_output || 0);
-              const orderQty = Number(order.order_qty || 0);
+              const rowOrderQty = Number(order.order_qty || 0);
               const cuttingQty = Number(order.cutting_qty || 0);
+              const washSend = Number(order.wash_send || 0);
 
-              // Extra % calculations
-              const inputExtraPct =
-                orderQty > 0
-                  ? (((totalInput - orderQty) / orderQty) * 100).toFixed(1)
-                  : '0.0';
-              const outputExtraPct =
-                orderQty > 0
-                  ? (((totalOutput - orderQty) / orderQty) * 100).toFixed(1)
-                  : '0.0';
+              // Whole PO total Order Qty
+              const poTotalOrderQty = poTotalQtyMap[order.po] || rowOrderQty;
+
+              // Extra % = round((cutting_qty - order_qty) / order_qty * 100)
+              const extraPct =
+                rowOrderQty > 0
+                  ? Math.round(((cuttingQty - rowOrderQty) / rowOrderQty) * 100)
+                  : 0;
+
+              // Cut status
+              let cutStatusLabel = 'Not cut';
+              let cutStatusClass =
+                'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300';
+              if (cuttingQty >= rowOrderQty && rowOrderQty > 0) {
+                cutStatusLabel = 'Cut done';
+                cutStatusClass =
+                  'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300';
+              } else if (cuttingQty > 0) {
+                cutStatusLabel = 'Cutting';
+                cutStatusClass =
+                  'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300';
+              }
 
               // Balances
               const inputBalance = cuttingQty - totalInput;
               const outputBalance = totalInput - totalOutput;
+              const sendBalance = washSend - totalOutput;
 
               return (
                 <React.Fragment key={orderId}>
@@ -229,54 +320,59 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                   <tr
                     className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5 border-t border-slate-200 dark:border-white/10`}
                   >
-                    {/* Admin Delete Action (Rowspan 2) */}
-                    {isAdmin && (
-                      <td
-                        rowSpan={2}
-                        className={`sticky left-0 z-20 px-1 py-1 text-center border-r border-slate-300 dark:border-white/10 ${status.rowTintClass} bg-inherit`}
-                      >
-                        {confirmDeleteId === orderId ? (
-                          <div className="flex flex-col items-center gap-1 p-1 bg-white dark:bg-slate-900 rounded border border-rose-300 shadow-md">
-                            <span className="text-[9px] text-rose-600 font-bold">
-                              Del?
-                            </span>
-                            <div className="flex gap-1">
-                              <button
-                                type="button"
-                                disabled={isDeleting}
-                                onClick={() => handleDelete(orderId)}
-                                className="px-1 py-0.5 bg-rose-600 text-white rounded text-[8px] font-bold"
-                              >
-                                {isDeleting ? '...' : 'Y'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setConfirmDeleteId(null)}
-                                className="px-1 py-0.5 bg-slate-200 text-slate-800 rounded text-[8px]"
-                              >
-                                N
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDeleteId(orderId)}
-                            className="p-1 text-slate-400 hover:text-rose-500 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
-                            title="Delete order"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </td>
-                    )}
-
-                    {/* Line No (Rowspan 2) */}
+                    {/* Sticky Column 1: SL (Rowspan 2) */}
                     <td
                       rowSpan={2}
-                      className={`sticky z-20 px-1 py-1 border-r border-slate-300 dark:border-white/10 ${
-                        isAdmin ? 'left-8' : 'left-0'
-                      } ${status.rowTintClass} bg-inherit`}
+                      className={`sticky left-0 z-20 px-2 py-1.5 text-center font-bold text-slate-500 dark:text-slate-400 border-r border-slate-300 dark:border-white/10 ${status.rowTintClass} bg-inherit`}
+                    >
+                      {index + 1}
+                    </td>
+
+                    {/* Sticky Column 2: PO (Rowspan 2) */}
+                    <td
+                      rowSpan={2}
+                      className={`sticky left-10 z-20 px-2.5 py-1.5 font-extrabold text-slate-900 dark:text-white border-r border-slate-300 dark:border-white/10 whitespace-nowrap ${status.rowTintClass} bg-inherit`}
+                    >
+                      {highlightMatch(order.po)}
+                    </td>
+
+                    {/* Sticky Column 3: Style (Rowspan 2) */}
+                    <td
+                      rowSpan={2}
+                      className={`sticky left-[140px] z-20 px-2.5 py-1.5 font-medium text-slate-700 dark:text-slate-300 border-r border-slate-300 dark:border-white/10 max-w-[140px] truncate ${status.rowTintClass} bg-inherit`}
+                      title={order.style || ''}
+                    >
+                      {highlightMatch(order.style)}
+                    </td>
+
+                    {/* Sticky Column 4: Order Qty (PO total, Rowspan 2) */}
+                    <td
+                      rowSpan={2}
+                      className={`sticky left-[250px] z-20 px-2.5 py-1.5 text-right font-black text-slate-900 dark:text-white border-r-2 border-slate-400 dark:border-white/20 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)] ${status.rowTintClass} bg-inherit`}
+                    >
+                      {poTotalOrderQty.toLocaleString()}
+                    </td>
+
+                    {/* Column 5: Colour (Rowspan 2) */}
+                    <td
+                      rowSpan={2}
+                      className="px-2 py-1.5 text-slate-700 dark:text-slate-300 border-r border-slate-200 dark:border-white/10 font-medium whitespace-nowrap"
+                    >
+                      {highlightMatch(order.colour) || '-'}
+                    </td>
+
+                    {/* Column 6: Wash (Rowspan 2) */}
+                    <td
+                      rowSpan={2}
+                      className="px-2 py-1.5 text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-white/10 text-[10px]"
+                    >
+                      {order.wash || '-'}
+                    </td>
+
+                    {/* Column 7: Line (Rowspan 2, inline select) */}
+                    <td
+                      rowSpan={2}
+                      className="px-1 py-1 border-r border-slate-200 dark:border-white/10"
                     >
                       <select
                         value={order.line_no || ''}
@@ -293,12 +389,10 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       </select>
                     </td>
 
-                    {/* Start Date (Rowspan 2) */}
+                    {/* Column 8: Start Date (Rowspan 2, inline date input with amber background) */}
                     <td
                       rowSpan={2}
-                      className={`sticky z-20 px-1 py-1 border-r border-slate-300 dark:border-white/10 ${
-                        isAdmin ? 'left-32' : 'left-24'
-                      } ${status.rowTintClass} bg-inherit`}
+                      className="px-1 py-1 border-r border-slate-200 dark:border-white/10"
                     >
                       <input
                         type="date"
@@ -308,146 +402,77 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             start_date: e.target.value || null,
                           })
                         }
-                        className="w-full px-1 py-0.5 text-[10px] rounded border border-transparent hover:border-slate-300 dark:hover:border-white/20 focus:border-[#2BA5B5] bg-transparent focus:bg-white dark:focus:bg-slate-900"
+                        className="w-full px-1.5 py-1 text-[10px] font-semibold rounded bg-[#FEF9C3] dark:bg-amber-950/40 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-700/60 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
                       />
                     </td>
 
-                    {/* PO (Rowspan 2) */}
+                    {/* Column 9: Qty (Colour Row Order Qty, Rowspan 2) */}
                     <td
                       rowSpan={2}
-                      className={`sticky z-20 px-2 py-1 font-bold text-slate-900 dark:text-white border-r border-slate-300 dark:border-white/10 ${
-                        isAdmin ? 'left-56' : 'left-48'
-                      } ${status.rowTintClass} bg-inherit`}
+                      className="px-2 py-1.5 text-right font-extrabold text-slate-800 dark:text-slate-200 border-r border-slate-200 dark:border-white/10"
                     >
-                      <div className="truncate max-w-[120px]" title={order.po}>
-                        {highlightMatch(order.po)}
-                      </div>
+                      {rowOrderQty.toLocaleString()}
                     </td>
 
-                    {/* Style (Rowspan 2) */}
+                    {/* Column 10: Cutting (Rowspan 2, inline number input) */}
                     <td
                       rowSpan={2}
-                      className="px-2 py-1 text-slate-700 dark:text-slate-300 border-r border-slate-200 dark:border-white/10"
-                    >
-                      <div
-                        className="truncate max-w-[120px]"
-                        title={order.style || '-'}
-                      >
-                        {highlightMatch(order.style)}
-                      </div>
-                    </td>
-
-                    {/* Colour (Rowspan 2) */}
-                    <td
-                      rowSpan={2}
-                      className="px-2 py-1 text-slate-700 dark:text-slate-300 border-r border-slate-200 dark:border-white/10"
-                    >
-                      <div
-                        className="truncate max-w-[100px]"
-                        title={order.colour || '-'}
-                      >
-                        {order.colour || '-'}
-                      </div>
-                    </td>
-
-                    {/* Wash (Rowspan 2) */}
-                    <td
-                      rowSpan={2}
-                      className="px-2 py-1 text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-white/10"
-                    >
-                      <div
-                        className="truncate max-w-[90px]"
-                        title={order.wash || '-'}
-                      >
-                        {order.wash || '-'}
-                      </div>
-                    </td>
-
-                    {/* Order Qty (Rowspan 2) */}
-                    <td
-                      rowSpan={2}
-                      className="px-2 py-1 text-right font-extrabold text-slate-900 dark:text-white border-r border-slate-200 dark:border-white/10"
-                    >
-                      {orderQty.toLocaleString()}
-                    </td>
-
-                    {/* Cutting Qty (Rowspan 2) */}
-                    <td
-                      rowSpan={2}
-                      className="px-1 py-1 text-right border-r border-slate-200 dark:border-white/10"
+                      className="px-1 py-1 border-r border-slate-200 dark:border-white/10"
                     >
                       <input
                         type="number"
                         min="0"
-                        defaultValue={order.cutting_qty ?? 0}
+                        defaultValue={cuttingQty || ''}
+                        key={`cutting_${orderId}_${cuttingQty}`}
+                        placeholder="0"
                         onBlur={(e) => {
-                          const val = Math.max(
-                            0,
-                            parseInt(e.target.value, 10) || 0
-                          );
-                          if (val !== order.cutting_qty) {
-                            onUpdateOrder(orderId, { cutting_qty: val });
+                          const val = parseInt(e.target.value, 10);
+                          const cleanVal = isNaN(val) ? 0 : Math.max(0, val);
+                          if (cleanVal !== cuttingQty) {
+                            onUpdateOrder(orderId, { cutting_qty: cleanVal });
                           }
                         }}
-                        className="w-16 px-1.5 py-0.5 text-right font-bold text-[11px] rounded border border-transparent hover:border-slate-300 dark:hover:border-white/20 focus:border-[#2BA5B5] bg-transparent focus:bg-white dark:focus:bg-slate-900"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            (e.target as HTMLInputElement).blur();
+                          }
+                        }}
+                        className="w-full h-7 px-1 text-right text-[11px] font-bold text-slate-900 dark:text-white rounded border border-transparent hover:border-slate-300 dark:hover:border-white/20 focus:border-[#2BA5B5] bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#2BA5B5]"
                       />
                     </td>
 
-                    {/* Wash Send (Rowspan 2) */}
+                    {/* Column 11: Extra % (Rowspan 2) */}
                     <td
                       rowSpan={2}
-                      className="px-1 py-1 text-right border-r border-slate-200 dark:border-white/10"
-                    >
-                      <input
-                        type="number"
-                        min="0"
-                        defaultValue={order.wash_send ?? 0}
-                        onBlur={(e) => {
-                          const val = Math.max(
-                            0,
-                            parseInt(e.target.value, 10) || 0
-                          );
-                          if (val !== order.wash_send) {
-                            onUpdateOrder(orderId, { wash_send: val });
-                          }
-                        }}
-                        className="w-14 px-1.5 py-0.5 text-right font-medium text-[11px] rounded border border-transparent hover:border-slate-300 dark:hover:border-white/20 focus:border-[#2BA5B5] bg-transparent focus:bg-white dark:focus:bg-slate-900"
-                      />
-                    </td>
-
-                    {/* ROW 1 METRIC: INPUT */}
-                    <td className="px-1.5 py-1 text-center font-bold text-[10px] text-teal-700 dark:text-teal-300 bg-teal-50/60 dark:bg-teal-950/30 border-r border-slate-300 dark:border-white/15">
-                      IN
-                    </td>
-
-                    {/* Total Input */}
-                    <td className="px-2 py-1 text-right font-bold text-slate-800 dark:text-slate-200 border-r border-slate-200 dark:border-white/10">
-                      {totalInput.toLocaleString()}
-                    </td>
-
-                    {/* Input Extra % */}
-                    <td
-                      className={`px-2 py-1 text-right font-semibold text-[10px] border-r border-slate-200 dark:border-white/10 ${
-                        Number(inputExtraPct) >= 0
+                      className={`px-1.5 py-1.5 text-right font-bold text-[10px] border-r border-slate-200 dark:border-white/10 ${
+                        extraPct > 0
                           ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-rose-600 dark:text-rose-400'
+                          : extraPct < 0
+                          ? 'text-rose-600 dark:text-rose-400'
+                          : 'text-slate-500 dark:text-slate-400'
                       }`}
                     >
-                      {Number(inputExtraPct) > 0 ? `+${inputExtraPct}%` : `${inputExtraPct}%`}
+                      {extraPct > 0 ? `+${extraPct}%` : `${extraPct}%`}
                     </td>
 
-                    {/* Input Balance */}
+                    {/* Column 12: Cut Status (Rowspan 2) */}
                     <td
-                      className={`px-2 py-1 text-right font-bold border-r border-slate-300 dark:border-white/20 ${
-                        inputBalance <= 0
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-amber-600 dark:text-amber-400'
-                      }`}
+                      rowSpan={2}
+                      className="px-1.5 py-1 text-center border-r border-slate-200 dark:border-white/10"
                     >
-                      {inputBalance.toLocaleString()}
+                      <span
+                        className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold border whitespace-nowrap ${cutStatusClass}`}
+                      >
+                        {cutStatusLabel}
+                      </span>
                     </td>
 
-                    {/* Row 1: 30 Daily INPUT cells */}
+                    {/* Column 13: Type (INPUT) */}
+                    <td className="px-1.5 py-1 text-center font-bold text-[10px] text-teal-700 dark:text-teal-300 bg-teal-50/70 dark:bg-teal-950/40 border-r border-slate-300 dark:border-white/15">
+                      INPUT
+                    </td>
+
+                    {/* 30 Daily INPUT cells */}
                     {days.map((day) => {
                       const cellKey = `${orderId}_${day.dateStr}_input`;
                       const flashKey = `${orderId}_${day.dateStr}`;
@@ -488,7 +513,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                                 (e.target as HTMLInputElement).blur();
                               }
                             }}
-                            className="w-full h-7 px-0.5 text-center text-[10px] font-bold text-slate-800 dark:text-slate-100 placeholder:text-slate-300 dark:placeholder:text-slate-600 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#2BA5B5] transition-all"
+                            className="w-full h-7 px-0.5 text-center text-[10px] font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#2BA5B5] transition-all"
                           />
                           {isSaving && (
                             <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[#2BA5B5] animate-ping" />
@@ -497,56 +522,128 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       );
                     })}
 
+                    {/* Total (INPUT) */}
+                    <td className="px-2 py-1 text-right font-extrabold text-slate-900 dark:text-white border-r border-slate-200 dark:border-white/10">
+                      {totalInput.toLocaleString()}
+                    </td>
+
+                    {/* Bal. (INPUT: cutting_qty - total_input) */}
+                    <td
+                      className={`px-2 py-1 text-right font-bold border-r border-slate-200 dark:border-white/10 ${
+                        inputBalance <= 0
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-amber-600 dark:text-amber-400'
+                      }`}
+                    >
+                      {inputBalance.toLocaleString()}
+                    </td>
+
+                    {/* Wash Send (Rowspan 2, inline number input) */}
+                    <td
+                      rowSpan={2}
+                      className="px-1 py-1 border-r border-slate-200 dark:border-white/10"
+                    >
+                      <input
+                        type="number"
+                        min="0"
+                        defaultValue={washSend || ''}
+                        key={`wash_${orderId}_${washSend}`}
+                        placeholder="0"
+                        onBlur={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          const cleanVal = isNaN(val) ? 0 : Math.max(0, val);
+                          if (cleanVal !== washSend) {
+                            onUpdateOrder(orderId, { wash_send: cleanVal });
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            (e.target as HTMLInputElement).blur();
+                          }
+                        }}
+                        className="w-full h-7 px-1 text-right text-[11px] font-semibold text-slate-900 dark:text-white rounded border border-transparent hover:border-slate-300 dark:hover:border-white/20 focus:border-[#2BA5B5] bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#2BA5B5]"
+                      />
+                    </td>
+
+                    {/* Send Bal. (Rowspan 2: wash_send - total_output) */}
+                    <td
+                      rowSpan={2}
+                      className={`px-2 py-1 text-right font-bold border-r border-slate-300 dark:border-white/15 ${
+                        sendBalance < 0
+                          ? 'text-rose-600 dark:text-rose-400'
+                          : sendBalance === 0 && washSend > 0
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      {sendBalance.toLocaleString()}
+                    </td>
+
                     {/* Status Badge (Rowspan 2) */}
                     <td
                       rowSpan={2}
-                      className={`sticky right-0 z-20 px-2.5 py-1 text-center border-l border-slate-300 dark:border-white/15 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] ${status.rowTintClass} bg-inherit`}
+                      className={`px-2 py-1 text-center border-r border-slate-300 dark:border-white/15 ${status.rowTintClass} bg-inherit`}
                     >
                       <span
-                        className={`inline-block px-2 py-0.5 rounded-full text-[10px] border whitespace-nowrap ${status.badgeClass}`}
+                        className={`inline-block px-2 py-0.5 rounded-full text-[10px] border whitespace-nowrap font-medium ${status.badgeClass}`}
                       >
                         {status.label}
                       </span>
                     </td>
+
+                    {/* Admin Delete Action (Rowspan 2) */}
+                    {isAdmin && (
+                      <td
+                        rowSpan={2}
+                        className={`px-1 py-1 text-center ${status.rowTintClass} bg-inherit`}
+                      >
+                        {confirmDeleteId === orderId ? (
+                          <div className="flex flex-col items-center gap-1 p-1 bg-white dark:bg-slate-900 rounded border border-rose-300 shadow-md">
+                            <span className="text-[9px] text-rose-600 font-bold">
+                              Del?
+                            </span>
+                            <div className="flex gap-1">
+                              <button
+                                type="button"
+                                disabled={isDeleting}
+                                onClick={() => handleDelete(orderId)}
+                                className="px-1 py-0.5 bg-rose-600 text-white rounded text-[8px] font-bold"
+                              >
+                                {isDeleting ? '...' : 'Y'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setConfirmDeleteId(null)}
+                                className="px-1 py-0.5 bg-slate-200 text-slate-800 rounded text-[8px]"
+                              >
+                                N
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(orderId)}
+                            className="p-1 text-slate-400 hover:text-rose-500 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                            title="Delete order"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </td>
+                    )}
                   </tr>
 
                   {/* SUB-ROW 2: OUTPUT */}
                   <tr
                     className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5`}
                   >
-                    {/* ROW 2 METRIC: OUTPUT */}
+                    {/* Column 13: Type (OUTPUT) */}
                     <td className="px-1.5 py-1 text-center font-bold text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50/60 dark:bg-indigo-950/30 border-r border-slate-300 dark:border-white/15">
-                      OUT
+                      OUTPUT
                     </td>
 
-                    {/* Total Output */}
-                    <td className="px-2 py-1 text-right font-extrabold text-slate-900 dark:text-white border-r border-slate-200 dark:border-white/10">
-                      {totalOutput.toLocaleString()}
-                    </td>
-
-                    {/* Output Extra % */}
-                    <td
-                      className={`px-2 py-1 text-right font-semibold text-[10px] border-r border-slate-200 dark:border-white/10 ${
-                        Number(outputExtraPct) >= 0
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-rose-600 dark:text-rose-400'
-                      }`}
-                    >
-                      {Number(outputExtraPct) > 0 ? `+${outputExtraPct}%` : `${outputExtraPct}%`}
-                    </td>
-
-                    {/* Output Balance */}
-                    <td
-                      className={`px-2 py-1 text-right font-bold border-r border-slate-300 dark:border-white/20 ${
-                        outputBalance <= 0
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-amber-600 dark:text-amber-400'
-                      }`}
-                    >
-                      {outputBalance.toLocaleString()}
-                    </td>
-
-                    {/* Row 2: 30 Daily OUTPUT cells */}
+                    {/* 30 Daily OUTPUT cells */}
                     {days.map((day) => {
                       const cellKey = `${orderId}_${day.dateStr}_output`;
                       const flashKey = `${orderId}_${day.dateStr}`;
@@ -595,11 +692,119 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                         </td>
                       );
                     })}
+
+                    {/* Total (OUTPUT) */}
+                    <td className="px-2 py-1 text-right font-extrabold text-slate-900 dark:text-white border-r border-slate-200 dark:border-white/10">
+                      {totalOutput.toLocaleString()}
+                    </td>
+
+                    {/* Bal. (OUTPUT: total_input - total_output) */}
+                    <td
+                      className={`px-2 py-1 text-right font-bold border-r border-slate-200 dark:border-white/10 ${
+                        outputBalance <= 0
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-amber-600 dark:text-amber-400'
+                      }`}
+                    >
+                      {outputBalance.toLocaleString()}
+                    </td>
                   </tr>
                 </React.Fragment>
               );
             })}
           </tbody>
+
+          {/* Pinned Totals Row */}
+          <tfoot className="sticky bottom-0 z-30 bg-slate-200 dark:bg-[#071B1E] text-slate-900 dark:text-white border-t-2 border-slate-400 dark:border-white/20 font-black text-[10px] uppercase">
+            {/* Totals Row 1: INPUT TOTALS */}
+            <tr className="border-b border-slate-300 dark:border-white/10">
+              <td
+                colSpan={3}
+                className="sticky left-0 z-40 bg-slate-200 dark:bg-[#071B1E] px-2.5 py-2 text-right border-r border-slate-300 dark:border-white/10"
+              >
+                TOTALS ({orders.length} orders)
+              </td>
+              <td className="sticky left-[250px] z-40 bg-slate-200 dark:bg-[#071B1E] px-2.5 py-2 text-right border-r-2 border-slate-400 dark:border-white/20 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)]">
+                {totals.totalOrderQty.toLocaleString()}
+              </td>
+              <td colSpan={4} className="px-2 py-2 text-center text-slate-500 border-r border-slate-300 dark:border-white/10">
+                -
+              </td>
+              <td className="px-2 py-2 text-right border-r border-slate-300 dark:border-white/10">
+                {totals.totalOrderQty.toLocaleString()}
+              </td>
+              <td className="px-2 py-2 text-right border-r border-slate-300 dark:border-white/10 text-emerald-700 dark:text-emerald-300">
+                {totals.totalCuttingQty.toLocaleString()}
+              </td>
+              <td colSpan={2} className="px-2 py-2 text-center text-slate-500 border-r border-slate-300 dark:border-white/10">
+                -
+              </td>
+              <td className="px-1.5 py-2 text-center font-bold text-teal-800 dark:text-teal-300 bg-teal-100/70 dark:bg-teal-950/60 border-r border-slate-300 dark:border-white/15">
+                IN Σ
+              </td>
+              {days.map((day) => (
+                <td
+                  key={`sum_in_${day.dateStr}`}
+                  className={`px-1 py-2 text-center text-[10px] border-r border-slate-300 dark:border-white/10 ${
+                    day.isFriday ? 'bg-slate-300/80 dark:bg-slate-800' : ''
+                  }`}
+                >
+                  {totals.dailyInputTotals[day.dateStr]
+                    ? totals.dailyInputTotals[day.dateStr].toLocaleString()
+                    : '-'}
+                </td>
+              ))}
+              <td className="px-2 py-2 text-right border-r border-slate-300 dark:border-white/10 text-teal-800 dark:text-teal-300">
+                {totals.totalInputQty.toLocaleString()}
+              </td>
+              <td className="px-2 py-2 text-right border-r border-slate-300 dark:border-white/10">
+                {(totals.totalCuttingQty - totals.totalInputQty).toLocaleString()}
+              </td>
+              <td className="px-2 py-2 text-right border-r border-slate-300 dark:border-white/10">
+                {totals.totalWashSend.toLocaleString()}
+              </td>
+              <td className="px-2 py-2 text-right border-r border-slate-300 dark:border-white/15">
+                {(totals.totalWashSend - totals.totalOutputQty).toLocaleString()}
+              </td>
+              <td colSpan={isAdmin ? 2 : 1} className="px-2 py-2 text-center text-slate-500">
+                -
+              </td>
+            </tr>
+
+            {/* Totals Row 2: OUTPUT TOTALS */}
+            <tr>
+              <td
+                colSpan={12}
+                className="sticky left-0 z-40 bg-slate-200 dark:bg-[#071B1E] px-2.5 py-1.5 text-right text-slate-500 border-r border-slate-300 dark:border-white/10"
+              >
+                OUTPUT DAILY TOTALS
+              </td>
+              <td className="px-1.5 py-1.5 text-center font-bold text-indigo-800 dark:text-indigo-300 bg-indigo-100/70 dark:bg-indigo-950/60 border-r border-slate-300 dark:border-white/15">
+                OUT Σ
+              </td>
+              {days.map((day) => (
+                <td
+                  key={`sum_out_${day.dateStr}`}
+                  className={`px-1.5 py-1.5 text-center text-[10px] border-r border-slate-300 dark:border-white/10 ${
+                    day.isFriday ? 'bg-slate-300/80 dark:bg-slate-800' : ''
+                  }`}
+                >
+                  {totals.dailyOutputTotals[day.dateStr]
+                    ? totals.dailyOutputTotals[day.dateStr].toLocaleString()
+                    : '-'}
+                </td>
+              ))}
+              <td className="px-2 py-1.5 text-right border-r border-slate-300 dark:border-white/10 text-indigo-800 dark:text-indigo-300">
+                {totals.totalOutputQty.toLocaleString()}
+              </td>
+              <td className="px-2 py-1.5 text-right border-r border-slate-300 dark:border-white/10">
+                {(totals.totalInputQty - totals.totalOutputQty).toLocaleString()}
+              </td>
+              <td colSpan={isAdmin ? 3 : 2} className="px-2 py-1.5 text-center text-slate-500">
+                -
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>

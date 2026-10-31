@@ -119,7 +119,7 @@ export function buildRolling30Days(dhakaTodayStr: string) {
 
     columns.push({
       dateStr,
-      displayDay: `${d.getUTCDate()}-${monthNames[d.getUTCMonth()]}`,
+      displayDay: `${dStr}/${mStr}`,
       dayOfWeek: dayNames[dayOfWeekIdx],
       isFriday,
       isToday,

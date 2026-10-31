@@ -34,10 +34,6 @@ export const AddOrderDrawer: React.FC<AddOrderDrawerProps> = ({
   const [factoryUnit, setFactoryUnit] = useState<'knit' | 'woven'>(
     currentFactoryUnit === 'woven' ? 'woven' : 'knit'
   );
-  const [lineNo, setLineNo] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [cuttingQty, setCuttingQty] = useState('');
-  const [washSend, setWashSend] = useState('');
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,10 +44,6 @@ export const AddOrderDrawer: React.FC<AddOrderDrawerProps> = ({
     setWash('');
     setOrderQty('');
     setColourInput('');
-    setLineNo('');
-    setStartDate('');
-    setCuttingQty('');
-    setWashSend('');
     setErrorMsg(null);
   };
 
@@ -166,20 +158,19 @@ export const AddOrderDrawer: React.FC<AddOrderDrawerProps> = ({
     setIsSubmitting(true);
 
     try {
-      const cutQty = parseInt(cuttingQty, 10) || 0;
-      const wSend = parseInt(washSend, 10) || 0;
-
-      // Create orders. Note: NEVER send is_done!
+      // Create orders with ONLY PO, Style, Wash, Order qty, Colour.
+      // Line, Start Date, Cutting, and Wash Send are entered in the table matrix.
+      // Note: NEVER send is_done!
       const rowsToInsert = colours.map((c) => ({
         po: cleanPo,
         style: style.trim() || null,
         colour: c.colour,
         wash: wash.trim() || null,
         order_qty: c.qty,
-        line_no: lineNo.trim(),
-        start_date: startDate || null,
-        cutting_qty: colours.length === 1 ? cutQty : 0, // if split colours, cutting can be entered per line
-        wash_send: colours.length === 1 ? wSend : 0,
+        line_no: '',
+        start_date: null,
+        cutting_qty: 0,
+        wash_send: 0,
         factory_unit: factoryUnit,
         created_by: profile?.id || null,
       }));
@@ -376,69 +367,6 @@ export const AddOrderDrawer: React.FC<AddOrderDrawerProps> = ({
                     • Names only: <code className="text-[#2BA5B5] font-mono">Black, Navy, White</code> (auto-splits total order quantity).
                   </p>
                   <p>• Leave empty if single color or color not specified.</p>
-                </div>
-              </div>
-
-              {/* Line Allocation and Start Date */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                    Line Allocation
-                  </label>
-                  <select
-                    value={lineNo}
-                    onChange={(e) => setLineNo(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-black/20 focus:outline-none focus:ring-2 focus:ring-[#2BA5B5]"
-                  >
-                    <option value="">No line yet (Upcoming)</option>
-                    <option value="Line-1">Line-1</option>
-                    <option value="Line-2">Line-2</option>
-                    <option value="Line-3">Line-3</option>
-                    <option value="Line-4">Line-4</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                    Plan Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-black/20 focus:outline-none focus:ring-2 focus:ring-[#2BA5B5]"
-                  />
-                </div>
-              </div>
-
-              {/* Initial Cutting & Wash Send */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                    Cutting Qty (কাটিং পরিমাণ)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={cuttingQty}
-                    onChange={(e) => setCuttingQty(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-black/20 focus:outline-none focus:ring-2 focus:ring-[#2BA5B5]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                    Wash Send (ওয়াশ পাঠানো)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={washSend}
-                    onChange={(e) => setWashSend(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-black/20 focus:outline-none focus:ring-2 focus:ring-[#2BA5B5]"
-                  />
                 </div>
               </div>
 

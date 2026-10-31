@@ -1,16 +1,15 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   CalendarDays,
   Plus,
   Search,
   X,
   RefreshCw,
-  Layers,
-  Filter,
-  CheckCircle2,
-  Clock,
   Sparkles,
-  Shirt,
+  Clock,
+  CheckCircle2,
+  ClipboardList,
+  BarChart3,
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { useUnit } from '../../context/UnitContext';
@@ -25,9 +24,14 @@ import { AddOrderDrawer } from '../../components/planning/AddOrderDrawer';
 import { ExportButtons } from '../../components/planning/ExportButtons';
 import type { PlanningTab } from '../../types/planning';
 
+type ViewMode = 'production_plan' | 'line_summary';
+
 export const LinePlanPage: React.FC = () => {
   const { activeUnit, setActiveUnit, unitLabel } = useUnit();
   const { isDark } = useTheme();
+
+  // View toggle: Production Plan vs Line Summary
+  const [viewMode, setViewMode] = useState<ViewMode>('production_plan');
 
   // Active tab: 'active' | 'upcoming' | 'done'
   const [currentTab, setCurrentTab] = useState<PlanningTab>('active');
@@ -40,7 +44,7 @@ export const LinePlanPage: React.FC = () => {
   const startDateStr = days[0].dateStr;
   const endDateStr = days[days.length - 1].dateStr;
 
-  // Formatted date range label (e.g., "24 Oct 2026 – 22 Nov 2026")
+  // Formatted date range label (e.g., "24/10 – 22/11 (Dhaka)")
   const dateRangeLabel = useMemo(() => {
     const startParts = days[0].displayDay;
     const endParts = days[days.length - 1].displayDay;
@@ -132,7 +136,7 @@ export const LinePlanPage: React.FC = () => {
         {/* Sticky Top Header Bar */}
         <div className="sticky top-0 z-30 -mt-2 -mx-4 px-4 py-3 bg-slate-50/95 dark:bg-[#0A262B]/95 backdrop-blur-md border-b border-slate-200 dark:border-white/10 print:static print:bg-white print:p-0">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            {/* Title & Rolling Date */}
+            {/* Title & Date Window */}
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#0F8B8D] to-teal-700 text-white flex items-center justify-center shadow-xs">
                 <CalendarDays className="w-5 h-5" />
@@ -140,10 +144,10 @@ export const LinePlanPage: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
-                    Line Plan
+                    Planning & Production
                   </h1>
                   <span className="text-xs font-bangla text-[#2BA5B5] font-bold">
-                    লাইন পরিকল্পনা
+                    পরিকল্পনা ও উৎপাদন
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
@@ -155,178 +159,211 @@ export const LinePlanPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Controls: Unit Toggle, Search, Export, Add Order */}
-            <div className="flex flex-wrap items-center gap-2 print:hidden">
-              {/* Unit Switcher */}
-              <div className="flex items-center bg-white dark:bg-black/20 p-1 rounded-xl border border-slate-200 dark:border-white/10 shadow-xs">
-                <button
-                  type="button"
-                  onClick={() => setActiveUnit('knit')}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                    activeUnit === 'knit'
-                      ? 'bg-[#2BA5B5] text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  Knit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveUnit('woven')}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                    activeUnit === 'woven'
-                      ? 'bg-[#2BA5B5] text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  Woven
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveUnit('all')}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                    activeUnit === 'all'
-                      ? 'bg-[#2BA5B5] text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  All
-                </button>
-              </div>
+            {/* TOP BAR VIEW TOGGLE (Two Buttons: Production Plan vs Line Summary) */}
+            <div className="flex items-center p-1 rounded-2xl bg-slate-200/80 dark:bg-black/30 border border-slate-300 dark:border-white/10 print:hidden self-start lg:self-auto">
+              <button
+                type="button"
+                onClick={() => setViewMode('production_plan')}
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  viewMode === 'production_plan'
+                    ? 'bg-[#2BA5B5] text-white shadow-xs'
+                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <ClipboardList className="w-4 h-4" />
+                <span>📋 Production Plan · উৎপাদন পরিকল্পনা</span>
+              </button>
 
-              {/* Search Box */}
-              <div className="relative min-w-[180px] sm:min-w-[220px]">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search PO or Style..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-7 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/15 bg-white dark:bg-black/20 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2BA5B5] shadow-xs"
-                />
-                {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setViewMode('line_summary')}
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  viewMode === 'line_summary'
+                    ? 'bg-[#2BA5B5] text-white shadow-xs'
+                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span>📊 Line Summary · লাইন অনুযায়ী অবস্থা</span>
+              </button>
+            </div>
+
+            {/* Mode-specific Controls (Only visible in Production Plan mode) */}
+            {viewMode === 'production_plan' && (
+              <div className="flex flex-wrap items-center gap-2 print:hidden">
+                {/* Unit Switcher */}
+                <div className="flex items-center bg-white dark:bg-black/20 p-1 rounded-xl border border-slate-200 dark:border-white/10 shadow-xs">
                   <button
                     type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                    onClick={() => setActiveUnit('knit')}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      activeUnit === 'knit'
+                        ? 'bg-[#2BA5B5] text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
                   >
-                    <X className="w-3.5 h-3.5" />
+                    Knit
                   </button>
-                )}
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveUnit('woven')}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      activeUnit === 'woven'
+                        ? 'bg-[#2BA5B5] text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Woven
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveUnit('all')}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      activeUnit === 'all'
+                        ? 'bg-[#2BA5B5] text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    All
+                  </button>
+                </div>
 
-              {/* Export Buttons (Print, Excel, PDF) */}
-              <ExportButtons
-                orders={filteredOrders}
-                days={days}
-                dailyData={dailyData}
-                dateRangeLabel={dateRangeLabel}
-                unitLabel={unitLabel}
-              />
+                {/* Search Box */}
+                <div className="relative min-w-[170px] sm:min-w-[200px]">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search PO or Style..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-7 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/15 bg-white dark:bg-black/20 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2BA5B5] shadow-xs"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
 
-              {/* Refresh button */}
-              <button
-                type="button"
-                onClick={() => {
-                  refreshOrders();
-                  fetchDaily();
-                }}
-                className="p-2 rounded-xl text-slate-500 dark:text-slate-400 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 transition-colors shadow-xs"
-                title="Refresh plan data"
-              >
-                <RefreshCw
-                  className={`w-4 h-4 ${ordersLoading ? 'animate-spin' : ''}`}
+                {/* Export Buttons (Print, Excel, PDF) */}
+                <ExportButtons
+                  orders={filteredOrders}
+                  days={days}
+                  dailyData={dailyData}
+                  dateRangeLabel={dateRangeLabel}
+                  unitLabel={unitLabel}
                 />
-              </button>
 
-              {/* Add Order Button */}
-              <button
-                type="button"
-                onClick={() => setIsDrawerOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#0F8B8D] hover:bg-[#0c6e70] shadow-sm transition-all hover:scale-102 cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Order</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Sub Navigation Tabs */}
-          <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-200/80 dark:border-white/10 print:hidden">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setCurrentTab('active');
-                  setSearchQuery('');
-                }}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                  currentTab === 'active' && !searchQuery
-                    ? 'bg-[#2BA5B5] text-white shadow-xs'
-                    : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Active</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/15">
-                  {counts.active}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setCurrentTab('upcoming');
-                  setSearchQuery('');
-                }}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                  currentTab === 'upcoming' && !searchQuery
-                    ? 'bg-[#2BA5B5] text-white shadow-xs'
-                    : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
-                }`}
-              >
-                <Clock className="w-3.5 h-3.5" />
-                <span>Upcoming</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/15">
-                  {counts.upcoming}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setCurrentTab('done');
-                  setSearchQuery('');
-                }}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                  currentTab === 'done' && !searchQuery
-                    ? 'bg-[#2BA5B5] text-white shadow-xs'
-                    : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
-                }`}
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Done</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/15">
-                  {counts.done}
-                </span>
-              </button>
-            </div>
-
-            {searchQuery && (
-              <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-3 py-1 rounded-lg border border-amber-200 dark:border-amber-800 flex items-center gap-1.5">
-                <span>
-                  Filtering {filteredOrders.length} search matches for &quot;{searchQuery}&quot;
-                </span>
+                {/* Refresh button */}
                 <button
                   type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="underline hover:text-amber-800 ml-1"
+                  onClick={() => {
+                    refreshOrders();
+                    fetchDaily();
+                  }}
+                  className="p-2 rounded-xl text-slate-500 dark:text-slate-400 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 transition-colors shadow-xs"
+                  title="Refresh plan data"
                 >
-                  Clear
+                  <RefreshCw
+                    className={`w-4 h-4 ${ordersLoading ? 'animate-spin' : ''}`}
+                  />
+                </button>
+
+                {/* Add Order Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsDrawerOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#0F8B8D] hover:bg-[#0c6e70] shadow-sm transition-all hover:scale-102 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Order</span>
                 </button>
               </div>
             )}
           </div>
+
+          {/* Sub Navigation Tabs (Only in Production Plan mode) */}
+          {viewMode === 'production_plan' && (
+            <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-200/80 dark:border-white/10 print:hidden">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentTab('active');
+                    setSearchQuery('');
+                  }}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    currentTab === 'active' && !searchQuery
+                      ? 'bg-[#2BA5B5] text-white shadow-xs'
+                      : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Active</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/15">
+                    {counts.active}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentTab('upcoming');
+                    setSearchQuery('');
+                  }}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    currentTab === 'upcoming' && !searchQuery
+                      ? 'bg-[#2BA5B5] text-white shadow-xs'
+                      : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Upcoming</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/15">
+                    {counts.upcoming}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentTab('done');
+                    setSearchQuery('');
+                  }}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    currentTab === 'done' && !searchQuery
+                      ? 'bg-[#2BA5B5] text-white shadow-xs'
+                      : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Done</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/15">
+                    {counts.done}
+                  </span>
+                </button>
+              </div>
+
+              {searchQuery && (
+                <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-3 py-1 rounded-lg border border-amber-200 dark:border-amber-800 flex items-center gap-1.5">
+                  <span>
+                    Filtering {filteredOrders.length} search matches for &quot;{searchQuery}&quot;
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="underline hover:text-amber-800 ml-1"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Print Only Header */}
@@ -337,7 +374,9 @@ export const LinePlanPage: React.FC = () => {
                 RUPKATHA APPARELS LTD.
               </h1>
               <h2 className="text-sm font-semibold text-slate-700">
-                30-Day Rolling Line Plan ({unitLabel})
+                {viewMode === 'production_plan'
+                  ? `30-Day Rolling Line Plan (${unitLabel})`
+                  : `Line Summary (${unitLabel})`}
               </h2>
             </div>
             <div className="text-right text-xs text-slate-600">
@@ -347,44 +386,51 @@ export const LinePlanPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Main Line Plan Matrix Table */}
-        <LinePlanTable
-          orders={filteredOrders}
-          days={days}
-          dailyData={dailyData}
-          flashedCells={flashedCells}
-          savingCells={savingCells}
-          searchQuery={searchQuery}
-          onUpdateOrder={updateOrder}
-          onDeleteOrder={deleteOrder}
-          onUpsertDailyCell={upsertDailyCell}
-        />
+        {/* VIEW 1: Main Production Plan Matrix Table */}
+        {viewMode === 'production_plan' ? (
+          <LinePlanTable
+            orders={filteredOrders}
+            days={days}
+            dailyData={dailyData}
+            flashedCells={flashedCells}
+            savingCells={savingCells}
+            searchQuery={searchQuery}
+            onUpdateOrder={updateOrder}
+            onDeleteOrder={deleteOrder}
+            onUpsertDailyCell={upsertDailyCell}
+          />
+        ) : (
+          /* VIEW 2: Full Standalone Line Summary View */
+          <div className="space-y-4">
+            <LineSummaryCard
+              orders={orders}
+              isStandalone={true}
+              unitLabel={unitLabel}
+              dateStr={dateRangeLabel}
+            />
+          </div>
+        )}
 
-        {/* Line Summary Card (Collapsible) */}
-        <div className="print:hidden">
-          <LineSummaryCard orders={orders} />
-        </div>
-
-        {/* Print Signature Block */}
+        {/* Print 4 Signature Lines (Merchandise Manager, General Manager, Managing Director, Chairman) */}
         <div className="hidden print:grid grid-cols-4 gap-8 mt-16 pt-8 border-t border-slate-400 text-center text-xs font-semibold text-slate-800">
           <div>
             <div className="border-t border-dashed border-slate-400 pt-2">
-              Prepared By
+              Merchandise Manager
             </div>
           </div>
           <div>
             <div className="border-t border-dashed border-slate-400 pt-2">
-              Merchandiser
+              General Manager
             </div>
           </div>
           <div>
             <div className="border-t border-dashed border-slate-400 pt-2">
-              Production Manager
+              Managing Director
             </div>
           </div>
           <div>
             <div className="border-t border-dashed border-slate-400 pt-2">
-              General Manager / MD
+              Chairman
             </div>
           </div>
         </div>
