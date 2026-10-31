@@ -32,6 +32,37 @@ export function formatDhakaTime12(isoOrDateString?: string | null): string {
   });
 }
 
+/**
+ * Format time in Asia/Dhaka without space between time and AM/PM (e.g. "8:42AM", "10:15PM")
+ */
+export function formatDhakaTimeNoSpace(isoOrDateString?: string | null): string {
+  if (!isoOrDateString) return '';
+  const d = new Date(isoOrDateString);
+  if (isNaN(d.getTime())) return '';
+  const str = d.toLocaleTimeString('en-US', {
+    timeZone: 'Asia/Dhaka',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+  return str.replace(/\s+/g, '');
+}
+
+/**
+ * Converts ISO date or date string to 24h HH:mm string in Asia/Dhaka for time inputs
+ */
+export function formatDhaka24HTime(isoOrDateString?: string | null): string {
+  if (!isoOrDateString) return '';
+  const d = new Date(isoOrDateString);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString('en-GB', {
+    timeZone: 'Asia/Dhaka',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
 export function formatDhakaDateDisplay(dateStr?: string | null): string {
   if (!dateStr) return '-';
   const d = new Date(dateStr.includes('T') ? dateStr : `${dateStr}T12:00:00+06:00`);

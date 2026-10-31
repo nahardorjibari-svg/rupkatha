@@ -154,26 +154,24 @@ export function exportStaffToExcel(staffList: any[], companyName = 'RUPKATHA APP
     'SL',
     'Employee ID',
     'Full Name',
-    'Designation',
+    'Login Email',
     'Department',
+    'Designation',
     'Mobile',
     'Joining Date',
     'Service Length',
-    'Attendance Allowed',
-    'Active Status',
   ];
 
   const dataRows = staffList.map((s, idx) => [
     idx + 1,
     s.employee_id || '-',
-    s.full_name || '-',
-    s.designation || '-',
+    s.full_name || s.email || '-',
+    s.email || '-',
     s.department || '-',
+    s.designation || '-',
     s.mobile || '-',
     s.joining_date || '-',
     calculateServiceLength(s.joining_date),
-    s.has_attendance ? 'Yes' : 'No',
-    s.is_active ? 'Active' : 'Inactive',
   ]);
 
   const sheetData = [...titleRows, headers, ...dataRows];
@@ -183,13 +181,12 @@ export function exportStaffToExcel(staffList: any[], companyName = 'RUPKATHA APP
     { wch: 6 },
     { wch: 15 },
     { wch: 25 },
-    { wch: 22 },
+    { wch: 28 },
     { wch: 18 },
+    { wch: 20 },
     { wch: 16 },
     { wch: 14 },
     { wch: 22 },
-    { wch: 18 },
-    { wch: 12 },
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, 'Staff Directory');
@@ -197,7 +194,7 @@ export function exportStaffToExcel(staffList: any[], companyName = 'RUPKATHA APP
 }
 
 /**
- * Export Monthly Attendance Report to Excel (.xlsx) with blank salary columns
+ * Export Monthly Attendance Summary Report to Excel (.xlsx)
  */
 export function exportMonthlyAttendanceToExcel(
   records: any[],
@@ -218,24 +215,16 @@ export function exportMonthlyAttendanceToExcel(
   const headers = [
     'SL',
     'Employee ID',
-    'Staff Name',
+    'Name',
+    'Department',
     'Designation',
-    'Joining Date',
-    'Service Length',
-    'Working Days',
     'Present',
     'Absent',
     'Late',
     'Missing OUT',
     'Total Hours',
-    'Basic Salary',
-    'Gross Salary',
-    'Deduction',
-    'Net Pay',
-    'Remarks',
   ];
 
-  let sumWorkingDays = 0;
   let sumPresent = 0;
   let sumAbsent = 0;
   let sumLate = 0;
@@ -243,7 +232,6 @@ export function exportMonthlyAttendanceToExcel(
   let sumMinutes = 0;
 
   const dataRows = records.map((r, idx) => {
-    sumWorkingDays += Number(r.working_days || 0);
     sumPresent += Number(r.days_present || 0);
     sumAbsent += Number(r.days_absent || 0);
     sumLate += Number(r.days_late || 0);
@@ -254,20 +242,13 @@ export function exportMonthlyAttendanceToExcel(
       idx + 1,
       r.employee_id || '-',
       r.full_name || '-',
+      r.department || '-',
       r.designation || '-',
-      r.joining_date || '-',
-      calculateServiceLength(r.joining_date),
-      r.working_days ?? 0,
       r.days_present ?? 0,
       r.days_absent ?? 0,
       r.days_late ?? 0,
       r.missing_out ?? 0,
       minutesToHhMm(r.total_minutes),
-      '', // Blank for HR salary entry
-      '', // Gross
-      '', // Deduction
-      '', // Net Pay
-      '', // Remarks
     ];
   });
 
@@ -277,18 +258,11 @@ export function exportMonthlyAttendanceToExcel(
     `${records.length} Staff`,
     '',
     '',
-    '',
-    sumWorkingDays,
     sumPresent,
     sumAbsent,
     sumLate,
     sumMissingOut,
     minutesToHhMm(sumMinutes),
-    '',
-    '',
-    '',
-    '',
-    '',
   ];
 
   const signatures = [
@@ -301,23 +275,16 @@ export function exportMonthlyAttendanceToExcel(
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
   ws['!cols'] = [
-    { wch: 5 },
+    { wch: 6 },
+    { wch: 15 },
+    { wch: 25 },
+    { wch: 20 },
+    { wch: 20 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 12 },
     { wch: 14 },
-    { wch: 24 },
-    { wch: 20 },
-    { wch: 13 },
-    { wch: 20 },
-    { wch: 13 },
-    { wch: 10 },
-    { wch: 10 },
-    { wch: 9 },
-    { wch: 12 },
-    { wch: 13 },
-    { wch: 13 },
-    { wch: 13 },
-    { wch: 12 },
-    { wch: 13 },
-    { wch: 16 },
+    { wch: 14 },
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, 'Monthly Attendance');
@@ -325,7 +292,7 @@ export function exportMonthlyAttendanceToExcel(
 }
 
 /**
- * Export Monthly Attendance Report to PDF
+ * Export Monthly Attendance Summary Report to PDF
  */
 export function exportMonthlyAttendanceToPdf(
   records: any[],
@@ -354,7 +321,6 @@ export function exportMonthlyAttendanceToPdf(
   doc.setFont('helvetica', 'bold');
   doc.text(`MONTHLY ATTENDANCE REPORT - ${monthName.toUpperCase()}`, 148, 25, { align: 'center' });
 
-  let sumWorkingDays = 0;
   let sumPresent = 0;
   let sumAbsent = 0;
   let sumLate = 0;
@@ -362,7 +328,6 @@ export function exportMonthlyAttendanceToPdf(
   let sumMinutes = 0;
 
   const tableRows = records.map((r, idx) => {
-    sumWorkingDays += Number(r.working_days || 0);
     sumPresent += Number(r.days_present || 0);
     sumAbsent += Number(r.days_absent || 0);
     sumLate += Number(r.days_late || 0);
@@ -373,20 +338,13 @@ export function exportMonthlyAttendanceToPdf(
       idx + 1,
       r.employee_id || '-',
       r.full_name || '-',
+      r.department || '-',
       r.designation || '-',
-      r.joining_date || '-',
-      calculateServiceLength(r.joining_date),
-      r.working_days ?? 0,
       r.days_present ?? 0,
       r.days_absent ?? 0,
       r.days_late ?? 0,
       r.missing_out ?? 0,
       minutesToHhMm(r.total_minutes),
-      '', // Basic
-      '', // Gross
-      '', // Deduction
-      '', // Net Pay
-      '', // Remarks
     ];
   });
 
@@ -397,46 +355,32 @@ export function exportMonthlyAttendanceToPdf(
     `${records.length} Staff`,
     '',
     '',
-    '',
-    sumWorkingDays,
     sumPresent,
     sumAbsent,
     sumLate,
     sumMissingOut,
     minutesToHhMm(sumMinutes),
-    '',
-    '',
-    '',
-    '',
-    '',
   ];
 
   autoTable(doc, {
     startY: 29,
     head: [[
       'SL',
-      'ID',
-      'Staff Name',
+      'Employee ID',
+      'Name',
+      'Department',
       'Designation',
-      'Joining',
-      'Service Length',
-      'Days',
-      'Pres',
-      'Abs',
+      'Present',
+      'Absent',
       'Late',
-      'No Out',
-      'Hours',
-      'Basic',
-      'Gross',
-      'Deduct',
-      'Net Pay',
-      'Remarks',
+      'Missing OUT',
+      'Total Hours',
     ]],
     body: [...tableRows, totalsRow],
     theme: 'grid',
     styles: {
-      fontSize: 7.5,
-      cellPadding: 1.5,
+      fontSize: 8.5,
+      cellPadding: 2,
       lineColor: [200, 200, 200],
       lineWidth: 0.1,
       textColor: [30, 41, 59],
@@ -447,33 +391,299 @@ export function exportMonthlyAttendanceToPdf(
       fontStyle: 'bold',
       halign: 'center',
     },
-    footStyles: {
-      fillColor: [241, 245, 249],
-      fontStyle: 'bold',
-    },
     didParseCell: (data) => {
       if (data.row.index === tableRows.length) {
         data.cell.styles.fontStyle = 'bold';
         data.cell.styles.fillColor = [226, 232, 240];
       }
     },
-    margin: { left: 8, right: 8 },
+    margin: { left: 14, right: 14 },
   });
 
-  // Signature lines at bottom
   const finalY = (doc as any).lastAutoTable.finalY + 18;
   if (finalY < 190) {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.line(16, finalY, 60, finalY);
-    doc.text('Prepared by (HR)', 25, finalY + 5);
+    doc.line(20, finalY, 70, finalY);
+    doc.text('Prepared by (HR)', 32, finalY + 5);
 
-    doc.line(125, finalY, 170, finalY);
+    doc.line(125, finalY, 175, finalY);
     doc.text('Checked by', 140, finalY + 5);
 
-    doc.line(235, finalY, 280, finalY);
-    doc.text('Approved by', 248, finalY + 5);
+    doc.line(230, finalY, 280, finalY);
+    doc.text('Approved by', 242, finalY + 5);
   }
 
   doc.save(`Monthly_Attendance_${year}_${String(month).padStart(2, '0')}.pdf`);
+}
+
+/**
+ * Export Individual Staff Month Sheet to Excel (.xlsx)
+ */
+export function exportStaffMonthSheetToExcel(
+  staff: any,
+  days: any[],
+  year: number,
+  month: number,
+  summary: any,
+  companyName = 'RUPKATHA APPARELS LTD.'
+): void {
+  const wb = XLSX.utils.book_new();
+  const monthName = new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+  const titleRows = [
+    [companyName.toUpperCase()],
+    ['Plot # 12, Road # 03, Sector # 01, Tongi I/A, Gazipur, Bangladesh'],
+    [`INDIVIDUAL MONTHLY ATTENDANCE SHEET - ${monthName.toUpperCase()}`],
+    [],
+    [`Staff Name: ${staff.full_name || staff.email || '-'}`, `Employee ID: ${staff.employee_id || '-'}`],
+    [`Department: ${staff.department || '-'}`, `Designation: ${staff.designation || '-'}`],
+    [`Joining Date: ${staff.joining_date || '-'}`, `Service Length: ${calculateServiceLength(staff.joining_date)}`],
+    [],
+    [`Present Days: ${summary.present}`, `Absent Days: ${summary.absent}`, `Fridays: ${summary.fridays}`, `Late Days: ${summary.late}`, `Total Hours: ${summary.totalHours}`],
+    [],
+  ];
+
+  const headers = [
+    'SL',
+    'Date (dd-mm-yyyy)',
+    'Day Name',
+    'IN Time',
+    'OUT Time',
+    'Working Hours',
+    'Late Status',
+    'Status',
+    'Remarks / Note',
+  ];
+
+  const dataRows = days.map((r, idx) => {
+    const isFri = r.is_friday;
+    let statusText = 'Upcoming';
+    if (isFri) statusText = 'Friday - Holiday';
+    else if (r.status === 'present') statusText = 'Present';
+    else if (r.status === 'absent') statusText = 'ABSENT';
+    else if (r.status === 'missing_out') statusText = 'Missing OUT';
+
+    return [
+      idx + 1,
+      r.d ? `${String(r.d).padStart(2, '0')}-${String(month).padStart(2, '0')}-${year}` : '-',
+      r.dow || '-',
+      r.check_in_at ? new Date(r.check_in_at).toLocaleTimeString('en-US', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
+      r.check_out_at ? new Date(r.check_out_at).toLocaleTimeString('en-US', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
+      minutesToHhMm(r.minutes),
+      r.is_late ? 'LATE' : '-',
+      statusText,
+      r.note || '',
+    ];
+  });
+
+  const totalsRow = [
+    'TOTAL',
+    '',
+    '',
+    '',
+    '',
+    summary.totalHours,
+    `${summary.late} Late`,
+    `${summary.present} Present, ${summary.absent} Absent`,
+    '',
+  ];
+
+  const signatures = [
+    [],
+    [],
+    ['Prepared by (HR)', '', '', 'Checked by', '', '', 'Approved by'],
+  ];
+
+  const sheetData = [...titleRows, headers, ...dataRows, totalsRow, ...signatures];
+  const ws = XLSX.utils.aoa_to_sheet(sheetData);
+
+  ws['!cols'] = [
+    { wch: 6 },
+    { wch: 18 },
+    { wch: 12 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 16 },
+    { wch: 14 },
+    { wch: 20 },
+    { wch: 24 },
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Staff Sheet');
+  XLSX.writeFile(wb, `Attendance_${staff.employee_id || 'Staff'}_${year}_${String(month).padStart(2, '0')}.xlsx`);
+}
+
+/**
+ * Export Individual Staff Month Sheet to PDF (A4 Portrait)
+ */
+export function exportStaffMonthSheetToPdf(
+  staff: any,
+  days: any[],
+  year: number,
+  month: number,
+  summary: any,
+  companyName = 'RUPKATHA APPARELS LTD.'
+): void {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  const monthName = new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+  // Header
+  doc.setFontSize(15);
+  doc.setFont('helvetica', 'bold');
+  doc.text(companyName.toUpperCase(), 105, 12, { align: 'center' });
+
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Plot # 12, Road # 03, Sector # 01, Tongi I/A, Gazipur, Bangladesh', 105, 17, { align: 'center' });
+
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`MONTHLY ATTENDANCE SHEET - ${monthName.toUpperCase()}`, 105, 23, { align: 'center' });
+
+  // Staff Info Block Box
+  doc.setDrawColor(200, 200, 200);
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(12, 26, 186, 20, 2, 2, 'FD');
+
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Name:', 16, 31);
+  doc.setFont('helvetica', 'normal');
+  doc.text(staff.full_name || staff.email || '-', 30, 31);
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Employee ID:', 110, 31);
+  doc.setFont('helvetica', 'normal');
+  doc.text(staff.employee_id || '-', 132, 31);
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Department:', 16, 37);
+  doc.setFont('helvetica', 'normal');
+  doc.text(staff.department || '-', 36, 37);
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Designation:', 110, 37);
+  doc.setFont('helvetica', 'normal');
+  doc.text(staff.designation || '-', 132, 37);
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Joining Date:', 16, 43);
+  doc.setFont('helvetica', 'normal');
+  doc.text(staff.joining_date || '-', 36, 43);
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Service Length:', 110, 43);
+  doc.setFont('helvetica', 'normal');
+  doc.text(calculateServiceLength(staff.joining_date), 134, 43);
+
+  // Summary KPI Mini strip
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Present: ${summary.present}  |  Absent: ${summary.absent}  |  Fridays: ${summary.fridays}  |  Late: ${summary.late}  |  Total Hours: ${summary.totalHours}`, 105, 50, { align: 'center' });
+
+  const tableRows = days.map((r, idx) => {
+    const isFri = r.is_friday;
+    let statusText = 'Upcoming';
+    if (isFri) statusText = 'Friday (Holiday)';
+    else if (r.status === 'present') statusText = 'Present';
+    else if (r.status === 'absent') statusText = 'ABSENT';
+    else if (r.status === 'missing_out') statusText = 'Missing OUT';
+
+    const inTime = r.check_in_at ? new Date(r.check_in_at).toLocaleTimeString('en-US', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: true }) : '-';
+    const outTime = r.check_out_at ? new Date(r.check_out_at).toLocaleTimeString('en-US', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: true }) : '-';
+
+    return [
+      idx + 1,
+      r.d ? `${String(r.d).padStart(2, '0')}-${String(month).padStart(2, '0')}-${year}` : '-',
+      r.dow || '-',
+      inTime,
+      outTime,
+      minutesToHhMm(r.minutes),
+      r.is_late ? 'LATE' : '-',
+      statusText,
+      r.note || '',
+    ];
+  });
+
+  const totalsRow = [
+    'TOTAL',
+    '',
+    '',
+    '',
+    '',
+    summary.totalHours,
+    `${summary.late} Late`,
+    `${summary.present}P / ${summary.absent}A`,
+    '',
+  ];
+
+  autoTable(doc, {
+    startY: 53,
+    head: [[
+      'SL',
+      'Date',
+      'Day',
+      'IN Time',
+      'OUT Time',
+      'Hours',
+      'Late',
+      'Status',
+      'Remarks',
+    ]],
+    body: [...tableRows, totalsRow],
+    theme: 'grid',
+    styles: {
+      fontSize: 7.2,
+      cellPadding: 1.4,
+      lineColor: [210, 210, 210],
+      lineWidth: 0.1,
+      textColor: [30, 41, 59],
+    },
+    headStyles: {
+      fillColor: [15, 139, 141],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      halign: 'center',
+    },
+    didParseCell: (data) => {
+      if (data.row.index === tableRows.length) {
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.fillColor = [226, 232, 240];
+        return;
+      }
+      const rawRow = days[data.row.index];
+      if (rawRow?.is_friday) {
+        data.cell.styles.fillColor = [254, 243, 199]; // amber-100
+        data.cell.styles.textColor = [146, 64, 14];
+      } else if (rawRow?.status === 'absent') {
+        data.cell.styles.fillColor = [254, 226, 226]; // red-100
+        data.cell.styles.textColor = [185, 28, 28];
+      } else if (rawRow?.status === 'missing_out') {
+        data.cell.styles.fillColor = [255, 237, 213]; // orange-100
+      }
+    },
+    margin: { left: 12, right: 12 },
+  });
+
+  const finalY = (doc as any).lastAutoTable.finalY + 16;
+  if (finalY < 275) {
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.line(16, finalY, 60, finalY);
+    doc.text('Prepared by (HR)', 24, finalY + 4);
+
+    doc.line(85, finalY, 125, finalY);
+    doc.text('Checked by', 95, finalY + 4);
+
+    doc.line(150, finalY, 190, finalY);
+    doc.text('Approved by', 160, finalY + 4);
+  }
+
+  doc.save(`Attendance_Sheet_${staff.employee_id || 'Staff'}_${year}_${String(month).padStart(2, '0')}.pdf`);
 }

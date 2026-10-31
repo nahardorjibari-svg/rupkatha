@@ -1,10 +1,13 @@
 /**
- * Monthly Attendance Report Page
+ * Monthly Attendance Summary Report Page
  * Rupkatha Apparels Ltd. (/hr/attendance)
- * Table from hr_monthly_attendance RPC with person-level daily sheet drawer and selfie signed URLs.
+ * Table from hr_monthly_attendance RPC with SL, Employee ID, Name, Department, Designation,
+ * Present, Absent, Late, Missing OUT, Total hours (hh:mm).
+ * Clicking an Employee ID opens /hr/attendance/:id
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useCompany } from '../../context/CompanyContext';
@@ -12,17 +15,19 @@ import { AdminLayout } from '../../components/layout/AdminLayout';
 import { supabase } from '../../lib/supabaseClient';
 import {
   getDhakaYearMonth,
-  formatDhakaDateDisplay,
-  formatDhakaTime12,
   minutesToHhMm,
-  calculateServiceLength,
-  calculateWorkingHoursBetween,
 } from '../../lib/dhakaTime';
 import {
   exportMonthlyAttendanceToExcel,
   exportMonthlyAttendanceToPdf,
-  getSelfieSignedUrl,
 } from '../../lib/attendanceUtils';
+import {
+  transformRawRowsToJobCard,
+  exportAllStaffJobCardsToPdf,
+  exportAllStaffJobCardsToExcel,
+  JobCardRow,
+  JobCardSummary,
+} from '../../lib/jobCardExport';
 import {
   Calendar,
   FileSpreadsheet,
@@ -31,18 +36,14 @@ import {
   Trash2,
   Users,
   Search,
-  MapPin,
-  Camera,
-  X,
-  ExternalLink,
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
   Loader2,
   RefreshCw,
-  Clock,
-  ShieldAlert,
-  Info,
+  ExternalLink,
+  FileText,
+  Layers,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -50,6 +51,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
   const { profile } = useAuth();
   const { isDark } = useTheme();
   const { companyName } = useCompany();
+  const navigate = useNavigate();
 
   // Current year & month in Dhaka
   const defaultYm = useMemo(() => getDhakaYearMonth(), []);
@@ -61,20 +63,13 @@ export const MonthlyAttendanceReport: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Daily sheet modal for clicked staff member
-  const [selectedStaff, setSelectedStaff] = useState<any | null>(null);
-  const [dailyRecords, setDailyRecords] = useState<any[]>([]);
-  const [loadingDaily, setLoadingDaily] = useState(false);
-  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
-  const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
-
   // Admin purge selfies confirmation modal
   const [showPurgeModal, setShowPurgeModal] = useState(false);
   const [purging, setPurging] = useState(false);
 
   const isAdmin = profile?.role === 'admin';
 
-  // Load monthly summary records via RPC hr_monthly_attendance
+  // Load monthly summary records via RPC hr_monthly_attendance({ y, m })
   const loadMonthlyData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -98,54 +93,6 @@ export const MonthlyAttendanceReport: React.FC = () => {
     loadMonthlyData();
   }, [loadMonthlyData]);
 
-  // Load individual staff daily sheet for the month
-  const handleOpenDailySheet = async (staff: any) => {
-    setSelectedStaff(staff);
-    setLoadingDaily(true);
-    setDailyRecords([]);
-    setSignedUrls({});
-
-    try {
-      const mStr = String(selectedMonth).padStart(2, '0');
-      const startOfMonth = `${selectedYear}-${mStr}-01`;
-      const endOfMonth = `${selectedYear}-${mStr}-31`;
-
-      const { data, error: fetchErr } = await supabase
-        .from('attendance')
-        .select('*')
-        .eq('user_id', staff.user_id)
-        .gte('att_date', startOfMonth)
-        .lte('att_date', endOfMonth)
-        .order('att_date', { ascending: true });
-
-      if (fetchErr) throw fetchErr;
-
-      const rows = data || [];
-      setDailyRecords(rows);
-
-      // Generate signed URLs for selfies (valid 60s)
-      const urlMap: Record<string, string> = {};
-      await Promise.all(
-        rows.map(async (r: any) => {
-          if (r.check_in_photo) {
-            const url = await getSelfieSignedUrl(r.check_in_photo);
-            if (url) urlMap[`${r.id}-in`] = url;
-          }
-          if (r.check_out_photo) {
-            const url = await getSelfieSignedUrl(r.check_out_photo);
-            if (url) urlMap[`${r.id}-out`] = url;
-          }
-        })
-      );
-      setSignedUrls(urlMap);
-    } catch (err: any) {
-      console.error('Error loading daily records:', err);
-      toast.error('Failed to load daily attendance sheet.');
-    } finally {
-      setLoadingDaily(false);
-    }
-  };
-
   // Admin purge selfies older than 90 days
   const handlePurgeOldSelfies = async () => {
     setPurging(true);
@@ -164,6 +111,63 @@ export const MonthlyAttendanceReport: React.FC = () => {
       setPurging(false);
     }
   };
+
+  // Bulk export all staff Job Cards
+  const [bulkExporting, setBulkExporting] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number; type: 'pdf' | 'excel' } | null>(null);
+
+  const handleBulkJobCards = async (exportType: 'pdf' | 'excel') => {
+    const listToExport = filteredRecords.length > 0 ? filteredRecords : records;
+    if (listToExport.length === 0) {
+      toast.error('No staff records found to generate Job Cards.');
+      return;
+    }
+
+    setBulkExporting(true);
+    setBulkProgress({ current: 0, total: listToExport.length, type: exportType });
+
+    try {
+      const staffList: { staff: any; rows: JobCardRow[]; summary: JobCardSummary }[] = [];
+
+      for (let i = 0; i < listToExport.length; i++) {
+        const staff = listToExport[i];
+        setBulkProgress({ current: i + 1, total: listToExport.length, type: exportType });
+
+        const { data: sheetData, error: sheetErr } = await supabase.rpc('hr_staff_month_sheet', {
+          target: staff.user_id,
+          y: selectedYear,
+          m: selectedMonth,
+        });
+
+        if (sheetErr) {
+          console.warn(`Failed to fetch sheet for staff ${staff.employee_id}:`, sheetErr);
+        }
+
+        const { rows, summary } = transformRawRowsToJobCard(sheetData || [], selectedYear, selectedMonth);
+
+        staffList.push({
+          staff,
+          rows,
+          summary,
+        });
+      }
+
+      if (exportType === 'pdf') {
+        exportAllStaffJobCardsToPdf(staffList, selectedYear, selectedMonth, companyName);
+        toast.success(`Exported ${staffList.length} Job Cards into PDF!`);
+      } else {
+        exportAllStaffJobCardsToExcel(staffList, selectedYear, selectedMonth, companyName);
+        toast.success(`Exported ${staffList.length} Job Cards into Excel workbook!`);
+      }
+    } catch (err: any) {
+      console.error('Bulk job card export error:', err);
+      toast.error(err?.message || 'Failed to export job cards.');
+    } finally {
+      setBulkExporting(false);
+      setBulkProgress(null);
+    }
+  };
+
 
   // Month navigation helpers
   const handlePrevMonth = () => {
@@ -189,17 +193,16 @@ export const MonthlyAttendanceReport: React.FC = () => {
     year: 'numeric',
   });
 
-  // Filtered records
+  // Filtered records: Search by employee ID or name
   const filteredRecords = useMemo(() => {
     return records.filter((r) => {
-      const target = `${r.full_name || ''} ${r.employee_id || ''} ${r.designation || ''}`.toLowerCase();
+      const target = `${r.full_name || ''} ${r.employee_id || ''}`.toLowerCase();
       return !searchQuery || target.includes(searchQuery.trim().toLowerCase());
     });
   }, [records, searchQuery]);
 
   // Totals calculations
   const totals = useMemo(() => {
-    let workingDays = 0;
     let present = 0;
     let absent = 0;
     let late = 0;
@@ -207,7 +210,6 @@ export const MonthlyAttendanceReport: React.FC = () => {
     let totalMinutes = 0;
 
     filteredRecords.forEach((r) => {
-      workingDays += Number(r.working_days || 0);
       present += Number(r.days_present || 0);
       absent += Number(r.days_absent || 0);
       late += Number(r.days_late || 0);
@@ -216,7 +218,6 @@ export const MonthlyAttendanceReport: React.FC = () => {
     });
 
     return {
-      workingDays,
       present,
       absent,
       late,
@@ -224,6 +225,11 @@ export const MonthlyAttendanceReport: React.FC = () => {
       totalHours: minutesToHhMm(totalMinutes),
     };
   }, [filteredRecords]);
+
+  // Navigate to person's monthly sheet
+  const handleRowClick = (staffUserId: string) => {
+    navigate(`/hr/attendance/${staffUserId}?y=${selectedYear}&m=${selectedMonth}`);
+  };
 
   return (
     <AdminLayout>
@@ -235,24 +241,24 @@ export const MonthlyAttendanceReport: React.FC = () => {
               <span className="text-xs uppercase font-extrabold tracking-widest text-[#2BA5B5]">
                 HR & Payroll Suite
               </span>
-              <span className="text-xs font-bangla text-slate-400">/ মাসিক হাজিরা ও বেতন খাতা</span>
+              <span className="text-xs font-bangla text-slate-400">/ মাসিক হাজিরা সামারি রিপোর্ট</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
               <Calendar className="w-8 h-8 text-[#0F8B8D]" />
               <span>Monthly Attendance Report</span>
             </h1>
             <p className="text-xs font-bangla text-slate-500 dark:text-slate-400 mt-0.5">
-              মাসের উপস্থিতি, অনুপস্থিতি, লেট, মোট কর্মঘণ্টা এবং বেতন শিট প্রিন্ট
+              সকল কর্মকর্তা-কর্মচারীর উপস্থিতি, অনুপস্থিতি, লেট ও মোট কর্মঘণ্টার খতিয়ান
             </p>
           </div>
 
-          {/* Action Buttons: Print, Excel, PDF, Purge */}
+          {/* Action Buttons: Print, Excel, PDF, All Job Cards, Purge */}
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => window.print()}
               disabled={loading || records.length === 0}
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
               title="Print A4 Landscape Attendance Report"
             >
               <Printer className="w-4 h-4" />
@@ -263,29 +269,54 @@ export const MonthlyAttendanceReport: React.FC = () => {
               type="button"
               onClick={() => exportMonthlyAttendanceToExcel(filteredRecords, selectedYear, selectedMonth, companyName)}
               disabled={loading || records.length === 0}
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-[#0F8B8D] hover:bg-[#0c6e70] text-white text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
-              title="Download Excel Spreadsheet (.xlsx)"
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-[#0F8B8D] hover:bg-[#0c6e70] text-white text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+              title="Download Monthly Summary Excel (.xlsx)"
             >
               <FileSpreadsheet className="w-4 h-4" />
-              <span>Download Excel</span>
+              <span>Summary Excel</span>
             </button>
 
             <button
               type="button"
               onClick={() => exportMonthlyAttendanceToPdf(filteredRecords, selectedYear, selectedMonth, companyName)}
               disabled={loading || records.length === 0}
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
-              title="Download Printable PDF (.pdf)"
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+              title="Download Monthly Summary PDF (.pdf)"
             >
               <FileDown className="w-4 h-4" />
-              <span>Download PDF</span>
+              <span>Summary PDF</span>
+            </button>
+
+            {/* Bulk All Staff Job Cards */}
+            <div className="h-6 w-px bg-slate-300 dark:bg-white/20 mx-1 hidden sm:block" />
+
+            <button
+              type="button"
+              onClick={() => handleBulkJobCards('pdf')}
+              disabled={loading || bulkExporting || records.length === 0}
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+              title="Download all staff Job Cards in a single multi-page PDF"
+            >
+              <FileDown className="w-4 h-4" />
+              <span>All Job Cards (PDF)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleBulkJobCards('excel')}
+              disabled={loading || bulkExporting || records.length === 0}
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+              title="Download multi-sheet Excel workbook with one sheet per staff member"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>All Job Cards (Excel)</span>
             </button>
 
             {isAdmin && (
               <button
                 type="button"
                 onClick={() => setShowPurgeModal(true)}
-                className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white border border-rose-500/20 text-xs font-bold transition-all active:scale-95"
+                className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white border border-rose-500/20 text-xs font-bold transition-all active:scale-95 cursor-pointer"
                 title="Delete selfie photos older than 90 days to free storage"
               >
                 <Trash2 className="w-4 h-4" />
@@ -297,7 +328,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
               type="button"
               onClick={loadMonthlyData}
               disabled={loading}
-              className="p-2.5 rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 transition-colors"
+              className="p-2.5 rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
               title="Refresh monthly report"
               aria-label="Refresh monthly report"
             >
@@ -317,7 +348,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
             <button
               type="button"
               onClick={handlePrevMonth}
-              className="p-2 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+              className="p-2 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
               aria-label="Previous Month"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -330,7 +361,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
             <button
               type="button"
               onClick={handleNextMonth}
-              className="p-2 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+              className="p-2 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
               aria-label="Next Month"
             >
               <ChevronRight className="w-4 h-4" />
@@ -344,7 +375,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search employee name or ID..."
+              placeholder="Search by Employee ID or Name..."
               className={`w-full pl-10 pr-4 py-2 rounded-2xl border text-xs transition-all focus:outline-none focus:ring-2 focus:ring-[#2BA5B5] ${
                 isDark
                   ? 'bg-black/20 border-white/10 text-white placeholder-slate-400'
@@ -391,58 +422,45 @@ export const MonthlyAttendanceReport: React.FC = () => {
                   <tr className="border-b border-slate-200 dark:border-white/10 text-slate-400 uppercase font-black tracking-wider bg-slate-50/50 dark:bg-black/20">
                     <th className="py-3 px-3">SL</th>
                     <th className="py-3 px-3">Employee ID</th>
-                    <th className="py-3 px-3">Staff Name</th>
+                    <th className="py-3 px-3">Name</th>
+                    <th className="py-3 px-3">Department</th>
                     <th className="py-3 px-3">Designation</th>
-                    <th className="py-3 px-3">Joining Date</th>
-                    <th className="py-3 px-3">Service Length</th>
-                    <th className="py-3 px-3 text-center">Working Days</th>
                     <th className="py-3 px-3 text-center text-emerald-600 dark:text-emerald-400">Present</th>
                     <th className="py-3 px-3 text-center text-rose-600 dark:text-rose-400">Absent</th>
                     <th className="py-3 px-3 text-center text-amber-600 dark:text-amber-400">Late</th>
-                    <th className="py-3 px-3 text-center">Missing OUT</th>
-                    <th className="py-3 px-3 text-center">Total Hours</th>
-                    {/* Blank Salary Columns for HR Print/Export */}
-                    <th className="py-3 px-3 text-center border-l border-slate-200 dark:border-white/10">Basic</th>
-                    <th className="py-3 px-3 text-center">Gross</th>
-                    <th className="py-3 px-3 text-center">Deduct</th>
-                    <th className="py-3 px-3 text-center">Net Pay</th>
-                    <th className="py-3 px-3 text-center">Remarks</th>
+                    <th className="py-3 px-3 text-center text-orange-600 dark:text-orange-400">Missing OUT</th>
+                    <th className="py-3 px-3 text-center">Total Hours (hh:mm)</th>
+                    <th className="py-3 px-3 text-center print:hidden">Job Card</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-medium">
                   {filteredRecords.map((r, idx) => {
-                    const serviceLength = calculateServiceLength(r.joining_date);
                     const hoursFormatted = minutesToHhMm(r.total_minutes);
 
                     return (
                       <tr
                         key={r.user_id}
-                        onClick={() => handleOpenDailySheet(r)}
+                        onClick={() => handleRowClick(r.user_id)}
                         className="hover:bg-slate-50/80 dark:hover:bg-white/5 transition-colors cursor-pointer group"
-                        title="Click to view daily punch sheet & selfies"
+                        title="Click to open this person's detailed Monthly Attendance Sheet"
                       >
                         <td className="py-3 px-3 text-slate-400 font-mono font-bold">
                           {idx + 1}
                         </td>
                         <td className="py-3 px-3 font-mono font-black text-slate-900 dark:text-white whitespace-nowrap">
-                          <span className="px-2 py-0.5 rounded-lg bg-teal-500/10 text-[#0F8B8D] dark:text-[#5EEAD4] border border-teal-500/20 group-hover:border-teal-500 transition-colors">
-                            {r.employee_id || '-'}
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-500/10 text-[#0F8B8D] dark:text-[#5EEAD4] border border-teal-500/20 group-hover:border-teal-500 group-hover:bg-teal-500/20 transition-all font-bold">
+                            <span>{r.employee_id || '-'}</span>
+                            <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                           </span>
                         </td>
                         <td className="py-3 px-3 font-black text-slate-900 dark:text-white whitespace-nowrap">
-                          {r.full_name}
+                          {r.full_name || '-'}
+                        </td>
+                        <td className="py-3 px-3 text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                          {r.department || '-'}
                         </td>
                         <td className="py-3 px-3 text-slate-600 dark:text-slate-300 whitespace-nowrap">
                           {r.designation || '-'}
-                        </td>
-                        <td className="py-3 px-3 text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                          {r.joining_date ? formatDhakaDateDisplay(r.joining_date) : '-'}
-                        </td>
-                        <td className="py-3 px-3 font-bold text-slate-900 dark:text-slate-200 whitespace-nowrap">
-                          {serviceLength}
-                        </td>
-                        <td className="py-3 px-3 text-center font-mono font-bold whitespace-nowrap">
-                          {r.working_days ?? 0}
                         </td>
                         <td className="py-3 px-3 text-center font-mono font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                           {r.days_present ?? 0}
@@ -453,30 +471,32 @@ export const MonthlyAttendanceReport: React.FC = () => {
                         <td className="py-3 px-3 text-center font-mono font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap">
                           {r.days_late ?? 0}
                         </td>
-                        <td className="py-3 px-3 text-center font-mono font-bold whitespace-nowrap">
+                        <td className="py-3 px-3 text-center font-mono font-bold text-orange-600 dark:text-orange-400 whitespace-nowrap">
                           {r.missing_out ?? 0}
                         </td>
                         <td className="py-3 px-3 text-center font-mono font-black whitespace-nowrap text-[#0F8B8D] dark:text-[#5EEAD4]">
                           {hoursFormatted}
                         </td>
-                        {/* Blank Salary Cells for HR */}
-                        <td className="py-3 px-3 text-center border-l border-slate-200 dark:border-white/10 text-slate-300">
-                          -
+                        <td className="py-3 px-3 text-center whitespace-nowrap print:hidden" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => handleRowClick(r.user_id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-teal-500/10 hover:bg-[#0F8B8D] hover:text-white text-[#0F8B8D] dark:text-[#5EEAD4] border border-teal-500/20 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                            title="Open detailed Job Card"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>Card</span>
+                          </button>
                         </td>
-                        <td className="py-3 px-3 text-center text-slate-300">-</td>
-                        <td className="py-3 px-3 text-center text-slate-300">-</td>
-                        <td className="py-3 px-3 text-center text-slate-300">-</td>
-                        <td className="py-3 px-3 text-center text-slate-300">-</td>
                       </tr>
                     );
                   })}
 
                   {/* Totals Summary Row */}
                   <tr className="bg-slate-100/90 dark:bg-black/40 font-black text-slate-900 dark:text-white border-t-2 border-slate-300 dark:border-white/20">
-                    <td colSpan={6} className="py-3.5 px-4 uppercase tracking-wider text-right">
+                    <td colSpan={5} className="py-3.5 px-4 uppercase tracking-wider text-right">
                       Grand Total ({filteredRecords.length} Staff):
                     </td>
-                    <td className="py-3.5 px-3 text-center font-mono">{totals.workingDays}</td>
                     <td className="py-3.5 px-3 text-center font-mono text-emerald-600 dark:text-emerald-400">
                       {totals.present}
                     </td>
@@ -486,11 +506,13 @@ export const MonthlyAttendanceReport: React.FC = () => {
                     <td className="py-3.5 px-3 text-center font-mono text-amber-600 dark:text-amber-400">
                       {totals.late}
                     </td>
-                    <td className="py-3.5 px-3 text-center font-mono">{totals.missingOut}</td>
+                    <td className="py-3.5 px-3 text-center font-mono text-orange-600 dark:text-orange-400">
+                      {totals.missingOut}
+                    </td>
                     <td className="py-3.5 px-3 text-center font-mono text-[#0F8B8D] dark:text-[#5EEAD4]">
                       {totals.totalHours}
                     </td>
-                    <td colSpan={5} className="py-3.5 px-3 border-l border-slate-200 dark:border-white/10"></td>
+                    <td className="py-3.5 px-3 print:hidden"></td>
                   </tr>
                 </tbody>
               </table>
@@ -512,217 +534,38 @@ export const MonthlyAttendanceReport: React.FC = () => {
         </div>
       </div>
 
-      {/* Person-Level Daily Sheet Drawer / Modal */}
-      {selectedStaff && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+      {/* Bulk Job Cards Export Progress Modal */}
+      {bulkExporting && bulkProgress && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
           <div
-            className={`w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl border shadow-2xl overflow-hidden transition-all ${
+            className={`w-full max-w-sm rounded-3xl border shadow-2xl p-6 text-center ${
               isDark ? 'bg-[#103A40] border-teal-500/30 text-white' : 'bg-white border-slate-200 text-slate-900'
             }`}
           >
-            {/* Modal Header */}
-            <div className="p-6 border-b border-white/10 flex items-center justify-between shrink-0">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black uppercase text-[#2BA5B5]">Staff Daily Sheet</span>
-                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-teal-500/20 text-[#2BA5B5]">
-                    ID: {selectedStaff.employee_id || 'N/A'}
-                  </span>
-                </div>
-                <h3 className="text-xl font-black tracking-tight mt-0.5">
-                  {selectedStaff.full_name} ({selectedStaff.designation || 'Staff'})
-                </h3>
-                <p className="text-xs font-bangla text-slate-400">
-                  {monthName} মাসের দৈনিক পাঞ্চ, জিপিএস ও ক্যামেরা সেলফি যাচাই
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setSelectedStaff(null)}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
+            <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-[#0F8B8D] dark:text-[#5EEAD4]">
+              <Loader2 className="w-7 h-7 animate-spin" />
             </div>
-
-            {/* Modal Body: Daily Records Table */}
-            <div className="p-6 overflow-y-auto flex-1">
-              {loadingDaily ? (
-                <div className="py-20 flex flex-col items-center justify-center text-slate-400">
-                  <Loader2 className="w-8 h-8 animate-spin text-[#2BA5B5] mb-2" />
-                  <span className="text-xs">Loading daily punches and selfie thumbnails...</span>
-                </div>
-              ) : dailyRecords.length === 0 ? (
-                <div className="py-16 text-center text-slate-400">
-                  <Calendar className="w-10 h-10 mx-auto mb-2 opacity-40" />
-                  <p className="text-sm font-semibold">No daily punch records found for this month.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-200 dark:border-white/10 text-slate-400 uppercase font-black tracking-wider bg-slate-50/50 dark:bg-black/20">
-                        <th className="py-2.5 px-3">Date</th>
-                        <th className="py-2.5 px-3">IN Time</th>
-                        <th className="py-2.5 px-3">IN Selfie</th>
-                        <th className="py-2.5 px-3">IN GPS</th>
-                        <th className="py-2.5 px-3">OUT Time</th>
-                        <th className="py-2.5 px-3">OUT Selfie</th>
-                        <th className="py-2.5 px-3">OUT GPS</th>
-                        <th className="py-2.5 px-3 text-center">Hours</th>
-                        <th className="py-2.5 px-3 text-center">Status</th>
-                        <th className="py-2.5 px-3">Note</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-medium">
-                      {dailyRecords.map((r) => {
-                        const inUrl = signedUrls[`${r.id}-in`];
-                        const outUrl = signedUrls[`${r.id}-out`];
-                        const hours = calculateWorkingHoursBetween(r.check_in_at, r.check_out_at);
-
-                        return (
-                          <tr key={r.id || r.att_date} className="hover:bg-slate-50/50 dark:hover:bg-white/5">
-                            <td className="py-3 px-3 font-bold whitespace-nowrap">
-                              {formatDhakaDateDisplay(r.att_date)}
-                            </td>
-                            {/* IN */}
-                            <td className="py-3 px-3 font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                              {formatDhakaTime12(r.check_in_at)}
-                            </td>
-                            <td className="py-3 px-3 whitespace-nowrap">
-                              {inUrl ? (
-                                <img
-                                  src={inUrl}
-                                  alt="IN Selfie"
-                                  onClick={() => setPreviewPhotoUrl(inUrl)}
-                                  className="w-9 h-9 object-cover rounded-xl border border-emerald-500/30 hover:scale-110 transition-transform cursor-pointer shadow-xs"
-                                  title="Click to view full photo"
-                                />
-                              ) : r.check_in_photo ? (
-                                <span className="text-[10px] text-slate-400 font-mono">Photo</span>
-                              ) : (
-                                <span className="text-slate-300">-</span>
-                              )}
-                            </td>
-                            <td className="py-3 px-3 whitespace-nowrap">
-                              {r.check_in_lat && r.check_in_lng ? (
-                                <a
-                                  href={`https://www.google.com/maps?q=${r.check_in_lat},${r.check_in_lng}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0F8B8D] hover:underline"
-                                  title={`Accuracy: ±${r.check_in_accuracy || 0}m`}
-                                >
-                                  <MapPin className="w-3.5 h-3.5 text-emerald-500" />
-                                  <span>Map</span>
-                                </a>
-                              ) : (
-                                <span className="text-slate-300">-</span>
-                              )}
-                            </td>
-                            {/* OUT */}
-                            <td className="py-3 px-3 font-mono font-bold text-rose-600 dark:text-rose-400 whitespace-nowrap">
-                              {formatDhakaTime12(r.check_out_at)}
-                            </td>
-                            <td className="py-3 px-3 whitespace-nowrap">
-                              {outUrl ? (
-                                <img
-                                  src={outUrl}
-                                  alt="OUT Selfie"
-                                  onClick={() => setPreviewPhotoUrl(outUrl)}
-                                  className="w-9 h-9 object-cover rounded-xl border border-rose-500/30 hover:scale-110 transition-transform cursor-pointer shadow-xs"
-                                  title="Click to view full photo"
-                                />
-                              ) : r.check_out_photo ? (
-                                <span className="text-[10px] text-slate-400 font-mono">Photo</span>
-                              ) : (
-                                <span className="text-slate-300">-</span>
-                              )}
-                            </td>
-                            <td className="py-3 px-3 whitespace-nowrap">
-                              {r.check_out_lat && r.check_out_lng ? (
-                                <a
-                                  href={`https://www.google.com/maps?q=${r.check_out_lat},${r.check_out_lng}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0F8B8D] hover:underline"
-                                  title={`Accuracy: ±${r.check_out_accuracy || 0}m`}
-                                >
-                                  <MapPin className="w-3.5 h-3.5 text-rose-500" />
-                                  <span>Map</span>
-                                </a>
-                              ) : (
-                                <span className="text-slate-300">-</span>
-                              )}
-                            </td>
-                            <td className="py-3 px-3 text-center font-mono font-bold whitespace-nowrap">
-                              {hours}
-                            </td>
-                            <td className="py-3 px-3 text-center whitespace-nowrap">
-                              {r.is_late ? (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-                                  LATE
-                                </span>
-                              ) : (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                                  PRESENT
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-3 px-3 text-slate-500 dark:text-slate-300 truncate max-w-[120px]">
-                              {r.check_in_note || r.check_out_note || '-'}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+            <h3 className="text-lg font-black tracking-tight mb-1">
+              Generating All Job Cards
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+              Exporting {bulkProgress.type.toUpperCase()} ({bulkProgress.current} of {bulkProgress.total} staff)...
+            </p>
+            <div className="w-full bg-slate-200 dark:bg-black/30 rounded-full h-2.5 overflow-hidden">
+              <div
+                className="bg-[#0F8B8D] h-2.5 rounded-full transition-all duration-300"
+                style={{
+                  width: `${Math.round((bulkProgress.current / bulkProgress.total) * 100)}%`,
+                }}
+              />
             </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-white/10 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setSelectedStaff(null)}
-                className="px-5 py-2 rounded-xl bg-slate-800 text-white text-xs font-bold hover:bg-slate-700 transition-colors"
-              >
-                Close Sheet
-              </button>
-            </div>
+            <p className="text-[11px] font-mono text-slate-400 mt-2">
+              {Math.round((bulkProgress.current / bulkProgress.total) * 100)}% Complete
+            </p>
           </div>
         </div>
       )}
 
-      {/* Selfie Preview Modal */}
-      {previewPhotoUrl && (
-        <div
-          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in"
-          onClick={() => setPreviewPhotoUrl(null)}
-        >
-          <div className="relative max-w-sm w-full bg-slate-900 p-2 rounded-3xl border border-white/20 shadow-2xl overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setPreviewPhotoUrl(null)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-black/60 text-white hover:bg-black transition-colors"
-              aria-label="Close Preview"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <img
-              src={previewPhotoUrl}
-              alt="Selfie verification full preview"
-              className="w-full h-auto rounded-2xl object-cover max-h-[80vh]"
-            />
-            <div className="p-3 text-center text-xs text-slate-300 font-medium">
-              Selfie snapshot captured at punch time
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Admin Purge Old Selfies Confirmation Modal */}
       {showPurgeModal && (
@@ -751,7 +594,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
                 type="button"
                 onClick={() => setShowPurgeModal(false)}
                 disabled={purging}
-                className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-white/10 text-xs font-bold hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+                className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-white/10 text-xs font-bold hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -759,7 +602,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
                 type="button"
                 onClick={handlePurgeOldSelfies}
                 disabled={purging}
-                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-md flex items-center gap-2"
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer"
               >
                 {purging ? (
                   <>

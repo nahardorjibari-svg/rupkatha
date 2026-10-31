@@ -81,19 +81,34 @@ The **Attendance Punch** module (`/attendance`) provides a tamper-proof, mobile-
 Governed by the `hr_payroll` permission key (available to HR officers and Administrators):
 
 1. **Staff Information Directory (`/hr/staff`)**:
-   - Complete directory of factory employees showing Full Name, Employee ID (office card number), Designation, Department, Mobile, Joining Date, and Attendance punch permission.
-   - **Service Length Auto-Calculation**: Automatically computes the service length from `joining_date` to today as `"X years Y months Z days"`.
-   - **HR Update Drawer**: Securely updates staff details strictly via `supabase.rpc('hr_update_staff')` with direct database error reporting (e.g. unique employee ID validation).
-   - **Excel Export**: Download complete staff roster to `.xlsx`.
+   - Complete directory of factory employees showing SL, Employee ID (office card number), Name, Login Email, Department, Designation, Mobile, Joining Date, and Service Length.
+   - **Primary "Add Staff" Action**: Enables HR to enroll staff members using their Supabase login email, Full Name, Employee ID, Department, Designation, Joining Date, and Mobile.
+   - Enrolls staff strictly via `supabase.rpc('hr_setup_staff')`, which automatically assigns the `"attendance"` permission and enforces validation (e.g. valid Supabase auth user, unique Employee ID).
+   - **Service Length Auto-Calculation**: Automatically computes the service tenure from `joining_date` to today as `"X years Y months Z days"`.
+   - **HR Update Drawer**: Securely updates staff details via `supabase.rpc('hr_update_staff')` with direct database error feedback.
+   - Filter by department and search by name, ID, or login email; export to Excel (`.xlsx`).
 
-2. **Monthly Attendance Report (`/hr/attendance`)**:
+2. **Monthly Attendance Summary Report (`/hr/attendance`)**:
    - Interactive month and year selector defaulting to current month in Dhaka time.
-   - Powered by `supabase.rpc('hr_monthly_attendance', { y, m })`, displaying Working Days, Days Present, Days Absent, Days Late, Missing OUT, and Total Working Hours (`hh:mm`).
-   - Summary totals row aggregating factory-wide attendance statistics.
-   - **Person-Level Daily Sheet Drawer**: Click any staff member's row to open their month-long punch sheet with check-in/out times, hours, Google Maps location link, and 60-second signed selfie thumbnails from the private bucket.
-   - **A4 Landscape Print & PDF**: Includes standard header for *Rupkatha Apparels Ltd.*, blank salary columns (Basic, Gross, Deduction, Net Pay) ready for manual HR payroll sign-offs, and signature lines: *Prepared by (HR)*, *Checked by*, and *Approved by*.
-   - **Excel Spreadsheet Export**: `.xlsx` export with complete metadata, salary columns, totals, and signature blocks.
-   - **Admin Purge**: One-click purge calling `supabase.rpc('purge_old_selfies', { days: 90 })` to clear photos older than 90 days while preserving all attendance records.
+   - Powered by `supabase.rpc('hr_monthly_attendance', { y, m })` returning: SL, Employee ID, Name, Department, Designation, Present, Absent, Late, Missing OUT, and Total Working Hours (`hh:mm`).
+   - Every staff member is displayed (even with zero punch records). Search by Employee ID or Name.
+   - All-staff summary export actions: Print A4 Landscape, Download Excel (.xlsx), and Download PDF.
+   - **Admin Purge**: Purges selfies older than 90 days via `supabase.rpc('purge_old_selfies', { days: 90 })` while retaining all attendance timestamps and figures.
+
+3. **Individual Staff Monthly Attendance Sheet (`/hr/attendance/:id`)**:
+   - Clicking on a staff member's Employee ID in the summary report opens their dedicated Monthly Attendance Sheet.
+   - Powered by `supabase.rpc('hr_staff_month_sheet', { target, y, m })`, displaying every single calendar day from the 1st to the end of the month.
+   - **Header Block**: Official company header (*Rupkatha Apparels Ltd.*, factory address, month), Staff Name, Employee ID, Department, Designation, Joining Date, and Service Length.
+   - **Day-by-Day Table**: SL, Date (dd-mm-yyyy), Day name (Sat, Sun, etc.), IN time, OUT time, Working hours, Late badge, Status, and Remarks.
+   - **Visual Status Hierarchy**:
+     - **Present**: Emerald green badge
+     - **ABSENT**: High-contrast red badge (working days up to today with no punch)
+     - **Friday (Holiday)**: Highlighted in amber/yellow (`Friday - Holiday`)
+     - **Missing OUT**: Orange badge
+     - **Upcoming**: Neutral gray
+   - **Selfie & GPS Verification**: In-cell selfie thumbnails (via 60s signed URLs) with full-screen preview and one-click Google Maps GPS pin links.
+   - **Summary Strip & Totals Row**: Present days, Absent days, Fridays, Late days, and Total hours.
+   - **Official Signatures & Exports**: A4 Portrait Print, Download Excel (.xlsx), and Download PDF with signature lines (*Prepared by HR*, *Checked by*, *Approved by*).
 
 ---
 

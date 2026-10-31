@@ -15,6 +15,7 @@ import { SewingReports } from '../pages/sewing/SewingReports';
 import { AttendancePunch } from '../pages/attendance/AttendancePunch';
 import { StaffInfo } from '../pages/hr/StaffInfo';
 import { MonthlyAttendanceReport } from '../pages/hr/MonthlyAttendanceReport';
+import { StaffMonthSheet } from '../pages/hr/StaffMonthSheet';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
 
@@ -189,6 +190,18 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/admin/hr/attendance"
           element={<Navigate to="/hr/attendance" replace />}
+        />
+        <Route
+          path="/hr/attendance/:id"
+          element={
+            <ProtectedRoute requiredModule="hr_payroll">
+              <StaffMonthSheet />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/hr/attendance/:id"
+          element={<Navigate to="/hr/attendance/:id" replace />}
         />
 
         {/* Protected Dashboard Route (All active authenticated factory staff) */}
