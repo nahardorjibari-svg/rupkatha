@@ -162,9 +162,13 @@ export function exportStaffToExcel(staffList: any[], companyName = 'RUPKATHA APP
     'Service Length',
   ];
 
-  const dataRows = staffList.map((s, idx) => [
+  const validStaff = (staffList || []).filter(
+    (s) => Boolean(s.employee_id && String(s.employee_id).trim())
+  );
+
+  const dataRows = validStaff.map((s, idx) => [
     idx + 1,
-    s.employee_id || '-',
+    s.employee_id,
     s.full_name || s.email || '-',
     s.email || '-',
     s.department || '-',

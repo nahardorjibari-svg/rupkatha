@@ -73,7 +73,7 @@ export const StaffInfo: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
 
-  // Load all profiles that have an Employee ID or attendance permission or role admin
+  // Load only profiles that have an Employee ID set (not null, not empty string)
   const loadStaff = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -81,6 +81,8 @@ export const StaffInfo: React.FC = () => {
       const { data, error: fetchErr } = await supabase
         .from('profiles')
         .select('id, full_name, email, role, unit, is_active, permissions, employee_id, designation, department, mobile, joining_date')
+        .not('employee_id', 'is', null)
+        .neq('employee_id', '')
         .order('full_name', { ascending: true });
 
       if (fetchErr) throw fetchErr;
@@ -94,7 +96,7 @@ export const StaffInfo: React.FC = () => {
             perms = Object.keys(s.permissions).filter((k) => s.permissions[k]);
           }
           const hasAttendance = s.role === 'admin' || perms.includes('attendance');
-          const hasEmployeeId = Boolean(s.employee_id && s.employee_id.trim());
+          const hasEmployeeId = Boolean(s.employee_id && String(s.employee_id).trim());
 
           return {
             ...s,
@@ -102,7 +104,7 @@ export const StaffInfo: React.FC = () => {
             has_employee_id: hasEmployeeId,
           };
         })
-        .filter((s: any) => s.has_employee_id || s.has_attendance || s.role === 'admin');
+        .filter((s: any) => Boolean(s.employee_id && String(s.employee_id).trim()));
 
       setStaffList(normalized);
     } catch (err: any) {
@@ -400,15 +402,9 @@ export const StaffInfo: React.FC = () => {
                           {idx + 1}
                         </td>
                         <td className="py-3 px-3 font-mono font-black text-slate-900 dark:text-white whitespace-nowrap">
-                          {s.employee_id ? (
-                            <span className="px-2.5 py-1 rounded-lg bg-teal-500/10 text-[#0F8B8D] dark:text-[#5EEAD4] border border-teal-500/20 font-bold">
-                              {s.employee_id}
-                            </span>
-                          ) : (
-                            <span className="text-amber-500 font-sans italic text-[11px]">
-                              Not set
-                            </span>
-                          )}
+                          <span className="px-2.5 py-1 rounded-lg bg-teal-500/10 text-[#0F8B8D] dark:text-[#5EEAD4] border border-teal-500/20 font-bold">
+                            {s.employee_id}
+                          </span>
                         </td>
                         <td className="py-3 px-3 font-black text-slate-900 dark:text-white whitespace-nowrap">
                           {displayName}
