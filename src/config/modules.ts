@@ -65,22 +65,30 @@ export const ERP_MODULES: ModuleGroup[] = [
     ],
   },
 
-  // 2. Apparel Production & Commercial Modules (Coming Soon / Permission-governed)
+  // 2. Planning & Production
+  {
+    group: 'Planning & Production',
+    groupBangla: 'পরিকল্পনা ও উৎপাদন',
+    items: [
+      {
+        id: 'merchandising',
+        name: 'Line Plan',
+        nameBangla: 'লাইন পরিকল্পনা',
+        path: '/planning/lineplan',
+        icon: 'CalendarDays',
+        badge: null,
+        description: '30-day rolling line plan and daily production tracking',
+        status: 'active',
+        isTickable: true,
+      },
+    ],
+  },
+
+  // 3. Apparel Production & Commercial Modules (Coming Soon / Permission-governed)
   {
     group: 'Garments Production Suite',
     groupBangla: 'গার্মেন্টস প্রোডাকশন স্যুট',
     items: [
-      {
-        id: 'merchandising',
-        name: 'Merchandising',
-        nameBangla: 'মার্চেন্ডাইজিং',
-        path: '/admin/merchandising',
-        icon: 'Layers',
-        badge: 'Soon',
-        description: 'Buyer inquiry, cost sheets, tech packs, BOM, and T&A calendar tracking',
-        status: 'coming_soon',
-        isTickable: true,
-      },
       {
         id: 'sampling',
         name: 'Sampling',
@@ -269,8 +277,8 @@ export const ERP_MODULES: ModuleGroup[] = [
 
 export const PERMISSION_CATEGORIES = [
   {
-    category: 'Merchandising and Sampling',
-    categoryBangla: 'মার্চেন্ডাইজিং ও স্যাম্পলিং',
+    category: 'Planning & Production',
+    categoryBangla: 'পরিকল্পনা ও উৎপাদন',
     keys: ['merchandising', 'sampling'],
   },
   {

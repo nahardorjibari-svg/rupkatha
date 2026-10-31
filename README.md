@@ -109,6 +109,50 @@ Governed by the `hr_payroll` permission key (available to HR officers and Admini
    - **Selfie & GPS Verification**: In-cell selfie thumbnails (via 60s signed URLs) with full-screen preview and one-click Google Maps GPS pin links.
    - **Summary Strip & Totals Row**: Present days, Absent days, Fridays, Late days, and Total hours.
    - **Official Signatures & Exports**: A4 Portrait Print, Download Excel (.xlsx), and Download PDF with signature lines (*Prepared by HR*, *Checked by*, *Approved by*).
+---
+
+## Planning & Production Module: 30-Day Rolling Line Plan (`/planning/lineplan`)
+The **Planning & Production** module provides a 30-day rolling line plan with real-time daily input and output tracking:
+
+1. **Access & Permissions**:
+   - Governed by the `merchandising` permission key, labeled **"Planning & Production / পরিকল্পনা"** in Staff & Role Management.
+   - Non-permitted access redirects to `/dashboard` with an explicit notice (`Access denied / আপনার এই পেইজে প্রবেশের অনুমতি নেই`).
+   - Dedicated sidebar group with direct access to **Line Plan** (`/planning/lineplan`). `/planning` automatically redirects to `/planning/lineplan`.
+
+2. **30-Day Rolling Time Horizon (Asia/Dhaka)**:
+   - Computes 30 days starting from today in Dhaka time (`Asia/Dhaka`).
+   - Day columns show day of month, month, and day of week.
+   - All Friday columns are styled with high-contrast slate-200 / dark slate-800 shading.
+
+3. **Two-Sub-row Order Matrix (IN & OUT)**:
+   - Fixed / sticky left columns: Admin Delete, Line No, Start Date, PO, Style, Colour, Wash, Order Qty, Cutting Qty, and Wash Send.
+   - Each order splits into:
+     - **Sub-row 1 (INPUT / IN)**: Total Input, Input Extra %, Input Balance, and 30 daily input cells.
+     - **Sub-row 2 (OUTPUT / OUT)**: Total Output, Output Extra %, Output Balance, and 30 daily output cells.
+   - Daily cells allow immediate inline numeric editing with optimistic feedback, saving spinners, and active typing protection so realtime updates never clobber focused inputs.
+
+4. **Automated 8-Level Status Hierarchy**:
+   1. `PO done` (Green `#DCFCE7`)
+   2. `Not cut` (Gray `#F3F4F6`)
+   3. `Cutting running` (Amber `#FEF9C3`)
+   4. `Cut done · no line yet` (Red `#FEE2E2`)
+   5. `Ready to input` (Amber)
+   6. `Input pending N` (Amber)
+   7. `Input done · output pending N` (Amber)
+   8. `Sewing done` (Green)
+
+5. **Slide-over Add Order Drawer**:
+   - PO, Style, Wash, Order Quantity, Line Allocation, Start Date, Cutting Quantity, Wash Send.
+   - Intelligent Colour Breakdown parser:
+     - With quantities: e.g. `Black 400, Navy 400, White 400` with exact sum validation.
+     - By names: e.g. `Black, Navy, White` with equal split and remainder to last colour.
+     - Single / blank colour.
+   - Seamless insertion into `planning_orders` without modifying or sending computed fields (`is_done`).
+
+6. **Line-Wise Summary & Multi-Format Exports**:
+   - Collapsible summary grouped by line (`Line-1` through `Line-4` and `No line yet`) with line sub-totals and grand total.
+   - Print A3 Landscape with 4 official signatures (*Prepared By*, *Merchandiser*, *Production Manager*, *General Manager / MD*).
+   - Export to Excel (`.xlsx`) via SheetJS and PDF (`.pdf`) via jsPDF and autoTable.
 
 ---
 

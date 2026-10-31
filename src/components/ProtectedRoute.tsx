@@ -10,9 +10,10 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: UserRole[];
   requiredModule?: string;
+  deniedToastMessage?: string;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles, requiredModule }) => {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles, requiredModule, deniedToastMessage }) => {
   const { session, profile, loading, signOut } = useAuth();
   const location = useLocation();
 
@@ -108,7 +109,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
   if (requiredModule && !isAdmin) {
     const permissions = profile?.permissions || [];
     if (!permissions.includes(requiredModule)) {
-      toast.error(`You do not have access to the ${requiredModule} module.`);
+      toast.error(
+        deniedToastMessage || `You do not have access to the ${requiredModule} module.`
+      );
       return <Navigate to="/dashboard" replace />;
     }
   }

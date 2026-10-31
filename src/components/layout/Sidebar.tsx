@@ -30,6 +30,7 @@ import {
   FileText,
   FileSpreadsheet,
   Clock,
+  CalendarDays,
 } from 'lucide-react';
 import { useCompany } from '../../context/CompanyContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -57,6 +58,8 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   FileText,
   FileSpreadsheet,
   Clock,
+  CalendarDays,
+  Factory,
 };
 
 interface TooltipData {

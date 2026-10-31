@@ -16,6 +16,7 @@ import { AttendancePunch } from '../pages/attendance/AttendancePunch';
 import { StaffInfo } from '../pages/hr/StaffInfo';
 import { MonthlyAttendanceReport } from '../pages/hr/MonthlyAttendanceReport';
 import { StaffMonthSheet } from '../pages/hr/StaffMonthSheet';
+import { LinePlanPage } from '../pages/planning/LinePlanPage';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
 
@@ -80,6 +81,22 @@ export const AppRoutes: React.FC = () => {
           element={
             <ProtectedRoute allowedRoles={['admin']}>
               <AdminSettings />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Planning & Production Module Routes (Protected by requiredModule="merchandising") */}
+        <Route path="/planning" element={<Navigate to="/planning/lineplan" replace />} />
+        <Route path="/admin/planning" element={<Navigate to="/planning/lineplan" replace />} />
+        <Route path="/admin/planning/lineplan" element={<Navigate to="/planning/lineplan" replace />} />
+        <Route
+          path="/planning/lineplan"
+          element={
+            <ProtectedRoute
+              requiredModule="merchandising"
+              deniedToastMessage="Access denied / আপনার এই পেইজে প্রবেশের অনুমতি নেই"
+            >
+              <LinePlanPage />
             </ProtectedRoute>
           }
         />

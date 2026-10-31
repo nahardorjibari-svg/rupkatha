@@ -840,11 +840,15 @@ export const Users: React.FC = () => {
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {cat.keys.map((k) => {
                               let modName = k;
-                              for (const g of ERP_MODULES) {
-                                const found = g.items.find((it) => it.id === k);
-                                if (found) {
-                                  modName = found.name;
-                                  break;
+                              if (k === 'merchandising') {
+                                modName = 'Planning & Production / পরিকল্পনা';
+                              } else {
+                                for (const g of ERP_MODULES) {
+                                  const found = g.items.find((it) => it.id === k);
+                                  if (found) {
+                                    modName = found.name;
+                                    break;
+                                  }
                                 }
                               }
 
