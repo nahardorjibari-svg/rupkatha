@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   ClipboardList,
   BarChart3,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { useUnit } from '../../context/UnitContext';
@@ -28,7 +30,7 @@ type ViewMode = 'production_plan' | 'line_summary';
 
 export const LinePlanPage: React.FC = () => {
   const { activeUnit, setActiveUnit, unitLabel } = useUnit();
-  const { isDark } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
 
   // View toggle: Production Plan vs Line Summary
   const [viewMode, setViewMode] = useState<ViewMode>('production_plan');
@@ -145,9 +147,9 @@ export const LinePlanPage: React.FC = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 pb-12 print:p-0 print:space-y-2">
+      <div className="min-h-screen bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 pb-12 print:p-0 print:space-y-2">
         {/* Sticky Top Header Bar */}
-        <div className="sticky top-0 z-30 -mt-2 -mx-4 px-4 py-3 bg-slate-50/95 dark:bg-[#0A262B]/95 backdrop-blur-md border-b border-slate-200 dark:border-white/10 print:static print:bg-white print:p-0">
+        <div className="sticky top-0 z-30 -mt-2 -mx-4 px-4 py-3 bg-white dark:bg-slate-900 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 print:static print:bg-white print:p-0">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             {/* Title & Date Window */}
             <div className="flex items-center gap-3">
@@ -173,31 +175,41 @@ export const LinePlanPage: React.FC = () => {
             </div>
 
             {/* TOP BAR VIEW TOGGLE (Two Buttons: Production Plan vs Line Summary) */}
-            <div className="flex items-center p-1 rounded-2xl bg-slate-200/80 dark:bg-black/30 border border-slate-300 dark:border-white/10 print:hidden self-start lg:self-auto">
-              <button
-                type="button"
-                onClick={() => setViewMode('production_plan')}
-                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  viewMode === 'production_plan'
-                    ? 'bg-[#2BA5B5] text-white shadow-xs'
-                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <ClipboardList className="w-4 h-4" />
-                <span>📋 Production Plan · উৎপাদন পরিকল্পনা</span>
-              </button>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center p-1 rounded-2xl bg-gray-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 print:hidden">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('production_plan')}
+                  className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    viewMode === 'production_plan'
+                      ? 'bg-[#2BA5B5] text-white shadow-xs'
+                      : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <ClipboardList className="w-4 h-4" />
+                  <span>📋 Production Plan</span>
+                </button>
 
+                <button
+                  type="button"
+                  onClick={() => setViewMode('line_summary')}
+                  className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    viewMode === 'line_summary'
+                      ? 'bg-[#2BA5B5] text-white shadow-xs'
+                      : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  <span>📊 Line Summary</span>
+                </button>
+              </div>
               <button
                 type="button"
-                onClick={() => setViewMode('line_summary')}
-                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  viewMode === 'line_summary'
-                    ? 'bg-[#2BA5B5] text-white shadow-xs'
-                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                }`}
+                onClick={toggleTheme}
+                className="p-2 rounded-xl bg-gray-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
               >
-                <BarChart3 className="w-4 h-4" />
-                <span>📊 Line Summary · লাইন অনুযায়ী অবস্থা</span>
+                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
             </div>
 

@@ -7,7 +7,7 @@ Professional Enterprise Resource Planning (ERP) web application tailored for **R
 - **Routing**: React Router (HashRouter optimized for GitHub Pages static hosting)
 - **Database & Auth**: Supabase (@supabase/supabase-js) with Row Level Security (RLS) & RPC functions
 - **UI Components & Icons**: Lucide React, Framer Motion, React Hot Toast, Recharts
-- **Design System**: Light / Dark theme with dual plant support (Knit & Woven units) and Hind Siliguri + Inter typography.
+- **Design System**: Light / Dark theme with dual plant support (Knit & Woven units) and Hind Siliguri + Inter typography. Supports theme persistence via localStorage.
 
 ---
 

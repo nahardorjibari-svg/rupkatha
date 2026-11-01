@@ -33,7 +33,7 @@ const LINE_GROUP_CONFIGS: Record<string, { label: string; borderClass: string; b
   'Line-2': { label: 'LINE 2', borderClass: 'border-[#7C3AED]', bgHeader: 'bg-[#F5F3FF] dark:bg-purple-900/40', textHeader: 'text-[#6D28D9] dark:text-purple-200' },
   'Line-3': { label: 'LINE 3', borderClass: 'border-[#EA580C]', bgHeader: 'bg-[#FFF7ED] dark:bg-orange-900/40', textHeader: 'text-[#C2410C] dark:text-orange-200' },
   'Line-4': { label: 'LINE 4', borderClass: 'border-[#0D9488]', bgHeader: 'bg-[#F0FDFA] dark:bg-teal-900/40', textHeader: 'text-[#0F766E] dark:text-teal-200' },
-  'No line yet': { label: 'NO LINE YET', borderClass: 'border-[#6B7280]', bgHeader: 'bg-[#F3F4F6] dark:bg-slate-800/60', textHeader: 'text-[#374151] dark:text-slate-200' },
+  'No line yet': { label: 'NO LINE YET', borderClass: 'border-[#6B7280]', bgHeader: 'bg-[#F3F4F6] dark:bg-slate-800/60', textHeader: 'text-gray-700 dark:text-slate-200' },
 };
 
 export const LinePlanTable: React.FC<LinePlanTableProps> = ({
@@ -168,7 +168,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
 
   if (orders.length === 0) {
     return (
-      <div className="py-16 text-center bg-white dark:bg-[#103A40]/40 rounded-2xl border border-slate-200 dark:border-white/10 p-8 shadow-xs">
+      <div className="py-16 text-center bg-white dark:bg-[#103A40]/40 rounded-2xl border border-slate-200 dark:border-slate-700 p-8 shadow-xs">
         <div className="w-12 h-12 mx-auto rounded-2xl bg-[#2BA5B5]/10 text-[#2BA5B5] flex items-center justify-center mb-3">
           <Calendar className="w-6 h-6" />
         </div>
@@ -186,13 +186,12 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Date Navigation Bar directly above table */}
-      <div className="px-4 py-2.5 bg-[#F3F4F6] dark:bg-[#082024] rounded-xl border border-[#D1D5DB] dark:border-white/10 flex flex-wrap items-center justify-between gap-3 print:hidden">
-        <div className="flex items-center gap-2 text-xs font-semibold text-[#1F2937] dark:text-slate-300">
+      <div className="px-4 py-2.5 bg-gray-100 dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <div className="flex items-center gap-2 text-xs font-semibold text-gray-900 dark:text-gray-100">
           <span className="w-2 h-2 rounded-full bg-[#2BA5B5]"></span>
           <span>{orders.length} Orders</span>
-          <span className="text-slate-400">·</span>
-          <span className="text-[#374151] dark:text-slate-400">8-Day Window</span>
+          <span className="text-gray-500 dark:text-gray-400">·</span>
+          <span className="text-gray-500 dark:text-gray-400">8-Day Window</span>
         </div>
 
         {onEarlier && onLater && (
@@ -200,7 +199,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
             <button
               type="button"
               onClick={onEarlier}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#F3F4F6] hover:bg-[#E5E7EB] dark:bg-white/10 dark:hover:bg-white/20 text-[#1F2937] dark:text-white border border-[#D1D5DB] dark:border-white/15 shadow-xs transition-all active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#F3F4F6] hover:bg-[#E5E7EB] dark:bg-white/10 dark:hover:bg-white/20 text-[#1F2937] dark:text-white border border-gray-200 dark:border-white/15 shadow-xs transition-all active:scale-95 cursor-pointer"
               title="Move window 8 days earlier"
             >
               ‹ Earlier
@@ -211,7 +210,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
             <button
               type="button"
               onClick={onLater}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#F3F4F6] hover:bg-[#E5E7EB] dark:bg-white/10 dark:hover:bg-white/20 text-[#1F2937] dark:text-white border border-[#D1D5DB] dark:border-white/15 shadow-xs transition-all active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#F3F4F6] hover:bg-[#E5E7EB] dark:bg-white/10 dark:hover:bg-white/20 text-[#1F2937] dark:text-white border border-gray-200 dark:border-white/15 shadow-xs transition-all active:scale-95 cursor-pointer"
               title="Move window 8 days later"
             >
               Later ›
@@ -250,7 +249,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
         return (
           <div
             key={lineName}
-            className={`rounded-xl border-2 ${config.borderClass} bg-white dark:bg-[#0E2E33] shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden mb-6`}
+            className={`rounded-xl border-2 ${config.borderClass} bg-white dark:bg-slate-800 shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden mb-6`}
           >
             {/* Colored Box Header Strip */}
             <div className={`${config.bgHeader} ${config.textHeader} px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs font-bold border-b ${config.borderClass}`}>
@@ -265,46 +264,46 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                 <span>·</span>
                 <span>Output: {groupOutput.toLocaleString()}</span>
               </div>
-              <div className="text-[11px] text-[#374151] dark:text-slate-200 font-medium">
+              <div className="text-[11px] text-gray-700 dark:text-slate-200 font-medium">
                 Status: {statusSummaryText}
               </div>
             </div>
 
             {/* Table inside Box Card with cell borders and border-collapse */}
             <div className="overflow-x-auto scrollbar-custom">
-              <table className="w-full text-left border-collapse text-[11px]">
+              <table className="w-full text-left border-collapse text-[11px] text-gray-900 dark:text-gray-100">
                 {/* Header */}
-                <thead className="sticky top-0 z-30 bg-[#F3F4F6] dark:bg-[#082024] text-[#111827] dark:text-slate-200 border-b border-[#9CA3AF] dark:border-white/15 select-none text-[12px] font-bold tracking-wider">
-                  <tr className="bg-[#F3F4F6] dark:bg-[#082024] border-b border-[#9CA3AF] dark:border-white/15">
+                <thead className="sticky top-0 z-30 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-slate-700 select-none text-[12px] font-bold tracking-wider">
+                  <tr className="bg-white dark:bg-slate-700 border-b border-gray-200 dark:border-slate-700">
                     <th
                       colSpan={14}
-                      className="sticky left-0 z-40 bg-[#F3F4F6] dark:bg-[#082024] px-3 py-1 text-left text-[11px] text-[#1F2937] dark:text-slate-400 border border-[#D1D5DB] dark:border-white/10 uppercase font-bold"
+                      className="sticky left-0 z-40 bg-white dark:bg-slate-900 px-3 py-1 text-left text-[11px] text-gray-700 dark:text-slate-300 border border-gray-200 dark:border-slate-700 uppercase font-bold"
                     >
                       Order Particulars ({config.label})
                     </th>
                     <th
                       colSpan={days.length}
-                      className="bg-[#E5E7EB] dark:bg-slate-800/90 px-2 py-1 text-center border border-[#D1D5DB] dark:border-white/10"
+                      className="bg-white dark:bg-slate-800 px-2 py-1 text-center border border-gray-200 dark:border-slate-700"
                     >
                       <div className="flex items-center justify-center gap-2 print:hidden">
                         {onEarlier && (
                           <button
                             type="button"
                             onClick={onEarlier}
-                            className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#F3F4F6] hover:bg-[#E5E7EB] dark:bg-white/10 dark:hover:bg-white/20 text-[#1F2937] dark:text-white border border-[#D1D5DB] dark:border-white/20 shadow-2xs transition-colors cursor-pointer"
+                            className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-900 dark:text-white border border-gray-200 dark:border-slate-600 shadow-2xs transition-colors cursor-pointer"
                             title="Move 8 days earlier"
                           >
                             ‹ Earlier
                           </button>
                         )}
-                        <span className="font-extrabold text-[11px] text-[#111827] dark:text-white tracking-wide">
+                        <span className="font-extrabold text-[11px] text-gray-900 dark:text-white tracking-wide">
                           {dateRangeLabel}
                         </span>
                         {onLater && (
                           <button
                             type="button"
                             onClick={onLater}
-                            className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#F3F4F6] hover:bg-[#E5E7EB] dark:bg-white/10 dark:hover:bg-white/20 text-[#1F2937] dark:text-white border border-[#D1D5DB] dark:border-white/20 shadow-2xs transition-colors cursor-pointer"
+                            className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-900 dark:text-white border border-gray-200 dark:border-slate-600 shadow-2xs transition-colors cursor-pointer"
                             title="Move 8 days later"
                           >
                             Later ›
@@ -317,79 +316,79 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                     </th>
                     <th
                       colSpan={isAdmin ? 10 : 9}
-                      className="bg-[#F3F4F6] dark:bg-[#082024] px-2 py-1 text-center text-[11px] text-[#1F2937] dark:text-slate-400 uppercase font-bold border border-[#D1D5DB] dark:border-white/10"
+                      className="bg-white dark:bg-slate-900 px-2 py-1 text-center text-[11px] text-gray-700 dark:text-slate-300 uppercase font-bold border border-gray-200 dark:border-slate-700"
                     >
                       Totals, Balances, Wash & Finishing Tracking
                     </th>
                   </tr>
                   <tr>
                     {/* Sticky Column 1: SL */}
-                    <th className="sticky left-0 z-40 bg-[#F3F4F6] dark:bg-[#082024] px-2 py-2.5 text-center w-10 border border-[#D1D5DB] dark:border-white/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="sticky left-0 z-40 bg-white dark:bg-[#082024] px-2 py-2.5 text-center w-10 border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       SL
                     </th>
 
                     {/* Sticky Column 2: Buyer */}
-                    <th className="sticky left-10 z-40 bg-[#F3F4F6] dark:bg-[#082024] px-2.5 py-2.5 min-w-[95px] max-w-[120px] border border-[#D1D5DB] dark:border-white/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="sticky left-10 z-40 bg-white dark:bg-[#082024] px-2.5 py-2.5 min-w-[95px] max-w-[120px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       BUYER
                     </th>
 
                     {/* Sticky Column 3: PO */}
-                    <th className="sticky left-[135px] z-40 bg-[#F3F4F6] dark:bg-[#082024] px-2.5 py-2.5 min-w-[95px] border border-[#D1D5DB] dark:border-white/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="sticky left-[135px] z-40 bg-white dark:bg-[#082024] px-2.5 py-2.5 min-w-[95px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       PO
                     </th>
 
                     {/* Sticky Column 4: Style */}
-                    <th className="sticky left-[230px] z-40 bg-[#F3F4F6] dark:bg-[#082024] px-2.5 py-2.5 min-w-[105px] border border-[#D1D5DB] dark:border-white/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="sticky left-[230px] z-40 bg-white dark:bg-[#082024] px-2.5 py-2.5 min-w-[105px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       STYLE
                     </th>
 
                     {/* Sticky Column 5: Order Qty */}
-                    <th className="sticky left-[335px] z-40 bg-[#F3F4F6] dark:bg-[#082024] px-2.5 py-2.5 text-right min-w-[80px] border border-[#D1D5DB] dark:border-white/10 text-[#1F2937] dark:text-slate-200 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)]">
+                    <th className="sticky left-[335px] z-40 bg-white dark:bg-[#082024] px-2.5 py-2.5 text-right min-w-[80px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)]">
                       ORDER QTY
                     </th>
 
                     {/* Colour */}
-                    <th className="px-2 py-2.5 min-w-[85px] border border-[#D1D5DB] dark:border-white/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 min-w-[85px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       COLOUR
                     </th>
 
                     {/* Wash */}
-                    <th className="px-2 py-2.5 min-w-[75px] border border-[#D1D5DB] dark:border-white/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 min-w-[75px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       WASH
                     </th>
 
                     {/* Line */}
-                    <th className="px-2 py-2.5 min-w-[80px] border border-[#D1D5DB] dark:border-white/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 min-w-[80px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       LINE
                     </th>
 
                     {/* Start Date */}
-                    <th className="px-2 py-2.5 min-w-[105px] border border-[#D1D5DB] dark:border-white/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 min-w-[105px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       START DATE
                     </th>
 
                     {/* Qty */}
-                    <th className="px-2 py-2.5 text-right min-w-[65px] border border-[#D1D5DB] dark:border-white/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[65px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       QTY
                     </th>
 
                     {/* Cutting */}
-                    <th className="px-2 py-2.5 text-right min-w-[70px] border border-[#D1D5DB] dark:border-white/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[70px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       CUTTING
                     </th>
 
                     {/* Extra % */}
-                    <th className="px-1.5 py-2.5 text-right min-w-[60px] border border-[#D1D5DB] dark:border-white/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-1.5 py-2.5 text-right min-w-[60px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       EXTRA %
                     </th>
 
                     {/* Cut Status */}
-                    <th className="px-2 py-2.5 text-center min-w-[75px] border border-[#D1D5DB] dark:border-white/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-center min-w-[75px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       CUT STATUS
                     </th>
 
                     {/* Type */}
-                    <th className="px-2 py-2.5 text-center min-w-[85px] border border-[#D1D5DB] dark:border-white/10 bg-[#E5E7EB] dark:bg-black/20 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-center min-w-[85px] border border-gray-200 dark:border-slate-700 bg-[#E5E7EB] dark:bg-black/20 text-[#1F2937] dark:text-slate-200">
                       TYPE
                     </th>
 
@@ -397,7 +396,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                     {days.map((day) => (
                       <th
                         key={day.dateStr}
-                        className={`px-1 py-1 text-center min-w-[50px] border border-[#D1D5DB] dark:border-white/10 ${
+                        className={`px-1 py-1 text-center min-w-[50px] border border-gray-200 dark:border-slate-700 ${
                           day.isFriday
                             ? 'bg-[#F3F4F6] dark:bg-slate-800 text-[#DC2626] dark:text-rose-400 font-extrabold'
                             : day.isToday
@@ -415,53 +414,53 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                     ))}
 
                     {/* Total */}
-                    <th className="px-2 py-2.5 text-right min-w-[65px] border border-[#D1D5DB] dark:border-white/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[65px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       TOTAL
                     </th>
 
                     {/* Balance */}
-                    <th className="px-2 py-2.5 text-right min-w-[75px] border border-[#D1D5DB] dark:border-white/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[75px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       BALANCE
                     </th>
 
                     {/* Total Wash Sent */}
-                    <th className="px-2 py-2.5 text-right min-w-[80px] border border-[#D1D5DB] dark:border-white/10 bg-sky-50/50 dark:bg-sky-950/20 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[80px] border border-gray-200 dark:border-slate-700 bg-sky-50/50 dark:bg-sky-950/20 text-[#1F2937] dark:text-slate-200">
                       TOTAL WASH SENT
                     </th>
 
                     {/* Wash Rem. */}
-                    <th className="px-2 py-2.5 text-right min-w-[75px] border border-[#D1D5DB] dark:border-white/10 bg-sky-50/30 dark:bg-sky-950/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[75px] border border-gray-200 dark:border-slate-700 bg-sky-50/30 dark:bg-sky-950/10 text-[#1F2937] dark:text-slate-200">
                       WASH REM.
                     </th>
 
                     {/* Total Wash Recv */}
-                    <th className="px-2 py-2.5 text-right min-w-[80px] border border-[#D1D5DB] dark:border-white/10 bg-purple-50/50 dark:bg-purple-950/20 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[80px] border border-gray-200 dark:border-slate-700 bg-purple-50/50 dark:bg-purple-950/20 text-[#1F2937] dark:text-slate-200">
                       TOTAL WASH RECV
                     </th>
 
                     {/* Wash Recv Rem. */}
-                    <th className="px-2 py-2.5 text-right min-w-[80px] border border-[#D1D5DB] dark:border-white/10 bg-purple-50/30 dark:bg-purple-950/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[80px] border border-gray-200 dark:border-slate-700 bg-purple-50/30 dark:bg-purple-950/10 text-[#1F2937] dark:text-slate-200">
                       WASH RECV REM.
                     </th>
 
                     {/* Total Finishing */}
-                    <th className="px-2 py-2.5 text-right min-w-[80px] border border-[#D1D5DB] dark:border-white/10 bg-emerald-50/50 dark:bg-emerald-950/20 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[80px] border border-gray-200 dark:border-slate-700 bg-emerald-50/50 dark:bg-emerald-950/20 text-[#1F2937] dark:text-slate-200">
                       TOTAL FINISHING
                     </th>
 
                     {/* Finishing Rem. */}
-                    <th className="px-2 py-2.5 text-right min-w-[80px] border border-[#D1D5DB] dark:border-white/10 bg-emerald-50/30 dark:bg-emerald-950/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[80px] border border-gray-200 dark:border-slate-700 bg-emerald-50/30 dark:bg-emerald-950/10 text-[#1F2937] dark:text-slate-200">
                       FINISHING REM.
                     </th>
 
                     {/* Status */}
-                    <th className="px-3 py-2.5 text-center min-w-[125px] border border-[#D1D5DB] dark:border-white/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-3 py-2.5 text-center min-w-[125px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       STATUS
                     </th>
 
                     {/* Action */}
                     {isAdmin && (
-                      <th className="px-2 py-2.5 text-center w-9 border border-[#D1D5DB] dark:border-white/10 text-[#1F2937] dark:text-slate-200">
+                      <th className="px-2 py-2.5 text-center w-9 border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                         ACT
                       </th>
                     )}
@@ -516,7 +515,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                         ? totalWashSent >= cuttingQty
                           ? 'text-[#16A34A] dark:text-emerald-400 font-extrabold'
                           : 'text-[#D97706] dark:text-amber-400 font-bold'
-                        : 'text-[#111827] dark:text-slate-300 font-bold';
+                        : 'text-gray-900 dark:text-slate-300 font-bold';
 
                     const washRemColor =
                       washRemaining > 0
@@ -528,7 +527,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                         ? totalWashRecv >= totalWashSent
                           ? 'text-[#16A34A] dark:text-emerald-400 font-extrabold'
                           : 'text-[#D97706] dark:text-amber-400 font-bold'
-                        : 'text-[#111827] dark:text-slate-300 font-bold';
+                        : 'text-gray-900 dark:text-slate-300 font-bold';
 
                     const washRecvRemColor =
                       washRecvRemaining > 0
@@ -540,7 +539,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                         ? totalFinishing >= totalWashRecv
                           ? 'text-[#16A34A] dark:text-emerald-400 font-extrabold'
                           : 'text-[#D97706] dark:text-amber-400 font-bold'
-                        : 'text-[#111827] dark:text-slate-300 font-bold';
+                        : 'text-gray-900 dark:text-slate-300 font-bold';
 
                     const finishingRemColor =
                       finishingRemaining > 0
@@ -551,12 +550,12 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       <React.Fragment key={orderId}>
                         {/* SUB-ROW 1: INPUT */}
                         <tr
-                          className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5 border-t border-[#D1D5DB] dark:border-white/10`}
+                          className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5 border-t border-gray-200 dark:border-slate-700`}
                         >
                           {/* Sticky Column 1: SL (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`sticky left-0 z-20 px-2 py-1.5 text-center font-bold text-[#374151] dark:text-slate-400 border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
+                            className={`sticky left-0 z-20 px-2 py-1.5 text-center font-bold text-gray-700 dark:text-slate-300 border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
                           >
                             {orderSlMap.get(orderId) || (index + 1)}
                           </td>
@@ -564,7 +563,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Sticky Column 2: Buyer (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`sticky left-10 z-20 px-2.5 py-1.5 font-bold text-[#111827] dark:text-slate-200 border border-[#D1D5DB] dark:border-white/10 whitespace-nowrap max-w-[120px] truncate bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
+                            className={`sticky left-10 z-20 px-2.5 py-1.5 font-bold text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 whitespace-nowrap max-w-[120px] truncate bg-white dark:bg-slate-800 ${status.rowTintClass}`}
                             title={order.buyer || '-'}
                           >
                             {order.buyer && order.buyer.trim() ? highlightMatch(order.buyer) : '-'}
@@ -573,7 +572,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Sticky Column 3: PO (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`sticky left-[135px] z-20 px-2.5 py-1.5 font-extrabold text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-white/10 whitespace-nowrap bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
+                            className={`sticky left-[135px] z-20 px-2.5 py-1.5 font-extrabold text-gray-900 dark:text-white border border-gray-200 dark:border-slate-700 whitespace-nowrap bg-white dark:bg-slate-800 ${status.rowTintClass}`}
                           >
                             {highlightMatch(order.po)}
                           </td>
@@ -581,7 +580,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Sticky Column 4: Style (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`sticky left-[230px] z-20 px-2.5 py-1.5 font-medium text-[#374151] dark:text-slate-300 border border-[#D1D5DB] dark:border-white/10 max-w-[130px] truncate bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
+                            className={`sticky left-[230px] z-20 px-2.5 py-1.5 font-medium text-gray-700 dark:text-slate-300 border border-gray-200 dark:border-slate-700 max-w-[130px] truncate bg-white dark:bg-slate-800 ${status.rowTintClass}`}
                             title={order.style || ''}
                           >
                             {highlightMatch(order.style)}
@@ -590,7 +589,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Sticky Column 5: Order Qty (PO total, Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`sticky left-[335px] z-20 px-2.5 py-1.5 text-right font-black text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-white/10 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)] bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
+                            className={`sticky left-[335px] z-20 px-2.5 py-1.5 text-right font-black text-gray-900 dark:text-white border border-gray-200 dark:border-slate-700 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)] bg-white dark:bg-slate-800 ${status.rowTintClass}`}
                           >
                             {poTotalOrderQty.toLocaleString()}
                           </td>
@@ -598,7 +597,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Column 5: Colour (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-2 py-1.5 text-[#111827] dark:text-slate-300 border border-[#D1D5DB] dark:border-white/10 font-bold text-[13px] whitespace-nowrap bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
+                            className={`px-2 py-1.5 text-gray-900 dark:text-slate-300 border border-gray-200 dark:border-slate-700 font-bold text-[13px] whitespace-nowrap bg-white dark:bg-slate-800 ${status.rowTintClass}`}
                           >
                             {highlightMatch(order.colour) || '-'}
                           </td>
@@ -606,7 +605,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Column 6: Wash (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-2 py-1.5 text-[#111827] dark:text-slate-400 border border-[#D1D5DB] dark:border-white/10 font-bold text-[13px] bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
+                            className={`px-2 py-1.5 text-gray-900 dark:text-slate-400 border border-gray-200 dark:border-slate-700 font-bold text-[13px] bg-white dark:bg-slate-800 ${status.rowTintClass}`}
                           >
                             {order.wash || '-'}
                           </td>
@@ -614,14 +613,14 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Column 7: Line (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-1 py-1 border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
+                            className={`px-1 py-1 border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
                           >
                             <select
                               value={order.line_no || ''}
                               onChange={(e) =>
                                 onUpdateOrder(orderId, { line_no: e.target.value })
                               }
-                              className="w-full px-2 py-1.5 text-[13px] font-bold rounded-md border border-[#D1D5DB] dark:border-white/20 focus:border-[#0F8B8D] bg-white dark:bg-slate-900 transition-all cursor-pointer text-[#111827] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F8B8D]"
+                              className="w-full px-2 py-1.5 text-[13px] font-bold rounded-md border border-gray-200 dark:border-white/20 focus:border-[#0F8B8D] bg-white dark:bg-slate-900 transition-all cursor-pointer text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F8B8D]"
                             >
                               <option value="">No line</option>
                               <option value="Line-1">Line-1</option>
@@ -634,7 +633,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Column 8: Start Date (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-1 py-1 border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
+                            className={`px-1 py-1 border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
                           >
                             <input
                               type="date"
@@ -644,14 +643,14 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                                   start_date: e.target.value || null,
                                 })
                               }
-                              className="w-full px-2.5 py-1.5 text-[13px] font-semibold rounded-md bg-white dark:bg-slate-900 text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-white/20 focus:outline-none focus:ring-2 focus:ring-[#0F8B8D] focus:border-[#0F8B8D] cursor-pointer placeholder:text-[#6B7280]"
+                              className="w-full px-2.5 py-1.5 text-[13px] font-semibold rounded-md bg-white dark:bg-slate-900 text-gray-900 dark:text-white border border-gray-200 dark:border-white/20 focus:outline-none focus:ring-2 focus:ring-[#0F8B8D] focus:border-[#0F8B8D] cursor-pointer placeholder:text-[#6B7280]"
                             />
                           </td>
 
                           {/* Column 9: Qty (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-2 py-1.5 text-right font-extrabold text-[#111827] dark:text-slate-200 border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
+                            className={`px-2 py-1.5 text-right font-extrabold text-gray-900 dark:text-slate-200 border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
                           >
                             {rowOrderQty.toLocaleString()}
                           </td>
@@ -659,7 +658,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Column 10: Cutting (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-1 py-1 border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
+                            className={`px-1 py-1 border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
                           >
                             <input
                               type="number"
@@ -679,14 +678,14 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                                   (e.target as HTMLInputElement).blur();
                                 }
                               }}
-                              className="w-full h-8 px-2 text-right text-[13px] font-bold text-[#111827] dark:text-white rounded-md border border-[#D1D5DB] dark:border-white/20 focus:border-[#0F8B8D] bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F8B8D]"
+                              className="w-full h-8 px-2 text-right text-[13px] font-bold text-gray-900 dark:text-white rounded-md border border-gray-200 dark:border-white/20 focus:border-[#0F8B8D] bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F8B8D]"
                             />
                           </td>
 
                           {/* Column 11: Extra % (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-1.5 py-1.5 text-right font-bold text-[13px] border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${status.rowTintClass} ${
+                            className={`px-1.5 py-1.5 text-right font-bold text-[13px] border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass} ${
                               extraPct > 0
                                 ? 'text-[#16A34A] dark:text-emerald-400'
                                 : extraPct < 0
@@ -700,7 +699,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Column 12: Cut Status (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-1.5 py-1 text-center border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
+                            className={`px-1.5 py-1 text-center border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
                           >
                             <span
                               className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${cutStatusBadgeBg}`}
@@ -710,7 +709,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           </td>
 
                           {/* Column 13: Type (INPUT) with left border stripe */}
-                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-teal-800 dark:text-teal-300 bg-white dark:bg-teal-950/40 border border-[#D1D5DB] dark:border-white/10 border-l-4 border-l-[#2563EB] dark:border-l-teal-500">
+                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-teal-800 dark:text-teal-300 bg-white dark:bg-teal-950/40 border border-gray-200 dark:border-slate-700 border-l-4 border-l-[#2563EB] dark:border-l-teal-500">
                             INPUT
                           </td>
 
@@ -726,7 +725,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             return (
                               <td
                                 key={`in_${day.dateStr}`}
-                                className={`p-0 text-center relative border border-[#D1D5DB] dark:border-white/10 transition-colors bg-white dark:bg-[#0E2E33] ${
+                                className={`p-0 text-center relative border border-gray-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800 ${
                                   day.isFriday
                                     ? 'bg-[#F3F4F6] dark:bg-slate-800/80'
                                     : isFlashed
@@ -755,7 +754,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                                       (e.target as HTMLInputElement).blur();
                                     }
                                   }}
-                                  className="w-full h-7 px-0.5 text-center text-[10px] font-bold text-[#111827] dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0F8B8D] transition-all"
+                                  className="w-full h-7 px-0.5 text-center text-[10px] font-bold text-gray-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0F8B8D] transition-all"
                                 />
                                 {isSaving && (
                                   <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[#0F8B8D] animate-ping" />
@@ -765,13 +764,13 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           })}
 
                           {/* Total (INPUT) */}
-                          <td className="px-2 py-1 text-right font-extrabold text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33]">
+                          <td className="px-2 py-1 text-right font-extrabold text-gray-900 dark:text-white border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                             {totalInput.toLocaleString()}
                           </td>
 
                           {/* Input Bal. */}
                           <td
-                            className={`px-2 py-1 text-right font-bold border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${
+                            className={`px-2 py-1 text-right font-bold border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${
                               inputBalance <= 0
                                 ? 'text-[#16A34A] dark:text-emerald-400'
                                 : 'text-[#DC2626] dark:text-rose-400 font-extrabold bg-rose-50/50 dark:bg-rose-950/30'
@@ -784,7 +783,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Merged Column: TOTAL WASH SENT (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-2 py-1 text-right border border-[#D1D5DB] dark:border-white/10 ${washSentColor} bg-white dark:bg-[#0E2E33]`}
+                            className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${washSentColor} bg-white dark:bg-slate-800`}
                           >
                             {totalWashSent.toLocaleString()}
                           </td>
@@ -792,7 +791,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Merged Column: WASH REMAINING (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-2 py-1 text-right border border-[#D1D5DB] dark:border-white/10 ${washRemColor} bg-white dark:bg-[#0E2E33]`}
+                            className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${washRemColor} bg-white dark:bg-slate-800`}
                           >
                             {washRemaining.toLocaleString()}
                           </td>
@@ -800,7 +799,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Merged Column: TOTAL WASH RECV (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-2 py-1 text-right border border-[#D1D5DB] dark:border-white/10 ${washRecvColor} bg-white dark:bg-[#0E2E33]`}
+                            className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${washRecvColor} bg-white dark:bg-slate-800`}
                           >
                             {totalWashRecv.toLocaleString()}
                           </td>
@@ -808,7 +807,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Merged Column: WASH RECV REMAINING (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-2 py-1 text-right border border-[#D1D5DB] dark:border-white/10 ${washRecvRemColor} bg-white dark:bg-[#0E2E33]`}
+                            className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${washRecvRemColor} bg-white dark:bg-slate-800`}
                           >
                             {washRecvRemaining.toLocaleString()}
                           </td>
@@ -816,7 +815,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Merged Column: TOTAL FINISHING (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-2 py-1 text-right border border-[#D1D5DB] dark:border-white/10 ${finishingColor} bg-white dark:bg-[#0E2E33]`}
+                            className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${finishingColor} bg-white dark:bg-slate-800`}
                           >
                             {totalFinishing.toLocaleString()}
                           </td>
@@ -824,7 +823,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Merged Column: FINISHING REMAINING (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-2 py-1 text-right border border-[#D1D5DB] dark:border-white/10 ${finishingRemColor} bg-white dark:bg-[#0E2E33]`}
+                            className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${finishingRemColor} bg-white dark:bg-slate-800`}
                           >
                             {finishingRemaining.toLocaleString()}
                           </td>
@@ -832,7 +831,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Status Badge (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-2 py-1 text-center border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
+                            className={`px-2 py-1 text-center border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
                           >
                             <span
                               className={`inline-block px-2.5 py-1 rounded-full text-[10px] border whitespace-nowrap font-bold shadow-2xs ${status.badgeClass}`}
@@ -845,7 +844,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {isAdmin && (
                             <td
                               rowSpan={5}
-                              className={`px-1 py-1 text-center border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
+                              className={`px-1 py-1 text-center border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
                             >
                               {confirmDeleteId === orderId ? (
                                 <div className="flex flex-col items-center gap-1 p-1 bg-white dark:bg-slate-900 rounded border border-rose-300 shadow-md">
@@ -889,7 +888,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5`}
                         >
                           {/* Column 13: Type (OUTPUT) */}
-                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-indigo-800 dark:text-indigo-300 bg-white dark:bg-indigo-950/30 border border-[#D1D5DB] dark:border-white/10 border-l-4 border-l-[#16A34A] dark:border-l-indigo-500">
+                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-indigo-800 dark:text-indigo-300 bg-white dark:bg-indigo-950/30 border border-gray-200 dark:border-slate-700 border-l-4 border-l-[#16A34A] dark:border-l-indigo-500">
                             OUTPUT
                           </td>
 
@@ -905,7 +904,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             return (
                               <td
                                 key={`out_${day.dateStr}`}
-                                className={`p-0 text-center relative border border-[#D1D5DB] dark:border-white/10 transition-colors bg-white dark:bg-[#0E2E33] ${
+                                className={`p-0 text-center relative border border-gray-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800 ${
                                   day.isFriday
                                     ? 'bg-[#F3F4F6] dark:bg-slate-800/80'
                                     : isFlashed
@@ -934,7 +933,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                                       (e.target as HTMLInputElement).blur();
                                     }
                                   }}
-                                  className="w-full h-7 px-0.5 text-center text-[10px] font-bold text-[#111827] dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0F8B8D] transition-all"
+                                  className="w-full h-7 px-0.5 text-center text-[10px] font-bold text-gray-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0F8B8D] transition-all"
                                 />
                                 {isSaving && (
                                   <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[#0F8B8D] animate-ping" />
@@ -944,13 +943,13 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           })}
 
                           {/* Total (OUTPUT) */}
-                          <td className="px-2 py-1 text-right font-extrabold text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33]">
+                          <td className="px-2 py-1 text-right font-extrabold text-gray-900 dark:text-white border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                             {totalOutput.toLocaleString()}
                           </td>
 
                           {/* Output Bal. */}
                           <td
-                            className={`px-2 py-1 text-right font-bold border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${
+                            className={`px-2 py-1 text-right font-bold border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${
                               outputBalance <= 0
                                 ? 'text-[#16A34A] dark:text-emerald-400'
                                 : 'text-[#DC2626] dark:text-rose-400 font-extrabold bg-rose-50/50 dark:bg-rose-950/30'
@@ -965,7 +964,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                         <tr
                           className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5`}
                         >
-                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-purple-800 dark:text-purple-300 bg-white dark:bg-sky-950/40 border border-[#D1D5DB] dark:border-white/10 border-l-4 border-l-[#7C3AED] dark:border-l-sky-500">
+                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-purple-800 dark:text-purple-300 bg-white dark:bg-sky-950/40 border border-gray-200 dark:border-slate-700 border-l-4 border-l-[#7C3AED] dark:border-l-sky-500">
                             WASH SENT
                           </td>
 
@@ -980,7 +979,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             return (
                               <td
                                 key={`ws_${day.dateStr}`}
-                                className={`p-0 text-center relative border border-[#D1D5DB] dark:border-white/10 transition-colors bg-white dark:bg-[#0E2E33] ${
+                                className={`p-0 text-center relative border border-gray-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800 ${
                                   day.isFriday
                                     ? 'bg-[#F3F4F6] dark:bg-slate-800/80'
                                     : isFlashed
@@ -1009,7 +1008,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                                       (e.target as HTMLInputElement).blur();
                                     }
                                   }}
-                                  className="w-full h-7 px-0.5 text-center text-[10px] font-bold text-[#111827] dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0F8B8D] transition-all"
+                                  className="w-full h-7 px-0.5 text-center text-[10px] font-bold text-gray-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0F8B8D] transition-all"
                                 />
                                 {isSaving && (
                                   <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[#0F8B8D] animate-ping" />
@@ -1018,12 +1017,12 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             );
                           })}
 
-                          <td className="px-2 py-1 text-right font-extrabold text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33]">
+                          <td className="px-2 py-1 text-right font-extrabold text-gray-900 dark:text-white border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                             {totalWashSent.toLocaleString()}
                           </td>
 
                           <td
-                            className={`px-2 py-1 text-right font-bold border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${
+                            className={`px-2 py-1 text-right font-bold border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${
                               washRemaining <= 0
                                 ? 'text-[#16A34A] dark:text-emerald-400'
                                 : 'text-[#DC2626] dark:text-rose-400 font-extrabold bg-rose-50/50 dark:bg-rose-950/30'
@@ -1038,7 +1037,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                         <tr
                           className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5`}
                         >
-                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-teal-800 dark:text-purple-300 bg-white dark:bg-purple-950/40 border border-[#D1D5DB] dark:border-white/10 border-l-4 border-l-[#0D9488] dark:border-l-purple-500">
+                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-teal-800 dark:text-purple-300 bg-white dark:bg-purple-950/40 border border-gray-200 dark:border-slate-700 border-l-4 border-l-[#0D9488] dark:border-l-purple-500">
                             WASH RECV
                           </td>
 
@@ -1053,7 +1052,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             return (
                               <td
                                 key={`wr_${day.dateStr}`}
-                                className={`p-0 text-center relative border border-[#D1D5DB] dark:border-white/10 transition-colors bg-white dark:bg-[#0E2E33] ${
+                                className={`p-0 text-center relative border border-gray-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800 ${
                                   day.isFriday
                                     ? 'bg-[#F3F4F6] dark:bg-slate-800/80'
                                     : isFlashed
@@ -1082,7 +1081,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                                       (e.target as HTMLInputElement).blur();
                                     }
                                   }}
-                                  className="w-full h-7 px-0.5 text-center text-[10px] font-bold text-[#111827] dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0F8B8D] transition-all"
+                                  className="w-full h-7 px-0.5 text-center text-[10px] font-bold text-gray-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0F8B8D] transition-all"
                                 />
                                 {isSaving && (
                                   <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[#0F8B8D] animate-ping" />
@@ -1091,12 +1090,12 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             );
                           })}
 
-                          <td className="px-2 py-1 text-right font-extrabold text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33]">
+                          <td className="px-2 py-1 text-right font-extrabold text-gray-900 dark:text-white border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                             {totalWashRecv.toLocaleString()}
                           </td>
 
                           <td
-                            className={`px-2 py-1 text-right font-bold border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${
+                            className={`px-2 py-1 text-right font-bold border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${
                               washRecvRemaining <= 0
                                 ? 'text-[#16A34A] dark:text-emerald-400'
                                 : 'text-[#DC2626] dark:text-rose-400 font-extrabold bg-rose-50/50 dark:bg-rose-950/30'
@@ -1111,7 +1110,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                         <tr
                           className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5`}
                         >
-                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-orange-800 dark:text-emerald-300 bg-white dark:bg-emerald-950/40 border border-[#D1D5DB] dark:border-white/10 border-l-4 border-l-[#EA580C] dark:border-l-emerald-500">
+                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-orange-800 dark:text-emerald-300 bg-white dark:bg-emerald-950/40 border border-gray-200 dark:border-slate-700 border-l-4 border-l-[#EA580C] dark:border-l-emerald-500">
                             FINISHING
                           </td>
 
@@ -1126,7 +1125,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             return (
                               <td
                                 key={`fn_${day.dateStr}`}
-                                className={`p-0 text-center relative border border-[#D1D5DB] dark:border-white/10 transition-colors bg-white dark:bg-[#0E2E33] ${
+                                className={`p-0 text-center relative border border-gray-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800 ${
                                   day.isFriday
                                     ? 'bg-[#F3F4F6] dark:bg-slate-800/80'
                                     : isFlashed
@@ -1155,7 +1154,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                                       (e.target as HTMLInputElement).blur();
                                     }
                                   }}
-                                  className="w-full h-7 px-0.5 text-center text-[10px] font-bold text-[#111827] dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0F8B8D] transition-all"
+                                  className="w-full h-7 px-0.5 text-center text-[10px] font-bold text-gray-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0F8B8D] transition-all"
                                 />
                                 {isSaving && (
                                   <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[#0F8B8D] animate-ping" />
@@ -1164,12 +1163,12 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             );
                           })}
 
-                          <td className="px-2 py-1 text-right font-extrabold text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33]">
+                          <td className="px-2 py-1 text-right font-extrabold text-gray-900 dark:text-white border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                             {totalFinishing.toLocaleString()}
                           </td>
 
                           <td
-                            className={`px-2 py-1 text-right font-bold border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${
+                            className={`px-2 py-1 text-right font-bold border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${
                               finishingRemaining <= 0
                                 ? 'text-[#16A34A] dark:text-emerald-400'
                                 : 'text-[#DC2626] dark:text-rose-400 font-extrabold bg-rose-50/50 dark:bg-rose-950/30'
@@ -1185,31 +1184,31 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                 </tbody>
 
                 {/* Pinned Totals Row for this Line Group */}
-                <tfoot className="sticky bottom-0 z-30 bg-[#E5E7EB] dark:bg-[#071B1E] text-[#111827] dark:text-white border-t-2 border-[#9CA3AF] dark:border-white/20 font-black text-[10px] uppercase">
+                <tfoot className="sticky bottom-0 z-30 bg-[#E5E7EB] dark:bg-[#071B1E] text-gray-900 dark:text-white border-t-2 border-[#9CA3AF] dark:border-white/20 font-black text-[10px] uppercase">
                   {/* Totals Row 1: INPUT TOTALS */}
-                  <tr className="border-b border-[#D1D5DB] dark:border-white/10">
+                  <tr className="border-b border-gray-200 dark:border-slate-700">
                     <td
                       colSpan={4}
-                      className="sticky left-0 z-40 bg-[#E5E7EB] dark:bg-[#071B1E] px-2.5 py-2 text-right border border-[#D1D5DB] dark:border-white/10 text-[#111827] dark:text-white"
+                      className="sticky left-0 z-40 bg-[#E5E7EB] dark:bg-[#071B1E] px-2.5 py-2 text-right border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white"
                     >
                       {config.label} TOTALS ({groupOrders.length} orders)
                     </td>
-                    <td className="sticky left-[335px] z-40 bg-[#E5E7EB] dark:bg-[#071B1E] px-2.5 py-2 text-right border-r-2 border-[#9CA3AF] dark:border-white/20 border border-[#D1D5DB] dark:border-white/10 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)] text-[#111827] dark:text-white">
+                    <td className="sticky left-[335px] z-40 bg-[#E5E7EB] dark:bg-[#071B1E] px-2.5 py-2 text-right border-r-2 border-[#9CA3AF] dark:border-white/20 border border-gray-200 dark:border-slate-700 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)] text-gray-900 dark:text-white">
                       {groupOrders.reduce((s, o) => s + Number(o.order_qty || 0), 0).toLocaleString()}
                     </td>
-                    <td colSpan={4} className="px-2 py-2 text-center text-slate-600 dark:text-slate-400 border border-[#D1D5DB] dark:border-white/10">
+                    <td colSpan={4} className="px-2 py-2 text-center text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-700">
                       -
                     </td>
-                    <td className="px-2 py-2 text-right border border-[#D1D5DB] dark:border-white/10 text-[#111827] dark:text-white">
+                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white">
                       {groupOrders.reduce((s, o) => s + Number(o.order_qty || 0), 0).toLocaleString()}
                     </td>
-                    <td className="px-2 py-2 text-right border border-[#D1D5DB] dark:border-white/10 text-[#16A34A] dark:text-emerald-300">
+                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 text-[#16A34A] dark:text-emerald-300">
                       {groupOrders.reduce((s, o) => s + Number(o.cutting_qty || 0), 0).toLocaleString()}
                     </td>
-                    <td colSpan={2} className="px-2 py-2 text-center text-slate-600 dark:text-slate-400 border border-[#D1D5DB] dark:border-white/10">
+                    <td colSpan={2} className="px-2 py-2 text-center text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-700">
                       -
                     </td>
-                    <td className="px-1.5 py-2 text-center font-bold text-teal-800 dark:text-teal-300 bg-teal-100/70 dark:bg-teal-950/60 border border-[#D1D5DB] dark:border-white/15">
+                    <td className="px-1.5 py-2 text-center font-bold text-teal-800 dark:text-teal-300 bg-teal-100/70 dark:bg-teal-950/60 border border-gray-200 dark:border-white/15">
                       IN Σ
                     </td>
                     {days.map((day) => {
@@ -1220,7 +1219,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       return (
                         <td
                           key={`group_sum_in_${day.dateStr}`}
-                          className={`px-1 py-2 text-center text-[10px] border border-[#D1D5DB] dark:border-white/10 text-[#111827] dark:text-white ${
+                          className={`px-1 py-2 text-center text-[10px] border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white ${
                             day.isFriday ? 'bg-slate-300/80 dark:bg-slate-800' : ''
                           }`}
                         >
@@ -1228,31 +1227,31 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                         </td>
                       );
                     })}
-                    <td className="px-2 py-2 text-right border border-[#D1D5DB] dark:border-white/10 text-teal-800 dark:text-teal-300 font-bold">
+                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 text-teal-800 dark:text-teal-300 font-bold">
                       {groupOrders.reduce((s, o) => s + Number(o.total_input || 0), 0).toLocaleString()}
                     </td>
-                    <td className="px-2 py-2 text-right border border-[#D1D5DB] dark:border-white/10 text-[#111827] dark:text-white">
+                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white">
                       -
                     </td>
-                    <td className="px-2 py-2 text-right border border-[#D1D5DB] dark:border-white/10 text-sky-800 dark:text-sky-300 font-bold">
+                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 text-sky-800 dark:text-sky-300 font-bold">
                       {groupOrders.reduce((s, o) => s + Number(o.total_wash_sent || 0), 0).toLocaleString()}
                     </td>
-                    <td className="px-2 py-2 text-right border border-[#D1D5DB] dark:border-white/10 font-bold text-[#111827] dark:text-white">
+                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 font-bold text-gray-900 dark:text-white">
                       {groupOrders.reduce((s, o) => s + (Number(o.order_qty || 0) - Number(o.total_wash_sent || 0)), 0).toLocaleString()}
                     </td>
-                    <td className="px-2 py-2 text-right border border-[#D1D5DB] dark:border-white/10 text-purple-800 dark:text-purple-300 font-bold">
+                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 text-purple-800 dark:text-purple-300 font-bold">
                       {groupOrders.reduce((s, o) => s + Number(o.total_wash_recv || 0), 0).toLocaleString()}
                     </td>
-                    <td className="px-2 py-2 text-right border border-[#D1D5DB] dark:border-white/10 font-bold text-[#111827] dark:text-white">
+                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 font-bold text-gray-900 dark:text-white">
                       {groupOrders.reduce((s, o) => s + (Number(o.total_wash_sent || 0) - Number(o.total_wash_recv || 0)), 0).toLocaleString()}
                     </td>
-                    <td className="px-2 py-2 text-right border border-[#D1D5DB] dark:border-white/10 text-emerald-800 dark:text-emerald-300 font-bold">
+                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 text-emerald-800 dark:text-emerald-300 font-bold">
                       {groupOrders.reduce((s, o) => s + Number(o.total_finishing || 0), 0).toLocaleString()}
                     </td>
-                    <td className="px-2 py-2 text-right border border-[#D1D5DB] dark:border-white/10 font-bold text-[#111827] dark:text-white">
+                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 font-bold text-gray-900 dark:text-white">
                       {groupOrders.reduce((s, o) => s + (Number(o.total_wash_recv || 0) - Number(o.total_finishing || 0)), 0).toLocaleString()}
                     </td>
-                    <td colSpan={isAdmin ? 2 : 1} className="px-2 py-2 text-center text-slate-600 dark:text-slate-400 border border-[#D1D5DB] dark:border-white/10">
+                    <td colSpan={isAdmin ? 2 : 1} className="px-2 py-2 text-center text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-700">
                       -
                     </td>
                   </tr>
