@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Trash2, Calendar } from 'lucide-react';
-import type { PlanningOrder, DayColumn } from '../../types/planning';
+import type { PlanningOrder, DayColumn, DailyCellType } from '../../types/planning';
 import type { DailyMatrix } from '../../hooks/planning/usePlanningDaily';
 import { getOrderStatus } from '../../lib/planningStatus';
 import { useAuth } from '../../context/AuthContext';
@@ -20,7 +20,7 @@ interface LinePlanTableProps {
   onUpsertDailyCell: (
     orderId: string,
     dateStr: string,
-    type: 'input' | 'output',
+    type: DailyCellType,
     val: string | number | null
   ) => Promise<void>;
   onEarlier?: () => void;
@@ -63,14 +63,22 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
     let totalCuttingQty = 0;
     let totalInputQty = 0;
     let totalOutputQty = 0;
-    let totalWashSend = 0;
+    let totalWashSent = 0;
+    let totalWashRecv = 0;
+    let totalFinishing = 0;
 
     const dailyInputTotals: Record<string, number> = {};
     const dailyOutputTotals: Record<string, number> = {};
+    const dailyWashSentTotals: Record<string, number> = {};
+    const dailyWashRecvTotals: Record<string, number> = {};
+    const dailyFinishingTotals: Record<string, number> = {};
 
     days.forEach((d) => {
       dailyInputTotals[d.dateStr] = 0;
       dailyOutputTotals[d.dateStr] = 0;
+      dailyWashSentTotals[d.dateStr] = 0;
+      dailyWashRecvTotals[d.dateStr] = 0;
+      dailyFinishingTotals[d.dateStr] = 0;
     });
 
     orders.forEach((o) => {
@@ -78,13 +86,21 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
       totalCuttingQty += Number(o.cutting_qty || 0);
       totalInputQty += Number(o.total_input || 0);
       totalOutputQty += Number(o.total_output || 0);
-      totalWashSend += Number(o.wash_send || 0);
+      totalWashSent += Number(o.total_wash_sent || 0);
+      totalWashRecv += Number(o.total_wash_recv || 0);
+      totalFinishing += Number(o.total_finishing || 0);
 
       days.forEach((d) => {
         const inVal = dailyData[o.id]?.[d.dateStr]?.input_qty;
         const outVal = dailyData[o.id]?.[d.dateStr]?.output_qty;
+        const wsVal = dailyData[o.id]?.[d.dateStr]?.wash_sent_qty;
+        const wrVal = dailyData[o.id]?.[d.dateStr]?.wash_recv_qty;
+        const fnVal = dailyData[o.id]?.[d.dateStr]?.finishing_qty;
         if (inVal) dailyInputTotals[d.dateStr] += Number(inVal);
         if (outVal) dailyOutputTotals[d.dateStr] += Number(outVal);
+        if (wsVal) dailyWashSentTotals[d.dateStr] += Number(wsVal);
+        if (wrVal) dailyWashRecvTotals[d.dateStr] += Number(wrVal);
+        if (fnVal) dailyFinishingTotals[d.dateStr] += Number(fnVal);
       });
     });
 
@@ -93,9 +109,14 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
       totalCuttingQty,
       totalInputQty,
       totalOutputQty,
-      totalWashSend,
+      totalWashSent,
+      totalWashRecv,
+      totalFinishing,
       dailyInputTotals,
       dailyOutputTotals,
+      dailyWashSentTotals,
+      dailyWashRecvTotals,
+      dailyFinishingTotals,
     };
   }, [orders, days, dailyData]);
 
@@ -235,10 +256,10 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                 </div>
               </th>
               <th
-                colSpan={isAdmin ? 6 : 5}
+                colSpan={isAdmin ? 10 : 9}
                 className="bg-slate-100 dark:bg-[#082024] px-2 py-1 text-center text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold"
               >
-                Totals & Status
+                Totals, Wash & Finishing Tracking
               </th>
             </tr>
             <tr>
@@ -307,12 +328,12 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                 Cut Status
               </th>
 
-              {/* Column 13: Type (INPUT / OUTPUT) */}
-              <th className="px-2 py-2.5 text-center min-w-[60px] border-r border-slate-300 dark:border-white/15 bg-slate-200/50 dark:bg-black/20">
+              {/* Column 13: Type (INPUT / OUTPUT / WASH SENT / WASH RECV / FINISHING) */}
+              <th className="px-2 py-2.5 text-center min-w-[85px] border-r border-slate-300 dark:border-white/15 bg-slate-200/50 dark:bg-black/20">
                 Type
               </th>
 
-              {/* 30 Day Columns */}
+              {/* 8 Day Columns */}
               {days.map((day) => (
                 <th
                   key={day.dateStr}
@@ -339,22 +360,42 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
               </th>
 
               {/* Column: Balance */}
-              <th className="px-2 py-2.5 text-right min-w-[70px] border-r border-slate-200 dark:border-white/10">
+              <th className="px-2 py-2.5 text-right min-w-[65px] border-r border-slate-200 dark:border-white/10">
                 Bal.
               </th>
 
-              {/* Column: Wash Send */}
-              <th className="px-2 py-2.5 text-right min-w-[70px] border-r border-slate-200 dark:border-white/10">
-                Wash Send
+              {/* Column: Total Wash Sent */}
+              <th className="px-2 py-2.5 text-right min-w-[80px] border-r border-slate-200 dark:border-white/10 bg-sky-50/50 dark:bg-sky-950/20">
+                Total Wash Sent
               </th>
 
-              {/* Column: Send Bal. */}
-              <th className="px-2 py-2.5 text-right min-w-[70px] border-r border-slate-300 dark:border-white/15">
-                Send Bal.
+              {/* Column: Wash Remaining */}
+              <th className="px-2 py-2.5 text-right min-w-[75px] border-r border-slate-200 dark:border-white/10 bg-sky-50/30 dark:bg-sky-950/10">
+                Wash Rem.
+              </th>
+
+              {/* Column: Total Wash Recv */}
+              <th className="px-2 py-2.5 text-right min-w-[80px] border-r border-slate-200 dark:border-white/10 bg-purple-50/50 dark:bg-purple-950/20">
+                Total Wash Recv
+              </th>
+
+              {/* Column: Wash Recv Remaining */}
+              <th className="px-2 py-2.5 text-right min-w-[80px] border-r border-slate-200 dark:border-white/10 bg-purple-50/30 dark:bg-purple-950/10">
+                Wash Recv Rem.
+              </th>
+
+              {/* Column: Total Finishing */}
+              <th className="px-2 py-2.5 text-right min-w-[80px] border-r border-slate-200 dark:border-white/10 bg-emerald-50/50 dark:bg-emerald-950/20">
+                Total Finishing
+              </th>
+
+              {/* Column: Finishing Remaining */}
+              <th className="px-2 py-2.5 text-right min-w-[80px] border-r border-slate-300 dark:border-white/15 bg-emerald-50/30 dark:bg-emerald-950/10">
+                Finishing Rem.
               </th>
 
               {/* Column: Status */}
-              <th className="px-3 py-2.5 text-center min-w-[130px] border-r border-slate-300 dark:border-white/15">
+              <th className="px-3 py-2.5 text-center min-w-[125px] border-r border-slate-300 dark:border-white/15">
                 Status
               </th>
 
@@ -375,9 +416,12 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
 
               const totalInput = Number(order.total_input || 0);
               const totalOutput = Number(order.total_output || 0);
+              const totalWashSent = Number(order.total_wash_sent || 0);
+              const totalWashRecv = Number(order.total_wash_recv || 0);
+              const totalFinishing = Number(order.total_finishing || 0);
+
               const rowOrderQty = Number(order.order_qty || 0);
               const cuttingQty = Number(order.cutting_qty || 0);
-              const washSend = Number(order.wash_send || 0);
 
               // Whole PO total Order Qty
               const poTotalOrderQty = poTotalQtyMap[order.po] || rowOrderQty;
@@ -405,7 +449,46 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
               // Balances
               const inputBalance = cuttingQty - totalInput;
               const outputBalance = totalInput - totalOutput;
-              const sendBalance = washSend - totalOutput;
+              const washRemaining = rowOrderQty - totalWashSent;
+              const washRecvRemaining = totalWashSent - totalWashRecv;
+              const finishingRemaining = totalWashRecv - totalFinishing;
+
+              // Wash & Finishing Right Column Styling
+              const washSentColor =
+                cuttingQty > 0
+                  ? totalWashSent >= cuttingQty
+                    ? 'text-emerald-600 dark:text-emerald-400 font-extrabold'
+                    : 'text-amber-600 dark:text-amber-400 font-bold'
+                  : 'text-slate-700 dark:text-slate-300 font-bold';
+
+              const washRemColor =
+                washRemaining > 0
+                  ? 'text-rose-600 dark:text-rose-400 font-extrabold'
+                  : 'text-emerald-600 dark:text-emerald-400 font-bold';
+
+              const washRecvColor =
+                totalWashSent > 0
+                  ? totalWashRecv >= totalWashSent
+                    ? 'text-emerald-600 dark:text-emerald-400 font-extrabold'
+                    : 'text-amber-600 dark:text-amber-400 font-bold'
+                  : 'text-slate-700 dark:text-slate-300 font-bold';
+
+              const washRecvRemColor =
+                washRecvRemaining > 0
+                  ? 'text-rose-600 dark:text-rose-400 font-extrabold'
+                  : 'text-emerald-600 dark:text-emerald-400 font-bold';
+
+              const finishingColor =
+                totalWashRecv > 0
+                  ? totalFinishing >= totalWashRecv
+                    ? 'text-emerald-600 dark:text-emerald-400 font-extrabold'
+                    : 'text-amber-600 dark:text-amber-400 font-bold'
+                  : 'text-slate-700 dark:text-slate-300 font-bold';
+
+              const finishingRemColor =
+                finishingRemaining > 0
+                  ? 'text-rose-600 dark:text-rose-400 font-extrabold'
+                  : 'text-emerald-600 dark:text-emerald-400 font-bold';
 
               return (
                 <React.Fragment key={orderId}>
@@ -413,67 +496,67 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                   <tr
                     className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5 border-t border-slate-200 dark:border-white/10`}
                   >
-                    {/* Sticky Column 1: SL (Rowspan 2) */}
+                    {/* Sticky Column 1: SL (Rowspan 5) */}
                     <td
-                      rowSpan={2}
+                      rowSpan={5}
                       className={`sticky left-0 z-20 px-2 py-1.5 text-center font-bold text-slate-500 dark:text-slate-400 border-r border-slate-300 dark:border-white/10 ${status.rowTintClass} bg-inherit`}
                     >
                       {index + 1}
                     </td>
 
-                    {/* Sticky Column 2: Buyer (Rowspan 2) */}
+                    {/* Sticky Column 2: Buyer (Rowspan 5) */}
                     <td
-                      rowSpan={2}
+                      rowSpan={5}
                       className={`sticky left-10 z-20 px-2.5 py-1.5 font-bold text-slate-800 dark:text-slate-200 border-r border-slate-300 dark:border-white/10 whitespace-nowrap max-w-[120px] truncate ${status.rowTintClass} bg-inherit`}
                       title={order.buyer || '-'}
                     >
                       {order.buyer && order.buyer.trim() ? highlightMatch(order.buyer) : '-'}
                     </td>
 
-                    {/* Sticky Column 3: PO (Rowspan 2) */}
+                    {/* Sticky Column 3: PO (Rowspan 5) */}
                     <td
-                      rowSpan={2}
+                      rowSpan={5}
                       className={`sticky left-[135px] z-20 px-2.5 py-1.5 font-extrabold text-slate-900 dark:text-white border-r border-slate-300 dark:border-white/10 whitespace-nowrap ${status.rowTintClass} bg-inherit`}
                     >
                       {highlightMatch(order.po)}
                     </td>
 
-                    {/* Sticky Column 4: Style (Rowspan 2) */}
+                    {/* Sticky Column 4: Style (Rowspan 5) */}
                     <td
-                      rowSpan={2}
+                      rowSpan={5}
                       className={`sticky left-[230px] z-20 px-2.5 py-1.5 font-medium text-slate-700 dark:text-slate-300 border-r border-slate-300 dark:border-white/10 max-w-[130px] truncate ${status.rowTintClass} bg-inherit`}
                       title={order.style || ''}
                     >
                       {highlightMatch(order.style)}
                     </td>
 
-                    {/* Sticky Column 5: Order Qty (PO total, Rowspan 2) */}
+                    {/* Sticky Column 5: Order Qty (PO total, Rowspan 5) */}
                     <td
-                      rowSpan={2}
+                      rowSpan={5}
                       className={`sticky left-[335px] z-20 px-2.5 py-1.5 text-right font-black text-slate-900 dark:text-white border-r-2 border-slate-400 dark:border-white/20 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)] ${status.rowTintClass} bg-inherit`}
                     >
                       {poTotalOrderQty.toLocaleString()}
                     </td>
 
-                    {/* Column 5: Colour (Rowspan 2) */}
+                    {/* Column 5: Colour (Rowspan 5) */}
                     <td
-                      rowSpan={2}
+                      rowSpan={5}
                       className="px-2 py-1.5 text-slate-700 dark:text-slate-300 border-r border-slate-200 dark:border-white/10 font-medium whitespace-nowrap"
                     >
                       {highlightMatch(order.colour) || '-'}
                     </td>
 
-                    {/* Column 6: Wash (Rowspan 2) */}
+                    {/* Column 6: Wash (Rowspan 5) */}
                     <td
-                      rowSpan={2}
+                      rowSpan={5}
                       className="px-2 py-1.5 text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-white/10 text-[10px]"
                     >
                       {order.wash || '-'}
                     </td>
 
-                    {/* Column 7: Line (Rowspan 2, inline select) */}
+                    {/* Column 7: Line (Rowspan 5, inline select) */}
                     <td
-                      rowSpan={2}
+                      rowSpan={5}
                       className="px-1 py-1 border-r border-slate-200 dark:border-white/10"
                     >
                       <select
@@ -491,9 +574,9 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       </select>
                     </td>
 
-                    {/* Column 8: Start Date (Rowspan 2, inline date input with amber background) */}
+                    {/* Column 8: Start Date (Rowspan 5, inline date input with amber background) */}
                     <td
-                      rowSpan={2}
+                      rowSpan={5}
                       className="px-1 py-1 border-r border-slate-200 dark:border-white/10"
                     >
                       <input
@@ -508,17 +591,17 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       />
                     </td>
 
-                    {/* Column 9: Qty (Colour Row Order Qty, Rowspan 2) */}
+                    {/* Column 9: Qty (Colour Row Order Qty, Rowspan 5) */}
                     <td
-                      rowSpan={2}
+                      rowSpan={5}
                       className="px-2 py-1.5 text-right font-extrabold text-slate-800 dark:text-slate-200 border-r border-slate-200 dark:border-white/10"
                     >
                       {rowOrderQty.toLocaleString()}
                     </td>
 
-                    {/* Column 10: Cutting (Rowspan 2, inline number input) */}
+                    {/* Column 10: Cutting (Rowspan 5, inline number input) */}
                     <td
-                      rowSpan={2}
+                      rowSpan={5}
                       className="px-1 py-1 border-r border-slate-200 dark:border-white/10"
                     >
                       <input
@@ -543,9 +626,9 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       />
                     </td>
 
-                    {/* Column 11: Extra % (Rowspan 2) */}
+                    {/* Column 11: Extra % (Rowspan 5) */}
                     <td
-                      rowSpan={2}
+                      rowSpan={5}
                       className={`px-1.5 py-1.5 text-right font-bold text-[10px] border-r border-slate-200 dark:border-white/10 ${
                         extraPct > 0
                           ? 'text-emerald-600 dark:text-emerald-400'
@@ -557,9 +640,9 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       {extraPct > 0 ? `+${extraPct}%` : `${extraPct}%`}
                     </td>
 
-                    {/* Column 12: Cut Status (Rowspan 2) */}
+                    {/* Column 12: Cut Status (Rowspan 5) */}
                     <td
-                      rowSpan={2}
+                      rowSpan={5}
                       className="px-1.5 py-1 text-center border-r border-slate-200 dark:border-white/10"
                     >
                       <span
@@ -574,7 +657,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       INPUT
                     </td>
 
-                    {/* 30 Daily INPUT cells */}
+                    {/* 8 Daily INPUT cells */}
                     {days.map((day) => {
                       const cellKey = `${orderId}_${day.dateStr}_input`;
                       const flashKey = `${orderId}_${day.dateStr}`;
@@ -640,50 +723,57 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       {inputBalance.toLocaleString()}
                     </td>
 
-                    {/* Wash Send (Rowspan 2, inline number input) */}
+                    {/* Merged Column: TOTAL WASH SENT (Rowspan 5) */}
                     <td
-                      rowSpan={2}
-                      className="px-1 py-1 border-r border-slate-200 dark:border-white/10"
+                      rowSpan={5}
+                      className={`px-2 py-1 text-right border-r border-slate-200 dark:border-white/10 ${washSentColor} bg-inherit`}
                     >
-                      <input
-                        type="number"
-                        min="0"
-                        defaultValue={washSend || ''}
-                        key={`wash_${orderId}_${washSend}`}
-                        placeholder="0"
-                        onBlur={(e) => {
-                          const val = parseInt(e.target.value, 10);
-                          const cleanVal = isNaN(val) ? 0 : Math.max(0, val);
-                          if (cleanVal !== washSend) {
-                            onUpdateOrder(orderId, { wash_send: cleanVal });
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            (e.target as HTMLInputElement).blur();
-                          }
-                        }}
-                        className="w-full h-7 px-1 text-right text-[11px] font-semibold text-slate-900 dark:text-white rounded border border-transparent hover:border-slate-300 dark:hover:border-white/20 focus:border-[#2BA5B5] bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#2BA5B5]"
-                      />
+                      {totalWashSent.toLocaleString()}
                     </td>
 
-                    {/* Send Bal. (Rowspan 2: wash_send - total_output) */}
+                    {/* Merged Column: WASH REMAINING (Rowspan 5) */}
                     <td
-                      rowSpan={2}
-                      className={`px-2 py-1 text-right font-bold border-r border-slate-300 dark:border-white/15 ${
-                        sendBalance < 0
-                          ? 'text-rose-600 dark:text-rose-400'
-                          : sendBalance === 0 && washSend > 0
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-slate-600 dark:text-slate-300'
-                      }`}
+                      rowSpan={5}
+                      className={`px-2 py-1 text-right border-r border-slate-200 dark:border-white/10 ${washRemColor} bg-inherit`}
                     >
-                      {sendBalance.toLocaleString()}
+                      {washRemaining.toLocaleString()}
                     </td>
 
-                    {/* Status Badge (Rowspan 2) */}
+                    {/* Merged Column: TOTAL WASH RECV (Rowspan 5) */}
                     <td
-                      rowSpan={2}
+                      rowSpan={5}
+                      className={`px-2 py-1 text-right border-r border-slate-200 dark:border-white/10 ${washRecvColor} bg-inherit`}
+                    >
+                      {totalWashRecv.toLocaleString()}
+                    </td>
+
+                    {/* Merged Column: WASH RECV REMAINING (Rowspan 5) */}
+                    <td
+                      rowSpan={5}
+                      className={`px-2 py-1 text-right border-r border-slate-200 dark:border-white/10 ${washRecvRemColor} bg-inherit`}
+                    >
+                      {washRecvRemaining.toLocaleString()}
+                    </td>
+
+                    {/* Merged Column: TOTAL FINISHING (Rowspan 5) */}
+                    <td
+                      rowSpan={5}
+                      className={`px-2 py-1 text-right border-r border-slate-200 dark:border-white/10 ${finishingColor} bg-inherit`}
+                    >
+                      {totalFinishing.toLocaleString()}
+                    </td>
+
+                    {/* Merged Column: FINISHING REMAINING (Rowspan 5) */}
+                    <td
+                      rowSpan={5}
+                      className={`px-2 py-1 text-right border-r border-slate-300 dark:border-white/15 ${finishingRemColor} bg-inherit`}
+                    >
+                      {finishingRemaining.toLocaleString()}
+                    </td>
+
+                    {/* Status Badge (Rowspan 5) */}
+                    <td
+                      rowSpan={5}
                       className={`px-2 py-1 text-center border-r border-slate-300 dark:border-white/15 ${status.rowTintClass} bg-inherit`}
                     >
                       <span
@@ -693,10 +783,10 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       </span>
                     </td>
 
-                    {/* Admin Delete Action (Rowspan 2) */}
+                    {/* Admin Delete Action (Rowspan 5) */}
                     {isAdmin && (
                       <td
-                        rowSpan={2}
+                        rowSpan={5}
                         className={`px-1 py-1 text-center ${status.rowTintClass} bg-inherit`}
                       >
                         {confirmDeleteId === orderId ? (
@@ -745,7 +835,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       OUTPUT
                     </td>
 
-                    {/* 30 Daily OUTPUT cells */}
+                    {/* 8 Daily OUTPUT cells */}
                     {days.map((day) => {
                       const cellKey = `${orderId}_${day.dateStr}_output`;
                       const flashKey = `${orderId}_${day.dateStr}`;
@@ -811,6 +901,234 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       {outputBalance.toLocaleString()}
                     </td>
                   </tr>
+
+                  {/* SUB-ROW 3: WASH SENT */}
+                  <tr
+                    className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5`}
+                  >
+                    {/* Column 13: Type (WASH SENT) */}
+                    <td className="px-1.5 py-1 text-center font-bold text-[10px] text-sky-700 dark:text-sky-300 bg-sky-50/70 dark:bg-sky-950/40 border-r border-slate-300 dark:border-white/15">
+                      WASH SENT
+                    </td>
+
+                    {/* 8 Daily WASH SENT cells */}
+                    {days.map((day) => {
+                      const cellKey = `${orderId}_${day.dateStr}_wash_sent`;
+                      const flashKey = `${orderId}_${day.dateStr}`;
+                      const isFlashed = Boolean(flashedCells[flashKey]);
+                      const isSaving = Boolean(savingCells[cellKey]);
+                      const cellValue =
+                        dailyData[orderId]?.[day.dateStr]?.wash_sent_qty;
+
+                      return (
+                        <td
+                          key={`ws_${day.dateStr}`}
+                          className={`p-0 text-center relative border-r border-slate-200 dark:border-white/10 transition-colors ${
+                            day.isFriday
+                              ? 'bg-slate-200/90 dark:bg-slate-800/80'
+                              : isFlashed
+                              ? 'bg-emerald-300 dark:bg-emerald-700'
+                              : ''
+                          }`}
+                        >
+                          <input
+                            type="number"
+                            min="0"
+                            data-cell-key={cellKey}
+                            placeholder="-"
+                            defaultValue={cellValue ?? ''}
+                            key={`wash_sent_${orderId}_${day.dateStr}_${cellValue ?? 'empty'}`}
+                            onBlur={(e) => {
+                              const val = e.target.value.trim();
+                              onUpsertDailyCell(
+                                orderId,
+                                day.dateStr,
+                                'wash_sent',
+                                val
+                              );
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
+                            className="w-full h-7 px-0.5 text-center text-[10px] font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#2BA5B5] transition-all"
+                          />
+                          {isSaving && (
+                            <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[#2BA5B5] animate-ping" />
+                          )}
+                        </td>
+                      );
+                    })}
+
+                    {/* Total (WASH SENT) */}
+                    <td className="px-2 py-1 text-right font-extrabold text-slate-900 dark:text-white border-r border-slate-200 dark:border-white/10">
+                      {totalWashSent.toLocaleString()}
+                    </td>
+
+                    {/* Bal. (WASH SENT: rowOrderQty - totalWashSent) */}
+                    <td
+                      className={`px-2 py-1 text-right font-bold border-r border-slate-200 dark:border-white/10 ${
+                        washRemaining <= 0
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-rose-600 dark:text-rose-400'
+                      }`}
+                    >
+                      {washRemaining.toLocaleString()}
+                    </td>
+                  </tr>
+
+                  {/* SUB-ROW 4: WASH RECV */}
+                  <tr
+                    className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5`}
+                  >
+                    {/* Column 13: Type (WASH RECV) */}
+                    <td className="px-1.5 py-1 text-center font-bold text-[10px] text-purple-700 dark:text-purple-300 bg-purple-50/70 dark:bg-purple-950/40 border-r border-slate-300 dark:border-white/15">
+                      WASH RECV
+                    </td>
+
+                    {/* 8 Daily WASH RECV cells */}
+                    {days.map((day) => {
+                      const cellKey = `${orderId}_${day.dateStr}_wash_recv`;
+                      const flashKey = `${orderId}_${day.dateStr}`;
+                      const isFlashed = Boolean(flashedCells[flashKey]);
+                      const isSaving = Boolean(savingCells[cellKey]);
+                      const cellValue =
+                        dailyData[orderId]?.[day.dateStr]?.wash_recv_qty;
+
+                      return (
+                        <td
+                          key={`wr_${day.dateStr}`}
+                          className={`p-0 text-center relative border-r border-slate-200 dark:border-white/10 transition-colors ${
+                            day.isFriday
+                              ? 'bg-slate-200/90 dark:bg-slate-800/80'
+                              : isFlashed
+                              ? 'bg-emerald-300 dark:bg-emerald-700'
+                              : ''
+                          }`}
+                        >
+                          <input
+                            type="number"
+                            min="0"
+                            data-cell-key={cellKey}
+                            placeholder="-"
+                            defaultValue={cellValue ?? ''}
+                            key={`wash_recv_${orderId}_${day.dateStr}_${cellValue ?? 'empty'}`}
+                            onBlur={(e) => {
+                              const val = e.target.value.trim();
+                              onUpsertDailyCell(
+                                orderId,
+                                day.dateStr,
+                                'wash_recv',
+                                val
+                              );
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
+                            className="w-full h-7 px-0.5 text-center text-[10px] font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#2BA5B5] transition-all"
+                          />
+                          {isSaving && (
+                            <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[#2BA5B5] animate-ping" />
+                          )}
+                        </td>
+                      );
+                    })}
+
+                    {/* Total (WASH RECV) */}
+                    <td className="px-2 py-1 text-right font-extrabold text-slate-900 dark:text-white border-r border-slate-200 dark:border-white/10">
+                      {totalWashRecv.toLocaleString()}
+                    </td>
+
+                    {/* Bal. (WASH RECV: totalWashSent - totalWashRecv) */}
+                    <td
+                      className={`px-2 py-1 text-right font-bold border-r border-slate-200 dark:border-white/10 ${
+                        washRecvRemaining <= 0
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-rose-600 dark:text-rose-400'
+                      }`}
+                    >
+                      {washRecvRemaining.toLocaleString()}
+                    </td>
+                  </tr>
+
+                  {/* SUB-ROW 5: FINISHING */}
+                  <tr
+                    className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5`}
+                  >
+                    {/* Column 13: Type (FINISHING) */}
+                    <td className="px-1.5 py-1 text-center font-bold text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/40 border-r border-slate-300 dark:border-white/15">
+                      FINISHING
+                    </td>
+
+                    {/* 8 Daily FINISHING cells */}
+                    {days.map((day) => {
+                      const cellKey = `${orderId}_${day.dateStr}_finishing`;
+                      const flashKey = `${orderId}_${day.dateStr}`;
+                      const isFlashed = Boolean(flashedCells[flashKey]);
+                      const isSaving = Boolean(savingCells[cellKey]);
+                      const cellValue =
+                        dailyData[orderId]?.[day.dateStr]?.finishing_qty;
+
+                      return (
+                        <td
+                          key={`fn_${day.dateStr}`}
+                          className={`p-0 text-center relative border-r border-slate-200 dark:border-white/10 transition-colors ${
+                            day.isFriday
+                              ? 'bg-slate-200/90 dark:bg-slate-800/80'
+                              : isFlashed
+                              ? 'bg-emerald-300 dark:bg-emerald-700'
+                              : ''
+                          }`}
+                        >
+                          <input
+                            type="number"
+                            min="0"
+                            data-cell-key={cellKey}
+                            placeholder="-"
+                            defaultValue={cellValue ?? ''}
+                            key={`finishing_${orderId}_${day.dateStr}_${cellValue ?? 'empty'}`}
+                            onBlur={(e) => {
+                              const val = e.target.value.trim();
+                              onUpsertDailyCell(
+                                orderId,
+                                day.dateStr,
+                                'finishing',
+                                val
+                              );
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
+                            className="w-full h-7 px-0.5 text-center text-[10px] font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#2BA5B5] transition-all"
+                          />
+                          {isSaving && (
+                            <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[#2BA5B5] animate-ping" />
+                          )}
+                        </td>
+                      );
+                    })}
+
+                    {/* Total (FINISHING) */}
+                    <td className="px-2 py-1 text-right font-extrabold text-slate-900 dark:text-white border-r border-slate-200 dark:border-white/10">
+                      {totalFinishing.toLocaleString()}
+                    </td>
+
+                    {/* Bal. (FINISHING: totalWashRecv - totalFinishing) */}
+                    <td
+                      className={`px-2 py-1 text-right font-bold border-r border-slate-200 dark:border-white/10 ${
+                        finishingRemaining <= 0
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-rose-600 dark:text-rose-400'
+                      }`}
+                    >
+                      {finishingRemaining.toLocaleString()}
+                    </td>
+                  </tr>
                 </React.Fragment>
               );
             })}
@@ -862,11 +1180,23 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
               <td className="px-2 py-2 text-right border-r border-slate-300 dark:border-white/10">
                 {(totals.totalCuttingQty - totals.totalInputQty).toLocaleString()}
               </td>
-              <td className="px-2 py-2 text-right border-r border-slate-300 dark:border-white/10">
-                {totals.totalWashSend.toLocaleString()}
+              <td className="px-2 py-2 text-right border-r border-slate-300 dark:border-white/10 text-sky-800 dark:text-sky-300 font-bold">
+                {totals.totalWashSent.toLocaleString()}
               </td>
-              <td className="px-2 py-2 text-right border-r border-slate-300 dark:border-white/15">
-                {(totals.totalWashSend - totals.totalOutputQty).toLocaleString()}
+              <td className="px-2 py-2 text-right border-r border-slate-300 dark:border-white/10 font-bold">
+                {(totals.totalOrderQty - totals.totalWashSent).toLocaleString()}
+              </td>
+              <td className="px-2 py-2 text-right border-r border-slate-300 dark:border-white/10 text-purple-800 dark:text-purple-300 font-bold">
+                {totals.totalWashRecv.toLocaleString()}
+              </td>
+              <td className="px-2 py-2 text-right border-r border-slate-300 dark:border-white/10 font-bold">
+                {(totals.totalWashSent - totals.totalWashRecv).toLocaleString()}
+              </td>
+              <td className="px-2 py-2 text-right border-r border-slate-300 dark:border-white/10 text-emerald-800 dark:text-emerald-300 font-bold">
+                {totals.totalFinishing.toLocaleString()}
+              </td>
+              <td className="px-2 py-2 text-right border-r border-slate-300 dark:border-white/15 font-bold">
+                {(totals.totalWashRecv - totals.totalFinishing).toLocaleString()}
               </td>
               <td colSpan={isAdmin ? 2 : 1} className="px-2 py-2 text-center text-slate-500">
                 -
@@ -874,7 +1204,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
             </tr>
 
             {/* Totals Row 2: OUTPUT TOTALS */}
-            <tr>
+            <tr className="border-b border-slate-300 dark:border-white/10">
               <td
                 colSpan={13}
                 className="sticky left-0 z-40 bg-slate-200 dark:bg-[#071B1E] px-2.5 py-1.5 text-right text-slate-500 border-r border-slate-300 dark:border-white/10"
@@ -902,7 +1232,109 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
               <td className="px-2 py-1.5 text-right border-r border-slate-300 dark:border-white/10">
                 {(totals.totalInputQty - totals.totalOutputQty).toLocaleString()}
               </td>
-              <td colSpan={isAdmin ? 3 : 2} className="px-2 py-1.5 text-center text-slate-500">
+              <td colSpan={isAdmin ? 8 : 7} className="px-2 py-1.5 text-center text-slate-500">
+                -
+              </td>
+            </tr>
+
+            {/* Totals Row 3: WASH SENT TOTALS */}
+            <tr className="border-b border-slate-300 dark:border-white/10">
+              <td
+                colSpan={13}
+                className="sticky left-0 z-40 bg-slate-200 dark:bg-[#071B1E] px-2.5 py-1.5 text-right text-slate-500 border-r border-slate-300 dark:border-white/10"
+              >
+                WASH SENT DAILY TOTALS
+              </td>
+              <td className="px-1.5 py-1.5 text-center font-bold text-sky-800 dark:text-sky-300 bg-sky-100/70 dark:bg-sky-950/60 border-r border-slate-300 dark:border-white/15">
+                WASH IN Σ
+              </td>
+              {days.map((day) => (
+                <td
+                  key={`sum_ws_${day.dateStr}`}
+                  className={`px-1.5 py-1.5 text-center text-[10px] border-r border-slate-300 dark:border-white/10 ${
+                    day.isFriday ? 'bg-slate-300/80 dark:bg-slate-800' : ''
+                  }`}
+                >
+                  {totals.dailyWashSentTotals[day.dateStr]
+                    ? totals.dailyWashSentTotals[day.dateStr].toLocaleString()
+                    : '-'}
+                </td>
+              ))}
+              <td className="px-2 py-1.5 text-right border-r border-slate-300 dark:border-white/10 text-sky-800 dark:text-sky-300">
+                {totals.totalWashSent.toLocaleString()}
+              </td>
+              <td className="px-2 py-1.5 text-right border-r border-slate-300 dark:border-white/10">
+                {(totals.totalOrderQty - totals.totalWashSent).toLocaleString()}
+              </td>
+              <td colSpan={isAdmin ? 8 : 7} className="px-2 py-1.5 text-center text-slate-500">
+                -
+              </td>
+            </tr>
+
+            {/* Totals Row 4: WASH RECV TOTALS */}
+            <tr className="border-b border-slate-300 dark:border-white/10">
+              <td
+                colSpan={13}
+                className="sticky left-0 z-40 bg-slate-200 dark:bg-[#071B1E] px-2.5 py-1.5 text-right text-slate-500 border-r border-slate-300 dark:border-white/10"
+              >
+                WASH RECV DAILY TOTALS
+              </td>
+              <td className="px-1.5 py-1.5 text-center font-bold text-purple-800 dark:text-purple-300 bg-purple-100/70 dark:bg-purple-950/60 border-r border-slate-300 dark:border-white/15">
+                WASH OUT Σ
+              </td>
+              {days.map((day) => (
+                <td
+                  key={`sum_wr_${day.dateStr}`}
+                  className={`px-1.5 py-1.5 text-center text-[10px] border-r border-slate-300 dark:border-white/10 ${
+                    day.isFriday ? 'bg-slate-300/80 dark:bg-slate-800' : ''
+                  }`}
+                >
+                  {totals.dailyWashRecvTotals[day.dateStr]
+                    ? totals.dailyWashRecvTotals[day.dateStr].toLocaleString()
+                    : '-'}
+                </td>
+              ))}
+              <td className="px-2 py-1.5 text-right border-r border-slate-300 dark:border-white/10 text-purple-800 dark:text-purple-300">
+                {totals.totalWashRecv.toLocaleString()}
+              </td>
+              <td className="px-2 py-1.5 text-right border-r border-slate-300 dark:border-white/10">
+                {(totals.totalWashSent - totals.totalWashRecv).toLocaleString()}
+              </td>
+              <td colSpan={isAdmin ? 8 : 7} className="px-2 py-1.5 text-center text-slate-500">
+                -
+              </td>
+            </tr>
+
+            {/* Totals Row 5: FINISHING TOTALS */}
+            <tr>
+              <td
+                colSpan={13}
+                className="sticky left-0 z-40 bg-slate-200 dark:bg-[#071B1E] px-2.5 py-1.5 text-right text-slate-500 border-r border-slate-300 dark:border-white/10"
+              >
+                FINISHING DAILY TOTALS
+              </td>
+              <td className="px-1.5 py-1.5 text-center font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/60 border-r border-slate-300 dark:border-white/15">
+                FINISH Σ
+              </td>
+              {days.map((day) => (
+                <td
+                  key={`sum_fn_${day.dateStr}`}
+                  className={`px-1.5 py-1.5 text-center text-[10px] border-r border-slate-300 dark:border-white/10 ${
+                    day.isFriday ? 'bg-slate-300/80 dark:bg-slate-800' : ''
+                  }`}
+                >
+                  {totals.dailyFinishingTotals[day.dateStr]
+                    ? totals.dailyFinishingTotals[day.dateStr].toLocaleString()
+                    : '-'}
+                </td>
+              ))}
+              <td className="px-2 py-1.5 text-right border-r border-slate-300 dark:border-white/10 text-emerald-800 dark:text-emerald-300">
+                {totals.totalFinishing.toLocaleString()}
+              </td>
+              <td className="px-2 py-1.5 text-right border-r border-slate-300 dark:border-white/10">
+                {(totals.totalWashRecv - totals.totalFinishing).toLocaleString()}
+              </td>
+              <td colSpan={isAdmin ? 8 : 7} className="px-2 py-1.5 text-center text-slate-500">
                 -
               </td>
             </tr>

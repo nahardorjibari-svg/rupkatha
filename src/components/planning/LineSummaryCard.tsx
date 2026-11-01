@@ -58,11 +58,17 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
     let inputPending = 0;
     let outputDone = 0;
     let outputPending = 0;
+    let washSentDone = 0;
+    let washRecvDone = 0;
+    let finishingDone = 0;
 
     filteredOrders.forEach((o) => {
       const cut = Number(o.cutting_qty || 0);
       const inD = Number(o.total_input || 0);
       const outD = Number(o.total_output || 0);
+      const wsD = Number(o.total_wash_sent || 0);
+      const wrD = Number(o.total_wash_recv || 0);
+      const fnD = Number(o.total_finishing || 0);
       const inP = Math.max(0, cut - inD);
       const outP = Math.max(0, inD - outD);
 
@@ -71,6 +77,9 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
       inputPending += inP;
       outputDone += outD;
       outputPending += outP;
+      washSentDone += wsD;
+      washRecvDone += wrD;
+      finishingDone += fnD;
     });
 
     return {
@@ -79,6 +88,9 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
       inputPending,
       outputDone,
       outputPending,
+      washSentDone,
+      washRecvDone,
+      finishingDone,
       count: filteredOrders.length,
     };
   }, [filteredOrders]);
@@ -101,6 +113,9 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
         'Input Pending',
         'Output Done',
         'Output Pending',
+        'Wash Sent',
+        'Wash Recv',
+        'Finishing',
         'Status',
       ]);
 
@@ -111,11 +126,17 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
         let subInP = 0;
         let subOutD = 0;
         let subOutP = 0;
+        let subWashSent = 0;
+        let subWashRecv = 0;
+        let subFinishing = 0;
 
         groupOrders.forEach((order) => {
           const cut = Number(order.cutting_qty || 0);
           const inD = Number(order.total_input || 0);
           const outD = Number(order.total_output || 0);
+          const wsD = Number(order.total_wash_sent || 0);
+          const wrD = Number(order.total_wash_recv || 0);
+          const fnD = Number(order.total_finishing || 0);
           const inP = Math.max(0, cut - inD);
           const outP = Math.max(0, inD - outD);
           const status = getOrderStatus(order);
@@ -125,6 +146,9 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
           subInP += inP;
           subOutD += outD;
           subOutP += outP;
+          subWashSent += wsD;
+          subWashRecv += wrD;
+          subFinishing += fnD;
 
           rows.push([
             lineName,
@@ -137,6 +161,9 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
             inP,
             outD,
             outP,
+            wsD,
+            wrD,
+            fnD,
             status.label,
           ]);
         });
@@ -152,6 +179,9 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
           subInP,
           subOutD,
           subOutP,
+          subWashSent,
+          subWashRecv,
+          subFinishing,
           '',
         ]);
       });
@@ -167,6 +197,9 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
         grandTotal.inputPending,
         grandTotal.outputDone,
         grandTotal.outputPending,
+        grandTotal.washSentDone,
+        grandTotal.washRecvDone,
+        grandTotal.finishingDone,
         '',
       ]);
 
@@ -182,6 +215,9 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
         { wch: 12 }, // Input Pending
         { wch: 12 }, // Output Done
         { wch: 12 }, // Output Pending
+        { wch: 12 }, // Wash Sent
+        { wch: 12 }, // Wash Recv
+        { wch: 12 }, // Finishing
         { wch: 18 }, // Status
       ];
       const wb = XLSX.utils.book_new();
@@ -249,11 +285,14 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
                 <th className="px-3 py-2.5 min-w-[90px]">PO</th>
                 <th className="px-3 py-2.5 min-w-[100px]">Style</th>
                 <th className="px-3 py-2.5 min-w-[90px]">Colour</th>
-                <th className="px-3 py-2.5 text-right min-w-[85px]">Cutting Done</th>
-                <th className="px-3 py-2.5 text-right min-w-[80px]">Input Done</th>
-                <th className="px-3 py-2.5 text-right min-w-[85px]">Input Pending</th>
-                <th className="px-3 py-2.5 text-right min-w-[80px]">Output Done</th>
-                <th className="px-3 py-2.5 text-right min-w-[85px]">Output Pending</th>
+                <th className="px-3 py-2.5 text-right min-w-[80px]">Cutting Done</th>
+                <th className="px-3 py-2.5 text-right min-w-[75px]">Input Done</th>
+                <th className="px-3 py-2.5 text-right min-w-[80px]">Input Pending</th>
+                <th className="px-3 py-2.5 text-right min-w-[75px]">Output Done</th>
+                <th className="px-3 py-2.5 text-right min-w-[80px]">Output Pending</th>
+                <th className="px-3 py-2.5 text-right min-w-[75px] text-sky-700 dark:text-sky-300">Wash Sent</th>
+                <th className="px-3 py-2.5 text-right min-w-[75px] text-purple-700 dark:text-purple-300">Wash Recv</th>
+                <th className="px-3 py-2.5 text-right min-w-[75px] text-emerald-700 dark:text-emerald-300">Finishing</th>
                 <th className="px-3 py-2.5 text-center min-w-[110px]">Status</th>
               </tr>
             </thead>
@@ -268,6 +307,9 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
                 let subInP = 0;
                 let subOutD = 0;
                 let subOutP = 0;
+                let subWashSent = 0;
+                let subWashRecv = 0;
+                let subFinishing = 0;
 
                 return (
                   <React.Fragment key={lineName}>
@@ -275,6 +317,9 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
                       const cut = Number(order.cutting_qty || 0);
                       const inD = Number(order.total_input || 0);
                       const outD = Number(order.total_output || 0);
+                      const wsD = Number(order.total_wash_sent || 0);
+                      const wrD = Number(order.total_wash_recv || 0);
+                      const fnD = Number(order.total_finishing || 0);
                       const inP = Math.max(0, cut - inD);
                       const outP = Math.max(0, inD - outD);
 
@@ -283,6 +328,9 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
                       subInP += inP;
                       subOutD += outD;
                       subOutP += outP;
+                      subWashSent += wsD;
+                      subWashRecv += wrD;
+                      subFinishing += fnD;
 
                       const status = getOrderStatus(order);
 
@@ -341,6 +389,15 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
                           >
                             {outP.toLocaleString()}
                           </td>
+                          <td className="px-3 py-2 text-right font-semibold text-sky-700 dark:text-sky-300">
+                            {wsD.toLocaleString()}
+                          </td>
+                          <td className="px-3 py-2 text-right font-semibold text-purple-700 dark:text-purple-300">
+                            {wrD.toLocaleString()}
+                          </td>
+                          <td className="px-3 py-2 text-right font-semibold text-emerald-700 dark:text-emerald-300">
+                            {fnD.toLocaleString()}
+                          </td>
                           <td className="px-3 py-2 text-center">
                             <span
                               className={`inline-block px-2 py-0.5 rounded-full text-[9px] border font-medium ${status.badgeClass}`}
@@ -376,6 +433,15 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
                       <td className="px-3 py-2 text-right text-amber-600 dark:text-amber-400">
                         {subOutP.toLocaleString()}
                       </td>
+                      <td className="px-3 py-2 text-right text-sky-700 dark:text-sky-300">
+                        {subWashSent.toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2 text-right text-purple-700 dark:text-purple-300">
+                        {subWashRecv.toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2 text-right text-emerald-700 dark:text-emerald-300">
+                        {subFinishing.toLocaleString()}
+                      </td>
                       <td className="px-3 py-2 text-center text-[10px] text-slate-400">
                         -
                       </td>
@@ -403,6 +469,15 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
                 </td>
                 <td className="px-3 py-2.5 text-right text-amber-600 dark:text-amber-400">
                   {grandTotal.outputPending.toLocaleString()}
+                </td>
+                <td className="px-3 py-2.5 text-right text-sky-700 dark:text-sky-300">
+                  {grandTotal.washSentDone.toLocaleString()}
+                </td>
+                <td className="px-3 py-2.5 text-right text-purple-700 dark:text-purple-300">
+                  {grandTotal.washRecvDone.toLocaleString()}
+                </td>
+                <td className="px-3 py-2.5 text-right text-emerald-700 dark:text-emerald-300">
+                  {grandTotal.finishingDone.toLocaleString()}
                 </td>
                 <td className="px-3 py-2.5 text-center text-slate-400">-</td>
               </tr>

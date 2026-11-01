@@ -84,6 +84,9 @@ export function usePlanningOrders({ factoryUnit }: UsePlanningOrdersProps) {
         delete cleanUpdates.is_done;
         delete cleanUpdates.total_input;
         delete cleanUpdates.total_output;
+        delete cleanUpdates.total_wash_sent;
+        delete cleanUpdates.total_wash_recv;
+        delete cleanUpdates.total_finishing;
         cleanUpdates.updated_at = new Date().toISOString();
 
         const { error: updateErr } = await supabase

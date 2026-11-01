@@ -46,12 +46,16 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         'Start Date',
         'Order Qty',
         'Cutting Qty',
-        'Wash Send',
         'Type',
         'Total',
-        'Extra %',
         'Balance',
         ...days.map((d) => `${d.displayDay} (${d.dayOfWeek})`),
+        'Total Wash Sent',
+        'Wash Rem.',
+        'Total Wash Recv',
+        'Wash Recv Rem.',
+        'Total Finishing',
+        'Finishing Rem.',
         'Status',
       ];
 
@@ -71,18 +75,15 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         const cutQty = Number(order.cutting_qty || 0);
         const totalIn = Number(order.total_input || 0);
         const totalOut = Number(order.total_output || 0);
-
-        const inExtraPct =
-          orderQty > 0
-            ? (((totalIn - orderQty) / orderQty) * 100).toFixed(1) + '%'
-            : '0%';
-        const outExtraPct =
-          orderQty > 0
-            ? (((totalOut - orderQty) / orderQty) * 100).toFixed(1) + '%'
-            : '0%';
+        const totalWashSent = Number(order.total_wash_sent || 0);
+        const totalWashRecv = Number(order.total_wash_recv || 0);
+        const totalFinishing = Number(order.total_finishing || 0);
 
         const inBal = cutQty - totalIn;
         const outBal = totalIn - totalOut;
+        const washRem = orderQty - totalWashSent;
+        const washRecvRem = totalWashSent - totalWashRecv;
+        const finishRem = totalWashRecv - totalFinishing;
         const buyerDisplay = order.buyer || '-';
 
         // Sub-row 1: INPUT
@@ -96,12 +97,16 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           order.start_date || '',
           orderQty,
           cutQty,
-          Number(order.wash_send || 0),
-          'IN',
+          'INPUT',
           totalIn,
-          inExtraPct,
           inBal,
           ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.input_qty ?? ''),
+          totalWashSent,
+          washRem,
+          totalWashRecv,
+          washRecvRem,
+          totalFinishing,
+          finishRem,
           status.label,
         ];
         sheetData.push(inRow);
@@ -117,15 +122,94 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           order.start_date || '',
           orderQty,
           cutQty,
-          Number(order.wash_send || 0),
-          'OUT',
+          'OUTPUT',
           totalOut,
-          outExtraPct,
           outBal,
           ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.output_qty ?? ''),
+          totalWashSent,
+          washRem,
+          totalWashRecv,
+          washRecvRem,
+          totalFinishing,
+          finishRem,
           status.label,
         ];
         sheetData.push(outRow);
+
+        // Sub-row 3: WASH SENT
+        const wsRow = [
+          order.line_no || 'No line',
+          buyerDisplay,
+          order.po,
+          order.style || '',
+          order.colour || '',
+          order.wash || '',
+          order.start_date || '',
+          orderQty,
+          cutQty,
+          'WASH SENT',
+          totalWashSent,
+          washRem,
+          ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.wash_sent_qty ?? ''),
+          totalWashSent,
+          washRem,
+          totalWashRecv,
+          washRecvRem,
+          totalFinishing,
+          finishRem,
+          status.label,
+        ];
+        sheetData.push(wsRow);
+
+        // Sub-row 4: WASH RECV
+        const wrRow = [
+          order.line_no || 'No line',
+          buyerDisplay,
+          order.po,
+          order.style || '',
+          order.colour || '',
+          order.wash || '',
+          order.start_date || '',
+          orderQty,
+          cutQty,
+          'WASH RECV',
+          totalWashRecv,
+          washRecvRem,
+          ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.wash_recv_qty ?? ''),
+          totalWashSent,
+          washRem,
+          totalWashRecv,
+          washRecvRem,
+          totalFinishing,
+          finishRem,
+          status.label,
+        ];
+        sheetData.push(wrRow);
+
+        // Sub-row 5: FINISHING
+        const fnRow = [
+          order.line_no || 'No line',
+          buyerDisplay,
+          order.po,
+          order.style || '',
+          order.colour || '',
+          order.wash || '',
+          order.start_date || '',
+          orderQty,
+          cutQty,
+          'FINISHING',
+          totalFinishing,
+          finishRem,
+          ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.finishing_qty ?? ''),
+          totalWashSent,
+          washRem,
+          totalWashRecv,
+          washRecvRem,
+          totalFinishing,
+          finishRem,
+          status.label,
+        ];
+        sheetData.push(fnRow);
       });
 
       const ws = XLSX.utils.aoa_to_sheet(sheetData);
@@ -141,16 +225,20 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         { wch: 12 }, // Start Date
         { wch: 11 }, // Order Qty
         { wch: 11 }, // Cutting
-        { wch: 11 }, // Wash Send
-        { wch: 7 },  // Type
+        { wch: 12 }, // Type
         { wch: 10 }, // Total
-        { wch: 9 },  // Extra %
         { wch: 10 }, // Balance
         ...days.map(() => ({ wch: 8 })),
-        { wch: 20 }, // Status
+        { wch: 14 }, // Total Wash Sent
+        { wch: 11 }, // Wash Rem
+        { wch: 14 }, // Total Wash Recv
+        { wch: 13 }, // Wash Recv Rem
+        { wch: 13 }, // Total Finishing
+        { wch: 13 }, // Finishing Rem
+        { wch: 16 }, // Status
       ];
 
-      // Vertical merges for paired sub-rows (IN & OUT) to create clean ERP sheet
+      // Vertical merges for 5 sub-rows per order
       const merges: XLSX.Range[] = [
         { s: { r: 0, c: 0 }, e: { r: 0, c: headerRow.length - 1 } },
         { s: { r: 1, c: 0 }, e: { r: 1, c: headerRow.length - 1 } },
@@ -159,20 +247,23 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
 
       // Data starts at row index 5 (0-indexed)
       let curRow = 5;
+      const rightColStart = 12 + days.length;
       orders.forEach(() => {
-        // Merge columns 0 to 9: Line, Buyer, PO, Style, Colour, Wash, Start Date, Order Qty, Cutting Qty, Wash Send
-        for (let col = 0; col <= 9; col++) {
+        // Merge columns 0 to 8: Line, Buyer, PO, Style, Colour, Wash, Start Date, Order Qty, Cutting Qty
+        for (let col = 0; col <= 8; col++) {
           merges.push({
             s: { r: curRow, c: col },
-            e: { r: curRow + 1, c: col },
+            e: { r: curRow + 4, c: col },
           });
         }
-        // Merge Status column
-        merges.push({
-          s: { r: curRow, c: headerRow.length - 1 },
-          e: { r: curRow + 1, c: headerRow.length - 1 },
-        });
-        curRow += 2;
+        // Merge Right Wash & Finishing + Status columns
+        for (let col = rightColStart; col < headerRow.length; col++) {
+          merges.push({
+            s: { r: curRow, c: col },
+            e: { r: curRow + 4, c: col },
+          });
+        }
+        curRow += 5;
       });
       ws['!merges'] = merges;
 
@@ -208,10 +299,10 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
               },
             };
           } else {
-            const isRightAlign = (C >= 7 && C <= 9) || C === 11 || C === 13;
-            const isCenterAlign = C === 0 || C === 6 || C === 10 || (C >= 14 && C < headerRow.length - 1);
+            const isRightAlign = (C >= 7 && C <= 8) || C === 10 || C === 11 || (C >= rightColStart && C < headerRow.length - 1);
+            const isCenterAlign = C === 0 || C === 6 || C === 9 || (C >= 12 && C < rightColStart) || C === headerRow.length - 1;
             cell.s = {
-              font: { sz: 9.5, bold: C === 1 || C === 2 || C === 10 },
+              font: { sz: 9.5, bold: C === 1 || C === 2 || C === 9 },
               alignment: {
                 vertical: 'center',
                 horizontal: isRightAlign ? 'right' : isCenterAlign ? 'center' : 'left',
@@ -245,7 +336,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
   const handlePdfExport = () => {
     setIsExportingPdf(true);
     try {
-      // Landscape A3 format to fit 30 days comfortably
+      // Landscape A3 format to fit 8 days and wash/finishing columns comfortably
       const doc = new jsPDF({ orientation: 'landscape', format: 'a3' });
 
       doc.setFontSize(16);
@@ -272,6 +363,10 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         'Tot',
         'Bal',
         ...days.map((d) => `${d.displayDay}`),
+        'Wash Sent',
+        'Wash Rem',
+        'Wash Recv',
+        'Finishing',
         'Status',
       ];
 
@@ -284,6 +379,15 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         const cutQty = Number(order.cutting_qty || 0);
         const totalIn = Number(order.total_input || 0);
         const totalOut = Number(order.total_output || 0);
+        const totalWashSent = Number(order.total_wash_sent || 0);
+        const totalWashRecv = Number(order.total_wash_recv || 0);
+        const totalFinishing = Number(order.total_finishing || 0);
+
+        const inBal = cutQty - totalIn;
+        const outBal = totalIn - totalOut;
+        const washRem = orderQty - totalWashSent;
+        const washRecvRem = totalWashSent - totalWashRecv;
+        const finishRem = totalWashRecv - totalFinishing;
 
         // IN row
         tableRows.push([
@@ -296,8 +400,12 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           cutQty.toLocaleString(),
           'IN',
           totalIn.toLocaleString(),
-          (cutQty - totalIn).toLocaleString(),
+          inBal.toLocaleString(),
           ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.input_qty ?? '-'),
+          totalWashSent.toLocaleString(),
+          washRem.toLocaleString(),
+          totalWashRecv.toLocaleString(),
+          totalFinishing.toLocaleString(),
           status.label,
         ]);
 
@@ -312,8 +420,72 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           '',
           'OUT',
           totalOut.toLocaleString(),
-          (totalIn - totalOut).toLocaleString(),
+          outBal.toLocaleString(),
           ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.output_qty ?? '-'),
+          '',
+          '',
+          '',
+          '',
+          '',
+        ]);
+
+        // WASH SENT row
+        tableRows.push([
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          'WASH IN',
+          totalWashSent.toLocaleString(),
+          washRem.toLocaleString(),
+          ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.wash_sent_qty ?? '-'),
+          '',
+          '',
+          '',
+          '',
+          '',
+        ]);
+
+        // WASH RECV row
+        tableRows.push([
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          'WASH OUT',
+          totalWashRecv.toLocaleString(),
+          washRecvRem.toLocaleString(),
+          ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.wash_recv_qty ?? '-'),
+          '',
+          '',
+          '',
+          '',
+          '',
+        ]);
+
+        // FINISHING row
+        tableRows.push([
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          'FINISH',
+          totalFinishing.toLocaleString(),
+          finishRem.toLocaleString(),
+          ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.finishing_qty ?? '-'),
+          '',
+          '',
+          '',
+          '',
           '',
         ]);
       });

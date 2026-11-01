@@ -19,6 +19,9 @@ export interface PlanningOrder {
   is_done: boolean;
   total_input?: number;
   total_output?: number;
+  total_wash_sent?: number;
+  total_wash_recv?: number;
+  total_finishing?: number;
   created_by?: string | null;
   created_at?: string;
   updated_at?: string;
@@ -30,9 +33,14 @@ export interface PlanningDaily {
   entry_date: string; // YYYY-MM-DD
   input_qty: number | null;
   output_qty: number | null;
+  wash_sent_qty?: number | null;
+  wash_recv_qty?: number | null;
+  finishing_qty?: number | null;
   entered_by?: string | null;
   updated_at?: string;
 }
+
+export type DailyCellType = 'input' | 'output' | 'wash_sent' | 'wash_recv' | 'finishing';
 
 export type PlanningTab = 'active' | 'upcoming' | 'done';
 
