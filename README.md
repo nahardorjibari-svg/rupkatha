@@ -142,15 +142,24 @@ The **Planning & Production** module provides a 30-day rolling line plan with re
    - **TOTAL FINISHING**: Bold, green if `>= total_wash_recv`, amber otherwise.
    - **FINISHING REMAINING**: `total_wash_recv - total_finishing`, red when `> 0`, green when `0`.
 
-5. **Automated 8-Level Status Hierarchy**:
-   1. `PO done` (Green `#DCFCE7`)
-   2. `Not cut` (Gray `#F3F4F6`)
-   3. `Cutting running` (Amber `#FEF9C3`)
-   4. `Cut done · no line yet` (Red `#FEE2E2`)
-   5. `Ready to input` (Amber)
-   6. `Input pending N` (Amber)
-   7. `Input done · output pending N` (Amber)
-   8. `Sewing done` (Green)
+5. **Line-Wise Boxed Cards & Cell Grid Borders**:
+   - Orders are grouped by line (`Line-1` through `Line-4`, and `No line yet`) and wrapped in distinct colored box cards (`rounded-xl border-2` with line-specific color badges and summary strips).
+   - All cells feature explicit 1px solid cell borders (`#374151` dark / `#D1D5DB` light) with `border-collapse: collapse`, creating a clean printed planning sheet appearance.
+   - Balance columns clearly display Input Bal., Output Bal., Wash Rem., Wash Recv Rem., and Finish Rem. with strong color coding (red when > 0, green when 0).
+
+6. **View-Driven Status Logic & 10-Step Lifecycle**:
+   - Driven by `status_key` and `is_done` from `planning_orders_with_status`:
+     1. `not_cut` → "Not cut" (gray)
+     2. `cutting_running` → "Cutting running" (amber)
+     3. `cut_no_line` → "Cut done · no line yet" (red)
+     4. `ready_input` → "Ready to input" (amber)
+     5. `input_pending` → "Input pending N" (amber)
+     6. `output_pending` → "Input done · output pending N" (amber)
+     7. `sewing_done` → "Sewing done · send to wash" (teal/cyan)
+     8. `wash_pending` → "Wash sent · waiting recv N" (orange)
+     9. `finishing_pending` → "Wash recv · finishing pending N" (purple)
+     10. `po_done` → "PO done ✓" (green bold)
+   - Done tab displays only rows where `is_done = true` (`po_done`).
 
 6. **Slide-over Add Order Drawer**:
    - Buyer (mandatory field), PO, Style, Wash, Order Quantity, Line Allocation, Start Date, Cutting Quantity, Wash Send.

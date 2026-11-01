@@ -17,6 +17,7 @@ export interface PlanningOrder {
   wash_send: number;
   factory_unit: 'knit' | 'woven';
   is_done: boolean;
+  status_key?: string;
   total_input?: number;
   total_output?: number;
   total_wash_sent?: number;
@@ -57,10 +58,14 @@ export type OrderStatusType =
   | 'not_cut'
   | 'cutting_running'
   | 'cut_done_no_line'
+  | 'cut_no_line'
   | 'ready_to_input'
+  | 'ready_input'
   | 'input_pending'
   | 'output_pending'
-  | 'sewing_done';
+  | 'sewing_done'
+  | 'wash_pending'
+  | 'finishing_pending';
 
 export interface OrderStatusInfo {
   type: OrderStatusType;
