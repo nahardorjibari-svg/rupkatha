@@ -65,7 +65,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
     return map;
   }, [orders]);
 
-  // Group orders by line_no
+  // Group orders by line_no and sort each group by start_date ascending (nulls at bottom)
   const groupedOrders = useMemo(() => {
     const map: Record<string, PlanningOrder[]> = {
       'Line-1': [],
@@ -85,8 +85,50 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
         map['No line yet'].push(o);
       }
     });
+
+    const sortGroup = (arr: PlanningOrder[]) => {
+      return [...arr].sort((a, b) => {
+        const dateA = a.start_date ? new Date(a.start_date).getTime() : NaN;
+        const dateB = b.start_date ? new Date(b.start_date).getTime() : NaN;
+        const hasA = !isNaN(dateA);
+        const hasB = !isNaN(dateB);
+
+        if (hasA && hasB) return dateA - dateB;
+        if (hasA && !hasB) return -1;
+        if (!hasA && hasB) return 1;
+        return 0;
+      });
+    };
+
+    Object.keys(map).forEach((k) => {
+      map[k] = sortGroup(map[k]);
+    });
+
     return map;
   }, [orders]);
+
+  // Page-wide sequential SL map (1, 2, 3...)
+  const orderSlMap = useMemo(() => {
+    const map = new Map<string, number>();
+    let counter = 1;
+    ['Line-1', 'Line-2', 'Line-3', 'Line-4', 'No line yet'].forEach((lineName) => {
+      if (groupedOrders[lineName]) {
+        groupedOrders[lineName].forEach((o) => {
+          map.set(o.id, counter++);
+        });
+      }
+    });
+    Object.keys(groupedOrders).forEach((lineName) => {
+      if (!['Line-1', 'Line-2', 'Line-3', 'Line-4', 'No line yet'].includes(lineName)) {
+        groupedOrders[lineName].forEach((o) => {
+          if (!map.has(o.id)) {
+            map.set(o.id, counter++);
+          }
+        });
+      }
+    });
+    return map;
+  }, [groupedOrders]);
 
   // Highlight helper for search query
   const highlightMatch = (text?: string | null) => {
@@ -519,7 +561,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             rowSpan={5}
                             className={`sticky left-0 z-20 px-2 py-1.5 text-center font-bold text-[#374151] dark:text-slate-400 border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
                           >
-                            {index + 1}
+                            {orderSlMap.get(orderId) || (index + 1)}
                           </td>
 
                           {/* Sticky Column 2: Buyer (Rowspan 5) */}

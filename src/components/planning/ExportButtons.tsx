@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Printer, FileSpreadsheet, FileText, Download, Loader2 } from 'lucide-react';
+import { Printer, FileSpreadsheet, FileText, Download, Loader2, Sun, Moon } from 'lucide-react';
 import type { PlanningOrder, DayColumn } from '../../types/planning';
 import type { DailyMatrix } from '../../hooks/planning/usePlanningDaily';
 import { getOrderStatus } from '../../lib/planningStatus';
+import { useTheme } from '../../context/ThemeContext';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -23,6 +24,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
   dateRangeLabel,
   unitLabel,
 }) => {
+  const { toggleTheme, isDark } = useTheme();
   const [isExportingExcel, setIsExportingExcel] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
@@ -543,6 +545,21 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
       >
         <Printer className="w-3.5 h-3.5 text-slate-500" />
         <span className="hidden sm:inline">Print</span>
+      </button>
+
+      <button
+        type="button"
+        onClick={toggleTheme}
+        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/10 transition-colors shadow-xs cursor-pointer"
+        title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
+        aria-label={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
+      >
+        {isDark ? (
+          <Sun className="w-3.5 h-3.5 text-amber-400" />
+        ) : (
+          <Moon className="w-3.5 h-3.5 text-[#0F8B8D]" />
+        )}
+        <span className="hidden sm:inline">{isDark ? 'Light' : 'Dark'}</span>
       </button>
 
       <button
