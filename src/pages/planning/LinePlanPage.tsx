@@ -311,13 +311,13 @@ export const LinePlanPage: React.FC = () => {
                   }}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                     currentTab === 'active' && !searchQuery
-                      ? 'bg-[#2BA5B5] text-white shadow-xs'
-                      : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
+                      ? 'bg-[#0F8B8D] text-white shadow-xs'
+                      : 'bg-[#F3F4F6] text-[#374151] border border-[#D1D5DB] hover:bg-[#E5E7EB] dark:bg-white/5 dark:text-slate-300 dark:border-white/10'
                   }`}
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Active</span>
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/15">
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/15 text-white">
                     {counts.active}
                   </span>
                 </button>
@@ -330,13 +330,13 @@ export const LinePlanPage: React.FC = () => {
                   }}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                     currentTab === 'upcoming' && !searchQuery
-                      ? 'bg-[#2BA5B5] text-white shadow-xs'
-                      : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
+                      ? 'bg-[#0F8B8D] text-white shadow-xs'
+                      : 'bg-[#F3F4F6] text-[#374151] border border-[#D1D5DB] hover:bg-[#E5E7EB] dark:bg-white/5 dark:text-slate-300 dark:border-white/10'
                   }`}
                 >
                   <Clock className="w-3.5 h-3.5" />
                   <span>Upcoming</span>
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/15">
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/15 text-white">
                     {counts.upcoming}
                   </span>
                 </button>
@@ -349,13 +349,13 @@ export const LinePlanPage: React.FC = () => {
                   }}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                     currentTab === 'done' && !searchQuery
-                      ? 'bg-[#2BA5B5] text-white shadow-xs'
-                      : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
+                      ? 'bg-[#0F8B8D] text-white shadow-xs'
+                      : 'bg-[#F3F4F6] text-[#374151] border border-[#D1D5DB] hover:bg-[#E5E7EB] dark:bg-white/5 dark:text-slate-300 dark:border-white/10'
                   }`}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Done</span>
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/15">
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/15 text-white">
                     {counts.done}
                   </span>
                 </button>

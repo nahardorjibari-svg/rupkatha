@@ -22,38 +22,38 @@ export function getOrderStatus(order: PlanningOrder): OrderStatusInfo {
         return {
           type: 'po_done',
           label: 'PO done ✓',
-          badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-200 font-bold',
-          rowTintClass: 'bg-emerald-50/60 dark:bg-emerald-950/20',
+          badgeClass: 'bg-[#15803D] text-white font-bold border-transparent dark:bg-emerald-900/50 dark:text-emerald-200',
+          rowTintClass: 'bg-[#DCFCE7]/70 dark:bg-emerald-950/20',
         };
       case 'not_cut':
         return {
           type: 'not_cut',
           label: 'Not cut',
-          badgeClass: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300',
-          rowTintClass: 'bg-slate-50/40 dark:bg-slate-900/30',
+          badgeClass: 'bg-[#6B7280] text-white border-transparent dark:bg-slate-800 dark:text-slate-300',
+          rowTintClass: 'bg-[#F9FAFB] dark:bg-slate-900/30',
         };
       case 'cutting_running':
         return {
           type: 'cutting_running',
           label: 'Cutting running',
-          badgeClass: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200',
-          rowTintClass: 'bg-amber-50/50 dark:bg-amber-950/15',
+          badgeClass: 'bg-[#D97706] text-white border-transparent dark:bg-amber-900/50 dark:text-amber-200',
+          rowTintClass: 'bg-[#FFFBEB]/70 dark:bg-amber-950/15',
         };
       case 'cut_no_line':
       case 'cut_done_no_line':
         return {
           type: 'cut_no_line',
           label: 'Cut done · no line yet',
-          badgeClass: 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-900/50 dark:text-rose-200 font-semibold',
-          rowTintClass: 'bg-rose-50/70 dark:bg-rose-950/25',
+          badgeClass: 'bg-[#DC2626] text-white font-semibold border-transparent dark:bg-rose-900/50 dark:text-rose-200',
+          rowTintClass: 'bg-[#FEE2E2]/70 dark:bg-rose-950/25',
         };
       case 'ready_input':
       case 'ready_to_input':
         return {
           type: 'ready_to_input',
           label: 'Ready to input',
-          badgeClass: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200',
-          rowTintClass: 'bg-amber-50/50 dark:bg-amber-950/15',
+          badgeClass: 'bg-[#D97706] text-white border-transparent dark:bg-amber-900/50 dark:text-amber-200',
+          rowTintClass: 'bg-[#FFFBEB]/70 dark:bg-amber-950/15',
         };
       case 'input_pending': {
         const pending = Math.max(0, cuttingQty - totalInput);
@@ -61,8 +61,8 @@ export function getOrderStatus(order: PlanningOrder): OrderStatusInfo {
           type: 'input_pending',
           label: `Input pending ${pending.toLocaleString()}`,
           pendingCount: pending,
-          badgeClass: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200',
-          rowTintClass: 'bg-amber-50/50 dark:bg-amber-950/15',
+          badgeClass: 'bg-[#D97706] text-white border-transparent dark:bg-amber-900/50 dark:text-amber-200',
+          rowTintClass: 'bg-[#FFFBEB]/70 dark:bg-amber-950/15',
         };
       }
       case 'output_pending': {
@@ -71,16 +71,16 @@ export function getOrderStatus(order: PlanningOrder): OrderStatusInfo {
           type: 'output_pending',
           label: `Input done · output pending ${pending.toLocaleString()}`,
           pendingCount: pending,
-          badgeClass: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200',
-          rowTintClass: 'bg-amber-50/50 dark:bg-amber-950/15',
+          badgeClass: 'bg-[#D97706] text-white border-transparent dark:bg-amber-900/50 dark:text-amber-200',
+          rowTintClass: 'bg-[#FFFBEB]/70 dark:bg-amber-950/15',
         };
       }
       case 'sewing_done':
         return {
           type: 'sewing_done',
           label: 'Sewing done · send to wash',
-          badgeClass: 'bg-teal-100 text-teal-800 border-teal-300 dark:bg-teal-900/50 dark:text-teal-200',
-          rowTintClass: 'bg-teal-50/60 dark:bg-teal-950/20',
+          badgeClass: 'bg-[#0891B2] text-white border-transparent dark:bg-teal-900/50 dark:text-teal-200',
+          rowTintClass: 'bg-[#FFFBEB]/70 dark:bg-teal-950/20',
         };
       case 'wash_pending': {
         const pending = Math.max(0, totalWashSent - totalWashRecv);
@@ -88,8 +88,8 @@ export function getOrderStatus(order: PlanningOrder): OrderStatusInfo {
           type: 'wash_pending',
           label: `Wash sent · waiting recv ${pending.toLocaleString()}`,
           pendingCount: pending,
-          badgeClass: 'bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/50 dark:text-orange-200',
-          rowTintClass: 'bg-orange-50/50 dark:bg-orange-950/15',
+          badgeClass: 'bg-[#EA580C] text-white border-transparent dark:bg-orange-900/50 dark:text-orange-200',
+          rowTintClass: 'bg-[#FFFBEB]/70 dark:bg-orange-950/15',
         };
       }
       case 'finishing_pending': {
@@ -98,8 +98,8 @@ export function getOrderStatus(order: PlanningOrder): OrderStatusInfo {
           type: 'finishing_pending',
           label: `Wash recv · finishing pending ${pending.toLocaleString()}`,
           pendingCount: pending,
-          badgeClass: 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/50 dark:text-purple-200',
-          rowTintClass: 'bg-purple-50/50 dark:bg-purple-950/15',
+          badgeClass: 'bg-[#7C3AED] text-white border-transparent dark:bg-purple-900/50 dark:text-purple-200',
+          rowTintClass: 'bg-[#FFFBEB]/70 dark:bg-purple-950/15',
         };
       }
     }
@@ -110,40 +110,40 @@ export function getOrderStatus(order: PlanningOrder): OrderStatusInfo {
     return {
       type: 'po_done',
       label: 'PO done ✓',
-      badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-200 font-bold',
-      rowTintClass: 'bg-emerald-50/60 dark:bg-emerald-950/20',
+      badgeClass: 'bg-[#15803D] text-white font-bold border-transparent dark:bg-emerald-900/50 dark:text-emerald-200',
+      rowTintClass: 'bg-[#DCFCE7]/70 dark:bg-emerald-950/20',
     };
   }
   if (cuttingQty === 0) {
     return {
       type: 'not_cut',
       label: 'Not cut',
-      badgeClass: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300',
-      rowTintClass: 'bg-slate-50/40 dark:bg-slate-900/30',
+      badgeClass: 'bg-[#6B7280] text-white border-transparent dark:bg-slate-800 dark:text-slate-300',
+      rowTintClass: 'bg-[#F9FAFB] dark:bg-slate-900/30',
     };
   }
   if (cuttingQty > 0 && cuttingQty < orderQty) {
     return {
       type: 'cutting_running',
       label: 'Cutting running',
-      badgeClass: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200',
-      rowTintClass: 'bg-amber-50/50 dark:bg-amber-950/15',
+      badgeClass: 'bg-[#D97706] text-white border-transparent dark:bg-amber-900/50 dark:text-amber-200',
+      rowTintClass: 'bg-[#FFFBEB]/70 dark:bg-amber-950/15',
     };
   }
   if (cuttingQty >= orderQty && !lineNo) {
     return {
       type: 'cut_no_line',
       label: 'Cut done · no line yet',
-      badgeClass: 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-900/50 dark:text-rose-200 font-semibold',
-      rowTintClass: 'bg-rose-50/70 dark:bg-rose-950/25',
+      badgeClass: 'bg-[#DC2626] text-white font-semibold border-transparent dark:bg-rose-900/50 dark:text-rose-200',
+      rowTintClass: 'bg-[#FEE2E2]/70 dark:bg-rose-950/25',
     };
   }
   if (totalInput === 0) {
     return {
       type: 'ready_to_input',
       label: 'Ready to input',
-      badgeClass: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200',
-      rowTintClass: 'bg-amber-50/50 dark:bg-amber-950/15',
+      badgeClass: 'bg-[#D97706] text-white border-transparent dark:bg-amber-900/50 dark:text-amber-200',
+      rowTintClass: 'bg-[#FFFBEB]/70 dark:bg-amber-950/15',
     };
   }
   if (totalInput < cuttingQty) {
@@ -152,8 +152,8 @@ export function getOrderStatus(order: PlanningOrder): OrderStatusInfo {
       type: 'input_pending',
       label: `Input pending ${pending.toLocaleString()}`,
       pendingCount: pending,
-      badgeClass: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200',
-      rowTintClass: 'bg-amber-50/50 dark:bg-amber-950/15',
+      badgeClass: 'bg-[#D97706] text-white border-transparent dark:bg-amber-900/50 dark:text-amber-200',
+      rowTintClass: 'bg-[#FFFBEB]/70 dark:bg-amber-950/15',
     };
   }
   if (totalInput >= cuttingQty && totalOutput < totalInput) {
@@ -162,8 +162,8 @@ export function getOrderStatus(order: PlanningOrder): OrderStatusInfo {
       type: 'output_pending',
       label: `Input done · output pending ${pending.toLocaleString()}`,
       pendingCount: pending,
-      badgeClass: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200',
-      rowTintClass: 'bg-amber-50/50 dark:bg-amber-950/15',
+      badgeClass: 'bg-[#D97706] text-white border-transparent dark:bg-amber-900/50 dark:text-amber-200',
+      rowTintClass: 'bg-[#FFFBEB]/70 dark:bg-amber-950/15',
     };
   }
   if (totalWashSent > totalWashRecv) {
@@ -172,8 +172,8 @@ export function getOrderStatus(order: PlanningOrder): OrderStatusInfo {
       type: 'wash_pending',
       label: `Wash sent · waiting recv ${pending.toLocaleString()}`,
       pendingCount: pending,
-      badgeClass: 'bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/50 dark:text-orange-200',
-      rowTintClass: 'bg-orange-50/50 dark:bg-orange-950/15',
+      badgeClass: 'bg-[#EA580C] text-white border-transparent dark:bg-orange-900/50 dark:text-orange-200',
+      rowTintClass: 'bg-[#FFFBEB]/70 dark:bg-orange-950/15',
     };
   }
   if (totalWashRecv > totalFinishing) {
@@ -182,15 +182,15 @@ export function getOrderStatus(order: PlanningOrder): OrderStatusInfo {
       type: 'finishing_pending',
       label: `Wash recv · finishing pending ${pending.toLocaleString()}`,
       pendingCount: pending,
-      badgeClass: 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/50 dark:text-purple-200',
-      rowTintClass: 'bg-purple-50/50 dark:bg-purple-950/15',
+      badgeClass: 'bg-[#7C3AED] text-white border-transparent dark:bg-purple-900/50 dark:text-purple-200',
+      rowTintClass: 'bg-[#FFFBEB]/70 dark:bg-purple-950/15',
     };
   }
   return {
     type: 'sewing_done',
     label: 'Sewing done · send to wash',
-    badgeClass: 'bg-teal-100 text-teal-800 border-teal-300 dark:bg-teal-900/50 dark:text-teal-200',
-    rowTintClass: 'bg-teal-50/60 dark:bg-teal-950/20',
+    badgeClass: 'bg-[#0891B2] text-white border-transparent dark:bg-teal-900/50 dark:text-teal-200',
+    rowTintClass: 'bg-[#FFFBEB]/70 dark:bg-teal-950/20',
   };
 }
 
