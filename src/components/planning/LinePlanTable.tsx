@@ -23,6 +23,9 @@ interface LinePlanTableProps {
     type: 'input' | 'output',
     val: string | number | null
   ) => Promise<void>;
+  onEarlier?: () => void;
+  onLater?: () => void;
+  dateRangeLabel?: string;
 }
 
 export const LinePlanTable: React.FC<LinePlanTableProps> = ({
@@ -35,6 +38,9 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
   onUpdateOrder,
   onDeleteOrder,
   onUpsertDailyCell,
+  onEarlier,
+  onLater,
+  dateRangeLabel,
 }) => {
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
@@ -149,10 +155,92 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
 
   return (
     <div className="relative w-full rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0E2E33] shadow-soft-sm overflow-hidden">
+      {/* Top Date Navigation Bar directly above table */}
+      <div className="px-4 py-2.5 bg-slate-50 dark:bg-[#082024] border-b border-slate-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+          <span className="w-2 h-2 rounded-full bg-[#2BA5B5]"></span>
+          <span>{orders.length} Orders</span>
+          <span className="text-slate-400">·</span>
+          <span className="text-slate-500 dark:text-slate-400">8-Day Window</span>
+        </div>
+
+        {onEarlier && onLater && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onEarlier}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/20 text-slate-800 dark:text-white border border-slate-300 dark:border-white/15 shadow-xs transition-all active:scale-95 cursor-pointer"
+              title="Move window 8 days earlier"
+            >
+              ‹ Earlier
+            </button>
+            <span className="px-3 py-1 rounded-xl text-xs font-black tracking-wide bg-[#2BA5B5]/15 text-[#0F8B8D] dark:text-[#2BA5B5] border border-[#2BA5B5]/30">
+              {dateRangeLabel}
+            </span>
+            <button
+              type="button"
+              onClick={onLater}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/20 text-slate-800 dark:text-white border border-slate-300 dark:border-white/15 shadow-xs transition-all active:scale-95 cursor-pointer"
+              title="Move window 8 days later"
+            >
+              Later ›
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="overflow-x-auto max-h-[calc(100vh-250px)] scrollbar-custom">
         <table className="w-full text-left border-collapse text-[11px]">
           {/* Header */}
           <thead className="sticky top-0 z-30 bg-slate-100 dark:bg-[#082024] text-slate-700 dark:text-slate-200 border-b border-slate-300 dark:border-white/15 select-none text-[10px] uppercase font-bold tracking-wider">
+            {/* Super Header: Navigation directly above Date Columns */}
+            <tr className="bg-slate-100 dark:bg-[#082024] border-b border-slate-300 dark:border-white/15">
+              <th
+                colSpan={14}
+                className="sticky left-0 z-40 bg-slate-100 dark:bg-[#082024] px-3 py-1 text-left text-[10px] text-slate-500 dark:text-slate-400 border-r border-slate-300 dark:border-white/10 uppercase font-semibold"
+              >
+                Order Particulars
+              </th>
+              <th
+                colSpan={days.length}
+                className="bg-slate-200/90 dark:bg-slate-800/90 px-2 py-1 text-center border-r border-slate-300 dark:border-white/10"
+              >
+                <div className="flex items-center justify-center gap-2 print:hidden">
+                  {onEarlier && (
+                    <button
+                      type="button"
+                      onClick={onEarlier}
+                      className="px-2 py-0.5 rounded text-[10px] font-bold bg-white dark:bg-white/10 hover:bg-slate-50 dark:hover:bg-white/20 text-slate-800 dark:text-white border border-slate-300 dark:border-white/20 shadow-2xs transition-colors cursor-pointer"
+                      title="Move 8 days earlier"
+                    >
+                      ‹ Earlier
+                    </button>
+                  )}
+                  <span className="font-extrabold text-[11px] text-slate-900 dark:text-white tracking-wide">
+                    {dateRangeLabel}
+                  </span>
+                  {onLater && (
+                    <button
+                      type="button"
+                      onClick={onLater}
+                      className="px-2 py-0.5 rounded text-[10px] font-bold bg-white dark:bg-white/10 hover:bg-slate-50 dark:hover:bg-white/20 text-slate-800 dark:text-white border border-slate-300 dark:border-white/20 shadow-2xs transition-colors cursor-pointer"
+                      title="Move 8 days later"
+                    >
+                      Later ›
+                    </button>
+                  )}
+                </div>
+                <div className="hidden print:block font-bold text-[10px] text-slate-800">
+                  {dateRangeLabel}
+                </div>
+              </th>
+              <th
+                colSpan={isAdmin ? 6 : 5}
+                className="bg-slate-100 dark:bg-[#082024] px-2 py-1 text-center text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold"
+              >
+                Totals & Status
+              </th>
+            </tr>
             <tr>
               {/* Sticky Column 1: SL */}
               <th className="sticky left-0 z-40 bg-slate-100 dark:bg-[#082024] px-2 py-2.5 text-center w-10 border-r border-slate-300 dark:border-white/10">

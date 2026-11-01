@@ -15,7 +15,7 @@ import { AdminLayout } from '../../components/layout/AdminLayout';
 import { useUnit } from '../../context/UnitContext';
 import { useTheme } from '../../context/ThemeContext';
 import { getDhakaDateString } from '../../lib/dhakaTime';
-import { buildRolling30Days } from '../../lib/planningStatus';
+import { buildWindowDays } from '../../lib/planningStatus';
 import { usePlanningOrders } from '../../hooks/planning/usePlanningOrders';
 import { usePlanningDaily } from '../../hooks/planning/usePlanningDaily';
 import { LinePlanTable } from '../../components/planning/LinePlanTable';
@@ -38,18 +38,30 @@ export const LinePlanPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Dhaka rolling 30 days
+  // Window position in React state: default -1 (yesterday is index 0)
+  const [offsetDays, setOffsetDays] = useState(-1);
+
+  // Dhaka today
   const dhakaTodayStr = useMemo(() => getDhakaDateString(), []);
-  const days = useMemo(() => buildRolling30Days(dhakaTodayStr), [dhakaTodayStr]);
+
+  // 8-Day rolling window
+  const days = useMemo(
+    () => buildWindowDays(dhakaTodayStr, offsetDays, 8),
+    [dhakaTodayStr, offsetDays]
+  );
   const startDateStr = days[0].dateStr;
   const endDateStr = days[days.length - 1].dateStr;
 
-  // Formatted date range label (e.g., "24/10 – 22/11 (Dhaka)")
+  // Formatted date range label (e.g. "31/10 – 07/11")
   const dateRangeLabel = useMemo(() => {
     const startParts = days[0].displayDay;
     const endParts = days[days.length - 1].displayDay;
-    return `${startParts} – ${endParts} (Dhaka)`;
+    return `${startParts} – ${endParts}`;
   }, [days]);
+
+  // Window navigation handlers (moves by 8 days)
+  const handleEarlier = () => setOffsetDays((prev) => prev - 8);
+  const handleLater = () => setOffsetDays((prev) => prev + 8);
 
   // Orders Hook
   const {
@@ -152,9 +164,9 @@ export const LinePlanPage: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
-                  <span>30-Day Rolling Window:</span>
+                  <span>8-Day Window:</span>
                   <span className="font-semibold text-slate-800 dark:text-slate-200">
-                    {dateRangeLabel}
+                    {dateRangeLabel} (Dhaka)
                   </span>
                 </p>
               </div>
@@ -349,6 +361,29 @@ export const LinePlanPage: React.FC = () => {
                 </button>
               </div>
 
+              {/* Date Navigation Buttons: ‹ Earlier & Later › */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleEarlier}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/20 text-slate-800 dark:text-white border border-slate-300 dark:border-white/15 shadow-xs transition-all active:scale-95 cursor-pointer"
+                  title="Move window 8 days earlier"
+                >
+                  ‹ Earlier
+                </button>
+                <span className="px-3 py-1 rounded-xl text-xs font-black tracking-wide bg-[#2BA5B5]/15 text-[#0F8B8D] dark:text-[#2BA5B5] border border-[#2BA5B5]/30">
+                  {dateRangeLabel}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleLater}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/20 text-slate-800 dark:text-white border border-slate-300 dark:border-white/15 shadow-xs transition-all active:scale-95 cursor-pointer"
+                  title="Move window 8 days later"
+                >
+                  Later ›
+                </button>
+              </div>
+
               {searchQuery && (
                 <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-3 py-1 rounded-lg border border-amber-200 dark:border-amber-800 flex items-center gap-1.5">
                   <span>
@@ -376,7 +411,7 @@ export const LinePlanPage: React.FC = () => {
               </h1>
               <h2 className="text-sm font-semibold text-slate-700">
                 {viewMode === 'production_plan'
-                  ? `30-Day Rolling Line Plan (${unitLabel})`
+                  ? `8-Day Line Plan (${unitLabel})`
                   : `Line Summary (${unitLabel})`}
               </h2>
             </div>
@@ -399,6 +434,9 @@ export const LinePlanPage: React.FC = () => {
             onUpdateOrder={updateOrder}
             onDeleteOrder={deleteOrder}
             onUpsertDailyCell={upsertDailyCell}
+            onEarlier={handleEarlier}
+            onLater={handleLater}
+            dateRangeLabel={dateRangeLabel}
           />
         ) : (
           /* VIEW 2: Full Standalone Line Summary View */

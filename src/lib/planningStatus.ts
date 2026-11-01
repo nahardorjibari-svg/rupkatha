@@ -95,27 +95,30 @@ export function getOrderStatus(order: PlanningOrder): OrderStatusInfo {
 }
 
 /**
- * Builds 30 rolling days starting from Dhaka today
+ * Builds rolling window of days starting from a base Dhaka date with an offset
+ * @param dhakaTodayStr YYYY-MM-DD representing Dhaka today
+ * @param offsetDays offset in days from today (default -1 so yesterday is index 0)
+ * @param count number of days in window (default 8)
  */
-export function buildRolling30Days(dhakaTodayStr: string) {
+export function buildWindowDays(
+  dhakaTodayStr: string,
+  offsetDays = -1,
+  count = 8
+) {
   const columns = [];
-  // Parse YYYY-MM-DD
   const [year, month, day] = dhakaTodayStr.split('-').map(Number);
-  
-  for (let i = 0; i < 30; i++) {
-    // Generate date in UTC or local preserving day offset
-    const d = new Date(Date.UTC(year, month - 1, day + i));
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  for (let i = 0; i < count; i++) {
+    const d = new Date(Date.UTC(year, month - 1, day + offsetDays + i));
     const yStr = d.getUTCFullYear();
     const mStr = String(d.getUTCMonth() + 1).padStart(2, '0');
     const dStr = String(d.getUTCDate()).padStart(2, '0');
     const dateStr = `${yStr}-${mStr}-${dStr}`;
 
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    
     const dayOfWeekIdx = d.getUTCDay();
     const isFriday = dayOfWeekIdx === 5;
-    const isToday = i === 0;
+    const isToday = dateStr === dhakaTodayStr;
 
     columns.push({
       dateStr,
@@ -126,4 +129,11 @@ export function buildRolling30Days(dhakaTodayStr: string) {
     });
   }
   return columns;
+}
+
+/**
+ * Builds 30 rolling days starting from Dhaka today
+ */
+export function buildRolling30Days(dhakaTodayStr: string) {
+  return buildWindowDays(dhakaTodayStr, 0, 30);
 }

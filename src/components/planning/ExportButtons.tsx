@@ -59,7 +59,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
 
       // Add Title Rows
       sheetData.push(['RUPKATHA APPARELS LTD.']);
-      sheetData.push([`30-Day Rolling Line Plan — ${unitLabel}`]);
+      sheetData.push([`8-Day Line Plan — ${unitLabel}`]);
       sheetData.push([`Period: ${dateRangeLabel}`]);
       sheetData.push([]); // Blank row
       sheetData.push(headerRow);
@@ -254,7 +254,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
 
       doc.setFontSize(12);
       doc.setTextColor(30, 41, 59);
-      doc.text(`30-Day Rolling Line Plan (${unitLabel})`, 14, 23);
+      doc.text(`8-Day Line Plan (${unitLabel})`, 14, 23);
 
       doc.setFontSize(10);
       doc.setTextColor(100, 116, 139);
