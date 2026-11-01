@@ -92,6 +92,7 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
       rows.push([]);
       rows.push([
         'Line',
+        'Buyer',
         'PO',
         'Style',
         'Colour',
@@ -127,6 +128,7 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
 
           rows.push([
             lineName,
+            order.buyer || '-',
             order.po,
             order.style || '',
             order.colour || '',
@@ -144,6 +146,7 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
           '',
           '',
           '',
+          '',
           subCut,
           subInD,
           subInP,
@@ -158,6 +161,7 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
         '',
         '',
         '',
+        '',
         grandTotal.cuttingDone,
         grandTotal.inputDone,
         grandTotal.inputPending,
@@ -167,6 +171,19 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
       ]);
 
       const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [
+        { wch: 12 }, // Line
+        { wch: 14 }, // Buyer
+        { wch: 14 }, // PO
+        { wch: 16 }, // Style
+        { wch: 12 }, // Colour
+        { wch: 12 }, // Cutting Done
+        { wch: 12 }, // Input Done
+        { wch: 12 }, // Input Pending
+        { wch: 12 }, // Output Done
+        { wch: 12 }, // Output Pending
+        { wch: 18 }, // Status
+      ];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Line Summary');
       XLSX.writeFile(wb, `Line_Summary_${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -228,6 +245,7 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
             <thead className="bg-slate-100 dark:bg-[#0A262B] text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-white/10 text-[10px] font-bold uppercase tracking-wider select-none">
               <tr>
                 <th className="px-3 py-2.5 w-24">Line</th>
+                <th className="px-3 py-2.5 min-w-[95px]">Buyer</th>
                 <th className="px-3 py-2.5 min-w-[90px]">PO</th>
                 <th className="px-3 py-2.5 min-w-[100px]">Style</th>
                 <th className="px-3 py-2.5 min-w-[90px]">Colour</th>
@@ -284,6 +302,9 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
                           }`}>
                             {lineName}
                           </td>
+                          <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">
+                            {order.buyer || '-'}
+                          </td>
                           <td className="px-3 py-2 font-semibold text-slate-900 dark:text-white">
                             {order.po}
                           </td>
@@ -337,7 +358,7 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
                         ? 'bg-rose-100/70 dark:bg-rose-950/40 text-rose-950 dark:text-rose-200'
                         : 'bg-slate-100/80 dark:bg-black/40 text-slate-800 dark:text-slate-200'
                     }`}>
-                      <td colSpan={4} className="px-3 py-2 text-xs">
+                      <td colSpan={5} className="px-3 py-2 text-xs">
                         {lineName} total · {groupOrders.length} {groupOrders.length === 1 ? 'row' : 'rows'}
                       </td>
                       <td className="px-3 py-2 text-right">
@@ -365,7 +386,7 @@ export const LineSummaryCard: React.FC<LineSummaryCardProps> = ({
 
               {/* Grand Total Row */}
               <tr className="bg-slate-200/90 dark:bg-[#06181B] font-extrabold border-t-2 border-slate-400 dark:border-white/20 text-slate-900 dark:text-white text-xs">
-                <td colSpan={4} className="px-3 py-2.5 uppercase tracking-wider">
+                <td colSpan={5} className="px-3 py-2.5 uppercase tracking-wider">
                   Grand Total · {grandTotal.count} Orders
                 </td>
                 <td className="px-3 py-2.5 text-right">

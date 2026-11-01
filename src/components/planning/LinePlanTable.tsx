@@ -159,18 +159,23 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                 SL
               </th>
 
-              {/* Sticky Column 2: PO */}
-              <th className="sticky left-10 z-40 bg-slate-100 dark:bg-[#082024] px-2.5 py-2.5 min-w-[100px] border-r border-slate-300 dark:border-white/10">
+              {/* Sticky Column 2: Buyer */}
+              <th className="sticky left-10 z-40 bg-slate-100 dark:bg-[#082024] px-2.5 py-2.5 min-w-[95px] max-w-[120px] border-r border-slate-300 dark:border-white/10">
+                Buyer
+              </th>
+
+              {/* Sticky Column 3: PO */}
+              <th className="sticky left-[135px] z-40 bg-slate-100 dark:bg-[#082024] px-2.5 py-2.5 min-w-[95px] border-r border-slate-300 dark:border-white/10">
                 PO
               </th>
 
-              {/* Sticky Column 3: Style */}
-              <th className="sticky left-[140px] z-40 bg-slate-100 dark:bg-[#082024] px-2.5 py-2.5 min-w-[110px] border-r border-slate-300 dark:border-white/10">
+              {/* Sticky Column 4: Style */}
+              <th className="sticky left-[230px] z-40 bg-slate-100 dark:bg-[#082024] px-2.5 py-2.5 min-w-[105px] border-r border-slate-300 dark:border-white/10">
                 Style
               </th>
 
-              {/* Sticky Column 4: Order Qty (PO total) */}
-              <th className="sticky left-[250px] z-40 bg-slate-100 dark:bg-[#082024] px-2.5 py-2.5 text-right min-w-[80px] border-r-2 border-slate-400 dark:border-white/20 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)]">
+              {/* Sticky Column 5: Order Qty (PO total) */}
+              <th className="sticky left-[335px] z-40 bg-slate-100 dark:bg-[#082024] px-2.5 py-2.5 text-right min-w-[80px] border-r-2 border-slate-400 dark:border-white/20 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)]">
                 Order Qty
               </th>
 
@@ -328,27 +333,36 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       {index + 1}
                     </td>
 
-                    {/* Sticky Column 2: PO (Rowspan 2) */}
+                    {/* Sticky Column 2: Buyer (Rowspan 2) */}
                     <td
                       rowSpan={2}
-                      className={`sticky left-10 z-20 px-2.5 py-1.5 font-extrabold text-slate-900 dark:text-white border-r border-slate-300 dark:border-white/10 whitespace-nowrap ${status.rowTintClass} bg-inherit`}
+                      className={`sticky left-10 z-20 px-2.5 py-1.5 font-bold text-slate-800 dark:text-slate-200 border-r border-slate-300 dark:border-white/10 whitespace-nowrap max-w-[120px] truncate ${status.rowTintClass} bg-inherit`}
+                      title={order.buyer || '-'}
+                    >
+                      {order.buyer && order.buyer.trim() ? highlightMatch(order.buyer) : '-'}
+                    </td>
+
+                    {/* Sticky Column 3: PO (Rowspan 2) */}
+                    <td
+                      rowSpan={2}
+                      className={`sticky left-[135px] z-20 px-2.5 py-1.5 font-extrabold text-slate-900 dark:text-white border-r border-slate-300 dark:border-white/10 whitespace-nowrap ${status.rowTintClass} bg-inherit`}
                     >
                       {highlightMatch(order.po)}
                     </td>
 
-                    {/* Sticky Column 3: Style (Rowspan 2) */}
+                    {/* Sticky Column 4: Style (Rowspan 2) */}
                     <td
                       rowSpan={2}
-                      className={`sticky left-[140px] z-20 px-2.5 py-1.5 font-medium text-slate-700 dark:text-slate-300 border-r border-slate-300 dark:border-white/10 max-w-[140px] truncate ${status.rowTintClass} bg-inherit`}
+                      className={`sticky left-[230px] z-20 px-2.5 py-1.5 font-medium text-slate-700 dark:text-slate-300 border-r border-slate-300 dark:border-white/10 max-w-[130px] truncate ${status.rowTintClass} bg-inherit`}
                       title={order.style || ''}
                     >
                       {highlightMatch(order.style)}
                     </td>
 
-                    {/* Sticky Column 4: Order Qty (PO total, Rowspan 2) */}
+                    {/* Sticky Column 5: Order Qty (PO total, Rowspan 2) */}
                     <td
                       rowSpan={2}
-                      className={`sticky left-[250px] z-20 px-2.5 py-1.5 text-right font-black text-slate-900 dark:text-white border-r-2 border-slate-400 dark:border-white/20 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)] ${status.rowTintClass} bg-inherit`}
+                      className={`sticky left-[335px] z-20 px-2.5 py-1.5 text-right font-black text-slate-900 dark:text-white border-r-2 border-slate-400 dark:border-white/20 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)] ${status.rowTintClass} bg-inherit`}
                     >
                       {poTotalOrderQty.toLocaleString()}
                     </td>
@@ -719,12 +733,12 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
             {/* Totals Row 1: INPUT TOTALS */}
             <tr className="border-b border-slate-300 dark:border-white/10">
               <td
-                colSpan={3}
+                colSpan={4}
                 className="sticky left-0 z-40 bg-slate-200 dark:bg-[#071B1E] px-2.5 py-2 text-right border-r border-slate-300 dark:border-white/10"
               >
                 TOTALS ({orders.length} orders)
               </td>
-              <td className="sticky left-[250px] z-40 bg-slate-200 dark:bg-[#071B1E] px-2.5 py-2 text-right border-r-2 border-slate-400 dark:border-white/20 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)]">
+              <td className="sticky left-[335px] z-40 bg-slate-200 dark:bg-[#071B1E] px-2.5 py-2 text-right border-r-2 border-slate-400 dark:border-white/20 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)]">
                 {totals.totalOrderQty.toLocaleString()}
               </td>
               <td colSpan={4} className="px-2 py-2 text-center text-slate-500 border-r border-slate-300 dark:border-white/10">
@@ -774,7 +788,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
             {/* Totals Row 2: OUTPUT TOTALS */}
             <tr>
               <td
-                colSpan={12}
+                colSpan={13}
                 className="sticky left-0 z-40 bg-slate-200 dark:bg-[#071B1E] px-2.5 py-1.5 text-right text-slate-500 border-r border-slate-300 dark:border-white/10"
               >
                 OUTPUT DAILY TOTALS

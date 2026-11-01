@@ -26,6 +26,7 @@ export const AddOrderDrawer: React.FC<AddOrderDrawerProps> = ({
 }) => {
   const { profile } = useAuth();
 
+  const [buyer, setBuyer] = useState('');
   const [po, setPo] = useState('');
   const [style, setStyle] = useState('');
   const [wash, setWash] = useState('');
@@ -39,6 +40,7 @@ export const AddOrderDrawer: React.FC<AddOrderDrawerProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const resetForm = () => {
+    setBuyer('');
     setPo('');
     setStyle('');
     setWash('');
@@ -137,6 +139,12 @@ export const AddOrderDrawer: React.FC<AddOrderDrawerProps> = ({
     e.preventDefault();
     setErrorMsg(null);
 
+    const cleanBuyer = buyer.trim();
+    if (!cleanBuyer) {
+      setErrorMsg('Buyer name is required.');
+      return;
+    }
+
     const cleanPo = po.trim();
     if (!cleanPo) {
       setErrorMsg('PO number is required.');
@@ -158,10 +166,11 @@ export const AddOrderDrawer: React.FC<AddOrderDrawerProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Create orders with ONLY PO, Style, Wash, Order qty, Colour.
+      // Create orders with Buyer, PO, Style, Wash, Order qty, Colour.
       // Line, Start Date, Cutting, and Wash Send are entered in the table matrix.
       // Note: NEVER send is_done!
       const rowsToInsert = colours.map((c) => ({
+        buyer: cleanBuyer,
         po: cleanPo,
         style: style.trim() || null,
         colour: c.colour,
@@ -281,6 +290,21 @@ export const AddOrderDrawer: React.FC<AddOrderDrawerProps> = ({
                     Woven Unit (ওভেন)
                   </button>
                 </div>
+              </div>
+
+              {/* Buyer */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Buyer *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. H&M / Zara / Target / Next"
+                  value={buyer}
+                  onChange={(e) => setBuyer(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-black/20 focus:outline-none focus:ring-2 focus:ring-[#2BA5B5]"
+                />
               </div>
 
               {/* PO and Style */}

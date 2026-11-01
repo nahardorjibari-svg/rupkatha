@@ -32,16 +32,18 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
   };
 
   // Export Excel (.xlsx) using SheetJS
+  // Export Excel (.xlsx) using SheetJS with smart styling & borders
   const handleExcelExport = () => {
     setIsExportingExcel(true);
     try {
       const headerRow = [
         'Line',
-        'Start Date',
+        'Buyer',
         'PO',
         'Style',
         'Colour',
         'Wash',
+        'Start Date',
         'Order Qty',
         'Cutting Qty',
         'Wash Send',
@@ -81,15 +83,17 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
 
         const inBal = cutQty - totalIn;
         const outBal = totalIn - totalOut;
+        const buyerDisplay = order.buyer || '-';
 
         // Sub-row 1: INPUT
         const inRow = [
           order.line_no || 'No line',
-          order.start_date || '',
+          buyerDisplay,
           order.po,
           order.style || '',
           order.colour || '',
           order.wash || '',
+          order.start_date || '',
           orderQty,
           cutQty,
           Number(order.wash_send || 0),
@@ -105,11 +109,12 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         // Sub-row 2: OUTPUT
         const outRow = [
           order.line_no || 'No line',
-          order.start_date || '',
+          buyerDisplay,
           order.po,
           order.style || '',
           order.colour || '',
           order.wash || '',
+          order.start_date || '',
           orderQty,
           cutQty,
           Number(order.wash_send || 0),
@@ -125,24 +130,102 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
 
       const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
-      // Set column widths
+      // Set smart column widths
       ws['!cols'] = [
-        { wch: 10 }, // Line
-        { wch: 12 }, // Start Date
+        { wch: 11 }, // Line
+        { wch: 15 }, // Buyer
         { wch: 14 }, // PO
-        { wch: 16 }, // Style
-        { wch: 12 }, // Colour
+        { wch: 18 }, // Style
+        { wch: 13 }, // Colour
         { wch: 12 }, // Wash
-        { wch: 10 }, // Order Qty
-        { wch: 10 }, // Cutting
-        { wch: 10 }, // Wash Send
-        { wch: 6 }, // Type
+        { wch: 12 }, // Start Date
+        { wch: 11 }, // Order Qty
+        { wch: 11 }, // Cutting
+        { wch: 11 }, // Wash Send
+        { wch: 7 },  // Type
         { wch: 10 }, // Total
-        { wch: 8 }, // Extra %
+        { wch: 9 },  // Extra %
         { wch: 10 }, // Balance
         ...days.map(() => ({ wch: 8 })),
         { wch: 20 }, // Status
       ];
+
+      // Vertical merges for paired sub-rows (IN & OUT) to create clean ERP sheet
+      const merges: XLSX.Range[] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: headerRow.length - 1 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: headerRow.length - 1 } },
+        { s: { r: 2, c: 0 }, e: { r: 2, c: headerRow.length - 1 } },
+      ];
+
+      // Data starts at row index 5 (0-indexed)
+      let curRow = 5;
+      orders.forEach(() => {
+        // Merge columns 0 to 9: Line, Buyer, PO, Style, Colour, Wash, Start Date, Order Qty, Cutting Qty, Wash Send
+        for (let col = 0; col <= 9; col++) {
+          merges.push({
+            s: { r: curRow, c: col },
+            e: { r: curRow + 1, c: col },
+          });
+        }
+        // Merge Status column
+        merges.push({
+          s: { r: curRow, c: headerRow.length - 1 },
+          e: { r: curRow + 1, c: headerRow.length - 1 },
+        });
+        curRow += 2;
+      });
+      ws['!merges'] = merges;
+
+      // Smart borders & styling on all table cells
+      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws[cellAddress]) {
+            if (R >= 4) {
+              ws[cellAddress] = { t: 's', v: '' };
+            } else {
+              continue;
+            }
+          }
+          const cell = ws[cellAddress];
+
+          if (R < 3) {
+            cell.s = {
+              font: { bold: true, sz: R === 0 ? 15 : 11, color: { rgb: R === 0 ? '0F8B8D' : '334155' } },
+              alignment: { horizontal: 'left', vertical: 'center' },
+            };
+          } else if (R === 4) {
+            cell.s = {
+              fill: { fgColor: { rgb: '0F8B8D' } },
+              font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 },
+              alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+              border: {
+                top: { style: 'thin', color: { rgb: '0A5E60' } },
+                bottom: { style: 'medium', color: { rgb: '0A5E60' } },
+                left: { style: 'thin', color: { rgb: '14A2A4' } },
+                right: { style: 'thin', color: { rgb: '14A2A4' } },
+              },
+            };
+          } else {
+            const isRightAlign = (C >= 7 && C <= 9) || C === 11 || C === 13;
+            const isCenterAlign = C === 0 || C === 6 || C === 10 || (C >= 14 && C < headerRow.length - 1);
+            cell.s = {
+              font: { sz: 9.5, bold: C === 1 || C === 2 || C === 10 },
+              alignment: {
+                vertical: 'center',
+                horizontal: isRightAlign ? 'right' : isCenterAlign ? 'center' : 'left',
+              },
+              border: {
+                top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+                bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+                left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+                right: { style: 'thin', color: { rgb: 'CBD5E1' } },
+              },
+            };
+          }
+        }
+      }
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Line Plan');
@@ -158,7 +241,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
     }
   };
 
-  // Export PDF using jsPDF + autoTable
+  // Export PDF using jsPDF + autoTable with clean border grid
   const handlePdfExport = () => {
     setIsExportingPdf(true);
     try {
@@ -179,6 +262,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
 
       const tableHeaders = [
         'Line',
+        'Buyer',
         'PO',
         'Style',
         'Colour',
@@ -204,6 +288,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         // IN row
         tableRows.push([
           order.line_no || 'No line',
+          order.buyer || '-',
           order.po,
           order.style || '-',
           order.colour || '-',
@@ -224,6 +309,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           '',
           '',
           '',
+          '',
           'OUT',
           totalOut.toLocaleString(),
           (totalIn - totalOut).toLocaleString(),
@@ -236,18 +322,30 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         head: [tableHeaders],
         body: tableRows,
         startY: 34,
-        styles: { fontSize: 7, cellPadding: 1.5, halign: 'center' },
-        headStyles: { fillColor: [15, 139, 141], textColor: [255, 255, 255], fontStyle: 'bold' },
+        theme: 'grid',
+        styles: {
+          fontSize: 6.5,
+          cellPadding: 1.5,
+          halign: 'center',
+          lineColor: [200, 200, 200],
+          lineWidth: 0.15,
+        },
+        headStyles: {
+          fillColor: [15, 139, 141],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
         columnStyles: {
           0: { halign: 'left' },
-          1: { halign: 'left', fontStyle: 'bold' },
-          2: { halign: 'left' },
+          1: { halign: 'left' },
+          2: { halign: 'left', fontStyle: 'bold' },
           3: { halign: 'left' },
-          4: { halign: 'right' },
+          4: { halign: 'left' },
           5: { halign: 'right' },
-          6: { halign: 'center', fontStyle: 'bold' },
-          7: { halign: 'right', fontStyle: 'bold' },
-          8: { halign: 'right' },
+          6: { halign: 'right' },
+          7: { halign: 'center', fontStyle: 'bold' },
+          8: { halign: 'right', fontStyle: 'bold' },
+          9: { halign: 'right' },
         },
         margin: { left: 10, right: 10 },
       });

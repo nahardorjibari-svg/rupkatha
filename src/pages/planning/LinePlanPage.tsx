@@ -86,7 +86,8 @@ export const LinePlanPage: React.FC = () => {
       return orders.filter((o) => {
         const poMatch = (o.po || '').toLowerCase().includes(q);
         const styleMatch = (o.style || '').toLowerCase().includes(q);
-        return poMatch || styleMatch;
+        const buyerMatch = (o.buyer || '').toLowerCase().includes(q);
+        return poMatch || styleMatch || buyerMatch;
       });
     }
 
@@ -233,7 +234,7 @@ export const LinePlanPage: React.FC = () => {
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
-                    placeholder="Search PO or Style..."
+                    placeholder="Search PO, Style, Buyer..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-9 pr-7 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/15 bg-white dark:bg-black/20 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2BA5B5] shadow-xs"

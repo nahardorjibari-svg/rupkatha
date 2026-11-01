@@ -5,6 +5,7 @@
 
 export interface PlanningOrder {
   id: string;
+  buyer?: string;
   po: string;
   style: string | null;
   colour: string;
