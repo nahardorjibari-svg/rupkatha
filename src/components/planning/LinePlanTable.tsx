@@ -494,16 +494,13 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
 
                     // Cut status
                     let cutStatusLabel = 'Not cut';
-                    let cutStatusClass =
-                      'bg-slate-100 text-[#111827] border-slate-300 dark:bg-slate-800 dark:text-slate-300';
+                    let cutStatusBadgeBg = 'bg-[#6B7280] dark:bg-slate-700';
                     if (cuttingQty >= rowOrderQty && rowOrderQty > 0) {
                       cutStatusLabel = 'Cut done';
-                      cutStatusClass =
-                        'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300';
+                      cutStatusBadgeBg = 'bg-[#16A34A] dark:bg-emerald-600';
                     } else if (cuttingQty > 0) {
                       cutStatusLabel = 'Cutting';
-                      cutStatusClass =
-                        'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300';
+                      cutStatusBadgeBg = 'bg-[#D97706] dark:bg-amber-600';
                     }
 
                     // Balances
@@ -601,7 +598,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Column 5: Colour (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-2 py-1.5 text-[#374151] dark:text-slate-300 border border-[#D1D5DB] dark:border-white/10 font-medium whitespace-nowrap bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
+                            className={`px-2 py-1.5 text-[#111827] dark:text-slate-300 border border-[#D1D5DB] dark:border-white/10 font-bold text-[13px] whitespace-nowrap bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
                           >
                             {highlightMatch(order.colour) || '-'}
                           </td>
@@ -609,7 +606,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Column 6: Wash (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-2 py-1.5 text-[#374151] dark:text-slate-400 border border-[#D1D5DB] dark:border-white/10 text-[10px] bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
+                            className={`px-2 py-1.5 text-[#111827] dark:text-slate-400 border border-[#D1D5DB] dark:border-white/10 font-bold text-[13px] bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
                           >
                             {order.wash || '-'}
                           </td>
@@ -624,7 +621,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                               onChange={(e) =>
                                 onUpdateOrder(orderId, { line_no: e.target.value })
                               }
-                              className="w-full px-1.5 py-1 text-[11px] font-bold rounded border border-transparent hover:border-[#D1D5DB] dark:hover:border-white/20 focus:border-[#0F8B8D] bg-transparent focus:bg-white dark:focus:bg-slate-900 transition-all cursor-pointer text-[#111827] dark:text-white"
+                              className="w-full px-2 py-1.5 text-[13px] font-bold rounded-md border border-[#D1D5DB] dark:border-white/20 focus:border-[#0F8B8D] bg-white dark:bg-slate-900 transition-all cursor-pointer text-[#111827] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F8B8D]"
                             >
                               <option value="">No line</option>
                               <option value="Line-1">Line-1</option>
@@ -647,7 +644,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                                   start_date: e.target.value || null,
                                 })
                               }
-                              className="w-full px-1.5 py-1 text-[10px] font-semibold rounded bg-[#FEF9C3] dark:bg-amber-950/40 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-700/60 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                              className="w-full px-2.5 py-1.5 text-[13px] font-semibold rounded-md bg-white dark:bg-slate-900 text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-white/20 focus:outline-none focus:ring-2 focus:ring-[#0F8B8D] focus:border-[#0F8B8D] cursor-pointer placeholder:text-[#6B7280]"
                             />
                           </td>
 
@@ -682,19 +679,19 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                                   (e.target as HTMLInputElement).blur();
                                 }
                               }}
-                              className="w-full h-7 px-1 text-right text-[11px] font-bold text-[#111827] dark:text-white rounded border border-[#D1D5DB] dark:border-white/20 focus:border-[#0F8B8D] bg-white dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0F8B8D]"
+                              className="w-full h-8 px-2 text-right text-[13px] font-bold text-[#111827] dark:text-white rounded-md border border-[#D1D5DB] dark:border-white/20 focus:border-[#0F8B8D] bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F8B8D]"
                             />
                           </td>
 
                           {/* Column 11: Extra % (Rowspan 5) */}
                           <td
                             rowSpan={5}
-                            className={`px-1.5 py-1.5 text-right font-bold text-[10px] border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${status.rowTintClass} ${
+                            className={`px-1.5 py-1.5 text-right font-bold text-[13px] border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${status.rowTintClass} ${
                               extraPct > 0
                                 ? 'text-[#16A34A] dark:text-emerald-400'
                                 : extraPct < 0
                                 ? 'text-[#DC2626] dark:text-rose-400'
-                                : 'text-[#374151] dark:text-slate-400'
+                                : 'text-[#6B7280] dark:text-slate-400'
                             }`}
                           >
                             {extraPct > 0 ? `+${extraPct}%` : `${extraPct}%`}
@@ -706,7 +703,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             className={`px-1.5 py-1 text-center border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#0E2E33] ${status.rowTintClass}`}
                           >
                             <span
-                              className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold border whitespace-nowrap ${cutStatusClass}`}
+                              className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${cutStatusBadgeBg}`}
                             >
                               {cutStatusLabel}
                             </span>
