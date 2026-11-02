@@ -48,6 +48,9 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         'Start Date',
         'Order Qty',
         'Cutting Qty',
+        'Cut Status',
+        'Input Bal.',
+        'Output Bal.',
         'Type',
         'Total',
         'Balance',
@@ -88,128 +91,51 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         const finishRem = totalWashRecv - totalFinishing;
         const buyerDisplay = order.buyer || '-';
 
+        // Sub-row 0: CUTTING
+        const cutRow = [
+          order.line_no || 'No line', buyerDisplay, order.po, order.style || '', order.colour || '', order.wash || '', order.start_date || '',
+          orderQty, cutQty, status.label, '', '', 'CUTTING', cutQty, '', ...days.map(() => ''),
+          '', '', '', '', '', '', status.label,
+        ];
+        sheetData.push(cutRow);
+
         // Sub-row 1: INPUT
         const inRow = [
-          order.line_no || 'No line',
-          buyerDisplay,
-          order.po,
-          order.style || '',
-          order.colour || '',
-          order.wash || '',
-          order.start_date || '',
-          orderQty,
-          cutQty,
-          'INPUT',
-          totalIn,
-          inBal,
-          ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.input_qty ?? ''),
-          totalWashSent,
-          washRem,
-          totalWashRecv,
-          washRecvRem,
-          totalFinishing,
-          finishRem,
-          status.label,
+          order.line_no || 'No line', buyerDisplay, order.po, order.style || '', order.colour || '', order.wash || '', order.start_date || '',
+          orderQty, cutQty, status.label, inputBalance, outputBalance, 'INPUT', totalIn, inBal, ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.input_qty ?? ''),
+          totalWashSent, washRem, totalWashRecv, washRecvRem, totalFinishing, finishRem, status.label,
         ];
         sheetData.push(inRow);
 
         // Sub-row 2: OUTPUT
         const outRow = [
-          order.line_no || 'No line',
-          buyerDisplay,
-          order.po,
-          order.style || '',
-          order.colour || '',
-          order.wash || '',
-          order.start_date || '',
-          orderQty,
-          cutQty,
-          'OUTPUT',
-          totalOut,
-          outBal,
-          ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.output_qty ?? ''),
-          totalWashSent,
-          washRem,
-          totalWashRecv,
-          washRecvRem,
-          totalFinishing,
-          finishRem,
-          status.label,
+          order.line_no || 'No line', buyerDisplay, order.po, order.style || '', order.colour || '', order.wash || '', order.start_date || '',
+          orderQty, cutQty, status.label, inputBalance, outputBalance, 'OUTPUT', totalOut, outBal, ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.output_qty ?? ''),
+          totalWashSent, washRem, totalWashRecv, washRecvRem, totalFinishing, finishRem, status.label,
         ];
         sheetData.push(outRow);
 
         // Sub-row 3: WASH SENT
         const wsRow = [
-          order.line_no || 'No line',
-          buyerDisplay,
-          order.po,
-          order.style || '',
-          order.colour || '',
-          order.wash || '',
-          order.start_date || '',
-          orderQty,
-          cutQty,
-          'WASH SENT',
-          totalWashSent,
-          washRem,
-          ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.wash_sent_qty ?? ''),
-          totalWashSent,
-          washRem,
-          totalWashRecv,
-          washRecvRem,
-          totalFinishing,
-          finishRem,
-          status.label,
+          order.line_no || 'No line', buyerDisplay, order.po, order.style || '', order.colour || '', order.wash || '', order.start_date || '',
+          orderQty, cutQty, status.label, inputBalance, outputBalance, 'WASH SENT', totalWashSent, washRem, ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.wash_sent_qty ?? ''),
+          totalWashSent, washRem, totalWashRecv, washRecvRem, totalFinishing, finishRem, status.label,
         ];
         sheetData.push(wsRow);
 
         // Sub-row 4: WASH RECV
         const wrRow = [
-          order.line_no || 'No line',
-          buyerDisplay,
-          order.po,
-          order.style || '',
-          order.colour || '',
-          order.wash || '',
-          order.start_date || '',
-          orderQty,
-          cutQty,
-          'WASH RECV',
-          totalWashRecv,
-          washRecvRem,
-          ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.wash_recv_qty ?? ''),
-          totalWashSent,
-          washRem,
-          totalWashRecv,
-          washRecvRem,
-          totalFinishing,
-          finishRem,
-          status.label,
+          order.line_no || 'No line', buyerDisplay, order.po, order.style || '', order.colour || '', order.wash || '', order.start_date || '',
+          orderQty, cutQty, status.label, inputBalance, outputBalance, 'WASH RECV', totalWashRecv, washRecvRem, ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.wash_recv_qty ?? ''),
+          totalWashSent, washRem, totalWashRecv, washRecvRem, totalFinishing, finishRem, status.label,
         ];
         sheetData.push(wrRow);
 
         // Sub-row 5: FINISHING
         const fnRow = [
-          order.line_no || 'No line',
-          buyerDisplay,
-          order.po,
-          order.style || '',
-          order.colour || '',
-          order.wash || '',
-          order.start_date || '',
-          orderQty,
-          cutQty,
-          'FINISHING',
-          totalFinishing,
-          finishRem,
-          ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.finishing_qty ?? ''),
-          totalWashSent,
-          washRem,
-          totalWashRecv,
-          washRecvRem,
-          totalFinishing,
-          finishRem,
-          status.label,
+          order.line_no || 'No line', buyerDisplay, order.po, order.style || '', order.colour || '', order.wash || '', order.start_date || '',
+          orderQty, cutQty, status.label, inputBalance, outputBalance, 'FINISHING', totalFinishing, finishRem, ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.finishing_qty ?? ''),
+          totalWashSent, washRem, totalWashRecv, washRecvRem, totalFinishing, finishRem, status.label,
         ];
         sheetData.push(fnRow);
       });
@@ -240,7 +166,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         { wch: 16 }, // Status
       ];
 
-      // Vertical merges for 5 sub-rows per order
+      // Vertical merges for 6 sub-rows per order
       const merges: XLSX.Range[] = [
         { s: { r: 0, c: 0 }, e: { r: 0, c: headerRow.length - 1 } },
         { s: { r: 1, c: 0 }, e: { r: 1, c: headerRow.length - 1 } },
@@ -255,17 +181,17 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         for (let col = 0; col <= 8; col++) {
           merges.push({
             s: { r: curRow, c: col },
-            e: { r: curRow + 4, c: col },
+            e: { r: curRow + 5, c: col },
           });
         }
         // Merge Right Wash & Finishing + Status columns
         for (let col = rightColStart; col < headerRow.length; col++) {
           merges.push({
             s: { r: curRow, c: col },
-            e: { r: curRow + 4, c: col },
+            e: { r: curRow + 5, c: col },
           });
         }
-        curRow += 5;
+        curRow += 6;
       });
       ws['!merges'] = merges;
 
@@ -391,7 +317,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         const washRecvRem = totalWashSent - totalWashRecv;
         const finishRem = totalWashRecv - totalFinishing;
 
-        // IN row
+        // CUTTING row
         tableRows.push([
           order.line_no || 'No line',
           order.buyer || '-',
@@ -400,6 +326,26 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           order.colour || '-',
           orderQty.toLocaleString(),
           cutQty.toLocaleString(),
+          'CUT',
+          '',
+          '',
+          ...days.map(() => '-'),
+          '',
+          '',
+          '',
+          '',
+          '',
+        ]);
+
+        // IN row
+        tableRows.push([
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
           'IN',
           totalIn.toLocaleString(),
           inBal.toLocaleString(),
