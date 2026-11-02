@@ -56,6 +56,61 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Local storage / state for cutting daily entries
+  const [cuttingDaily, setCuttingDaily] = useState<Record<string, Record<string, number>>>(() => {
+    try {
+      const saved = localStorage.getItem('rupkatha_planning_cutting_daily');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const getOrderCuttingForDate = (order: PlanningOrder, dateStr: string): number | null => {
+    const fromMap = cuttingDaily[order.id]?.[dateStr];
+    if (fromMap !== undefined) {
+      return fromMap > 0 ? fromMap : null;
+    }
+    // Fallback: if order has start_date matching dateStr and cutting_qty > 0
+    if (order.start_date && order.start_date === dateStr && Number(order.cutting_qty || 0) > 0) {
+      return Number(order.cutting_qty);
+    }
+    return null;
+  };
+
+  const handleUpdateCuttingDaily = (order: PlanningOrder, dateStr: string, rawVal: string) => {
+    const numVal = rawVal.trim() === '' ? 0 : Math.max(0, parseInt(rawVal, 10) || 0);
+    const orderId = order.id;
+
+    setCuttingDaily((prev) => {
+      const orderMap = { ...(prev[orderId] || {}) };
+      // If order previously had cutting_qty on order.start_date but not yet in orderMap
+      if (order.start_date && Number(order.cutting_qty || 0) > 0 && !orderMap[order.start_date]) {
+        orderMap[order.start_date] = Number(order.cutting_qty);
+      }
+
+      if (numVal === 0) {
+        delete orderMap[dateStr];
+      } else {
+        orderMap[dateStr] = numVal;
+      }
+      const next = { ...prev, [orderId]: orderMap };
+      try {
+        localStorage.setItem('rupkatha_planning_cutting_daily', JSON.stringify(next));
+      } catch (e) {
+        console.error(e);
+      }
+
+      const totalCut = Object.values(orderMap).reduce((s, v) => s + v, 0);
+      onUpdateOrder(orderId, {
+        cutting_qty: totalCut,
+        start_date: orderMap[dateStr] ? dateStr : order.start_date,
+      });
+
+      return next;
+    });
+  };
+
   // Compute total Order Qty grouped by PO across all colour rows
   const poTotalQtyMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -249,7 +304,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
         return (
           <div
             key={lineName}
-            className={`rounded-xl border-2 ${config.borderClass} bg-white dark:bg-slate-900 overflow-hidden mb-6`}
+            className={`rounded-xl border-2 ${config.borderClass} bg-white dark:bg-slate-900 overflow-hidden mb-6 shadow-sm`}
           >
             {/* Colored Box Header Strip */}
             <div className={`${config.bgHeader} ${config.textHeader} px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs font-bold border-b ${config.borderClass}`}>
@@ -276,14 +331,14 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                 <thead className="sticky top-0 z-30 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-700 select-none text-[12px] font-bold tracking-wider">
                   <tr className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                     <th
-                      colSpan={14}
-                      className="sticky left-0 z-40 bg-white dark:bg-slate-900 px-3 py-1 text-left text-[11px] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 uppercase font-bold"
+                      colSpan={11}
+                      className="sticky left-0 z-40 bg-white dark:bg-slate-900 px-3 py-1 text-left text-[11px] text-slate-700 dark:text-slate-300 border-[1.5px] border-gray-200 dark:border-slate-700 uppercase font-bold"
                     >
                       Order Particulars ({config.label})
                     </th>
                     <th
                       colSpan={days.length}
-                      className="bg-white dark:bg-slate-800 px-2 py-1 text-center border border-slate-200 dark:border-slate-700"
+                      className="bg-white dark:bg-slate-800 px-2 py-1 text-center border-[1.5px] border-gray-200 dark:border-slate-700"
                     >
                       <div className="flex items-center justify-center gap-2 print:hidden">
                         {onEarlier && (
@@ -316,7 +371,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                     </th>
                     <th
                       colSpan={isAdmin ? 10 : 9}
-                      className="bg-white dark:bg-slate-900 px-2 py-1 text-center text-[11px] text-gray-700 dark:text-slate-300 uppercase font-bold border border-gray-200 dark:border-slate-700"
+                      className="bg-white dark:bg-slate-900 px-2 py-1 text-center text-[11px] text-gray-700 dark:text-slate-300 uppercase font-bold border-[1.5px] border-gray-200 dark:border-slate-700"
                     >
                       Totals, Balances, Wash & Finishing Tracking
                     </th>
@@ -372,38 +427,18 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       QTY
                     </th>
 
-                    {/* Extra % */}
-                    <th className="px-1.5 py-2.5 text-right min-w-[60px] border-[1.5px] border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
-                      EXTRA %
-                    </th>
-
-                    {/* Cut Status */}
-                    <th className="px-2 py-2.5 text-center min-w-[75px] border-[1.5px] border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
-                      CUT STATUS
-                    </th>
-
-                    {/* Input Bal. */}
-                    <th className="px-2 py-2.5 text-right min-w-[90px] border-[1.5px] border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
-                      INPUT BAL.
-                    </th>
-
-                    {/* Output Bal. */}
-                    <th className="px-2 py-2.5 text-right min-w-[90px] border-[1.5px] border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
-                      OUTPUT BAL.
-                    </th>
-
                     {/* Type */}
                     <th className="px-2 py-2.5 text-center min-w-[85px] border-[1.5px] border-gray-200 dark:border-slate-700 bg-[#E5E7EB] dark:bg-black/20 text-[#1F2937] dark:text-slate-200">
                       TYPE
                     </th>
 
-                    {/* 8 Day Columns */}
+                    {/* 8 Day Columns - Dates Only */}
                     {days.map((day) => (
                       <th
                         key={day.dateStr}
-                        className={`px-1 py-1 text-center min-w-[50px] border-[1.5px] border-gray-200 dark:border-slate-700 ${
+                        className={`px-1 py-2 text-center min-w-[50px] border-[1.5px] border-gray-200 dark:border-slate-700 ${
                           day.isFriday
-                            ? 'text-[#DC2626] font-extrabold'
+                            ? 'text-[#DC2626] font-extrabold bg-rose-50/50 dark:bg-rose-950/20'
                             : day.isToday
                             ? 'bg-teal-50 dark:bg-teal-950/60 text-[#0F8B8D] dark:text-teal-300'
                             : 'text-[#1F2937] dark:text-slate-200'
@@ -416,53 +451,53 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                     ))}
 
                     {/* Total */}
-                    <th className="px-2 py-2.5 text-right min-w-[65px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[65px] border-[1.5px] border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       TOTAL
                     </th>
 
                     {/* Balance */}
-                    <th className="px-2 py-2.5 text-right min-w-[75px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[120px] border-[1.5px] border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       BALANCE
                     </th>
 
                     {/* Total Wash Sent */}
-                    <th className="px-2 py-2.5 text-right min-w-[80px] border border-gray-200 dark:border-slate-700 bg-sky-50/50 dark:bg-sky-950/20 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[80px] border-[1.5px] border-gray-200 dark:border-slate-700 bg-sky-50/50 dark:bg-sky-950/20 text-[#1F2937] dark:text-slate-200">
                       TOTAL WASH SENT
                     </th>
 
                     {/* Wash Rem. */}
-                    <th className="px-2 py-2.5 text-right min-w-[75px] border border-gray-200 dark:border-slate-700 bg-sky-50/30 dark:bg-sky-950/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[75px] border-[1.5px] border-gray-200 dark:border-slate-700 bg-sky-50/30 dark:bg-sky-950/10 text-[#1F2937] dark:text-slate-200">
                       WASH REM.
                     </th>
 
                     {/* Total Wash Recv */}
-                    <th className="px-2 py-2.5 text-right min-w-[80px] border border-gray-200 dark:border-slate-700 bg-purple-50/50 dark:bg-purple-950/20 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[80px] border-[1.5px] border-gray-200 dark:border-slate-700 bg-purple-50/50 dark:bg-purple-950/20 text-[#1F2937] dark:text-slate-200">
                       TOTAL WASH RECV
                     </th>
 
                     {/* Wash Recv Rem. */}
-                    <th className="px-2 py-2.5 text-right min-w-[80px] border border-gray-200 dark:border-slate-700 bg-purple-50/30 dark:bg-purple-950/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[80px] border-[1.5px] border-gray-200 dark:border-slate-700 bg-purple-50/30 dark:bg-purple-950/10 text-[#1F2937] dark:text-slate-200">
                       WASH RECV REM.
                     </th>
 
                     {/* Total Finishing */}
-                    <th className="px-2 py-2.5 text-right min-w-[80px] border border-gray-200 dark:border-slate-700 bg-emerald-50/50 dark:bg-emerald-950/20 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[80px] border-[1.5px] border-gray-200 dark:border-slate-700 bg-emerald-50/50 dark:bg-emerald-950/20 text-[#1F2937] dark:text-slate-200">
                       TOTAL FINISHING
                     </th>
 
                     {/* Finishing Rem. */}
-                    <th className="px-2 py-2.5 text-right min-w-[80px] border border-gray-200 dark:border-slate-700 bg-emerald-50/30 dark:bg-emerald-950/10 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 text-right min-w-[80px] border-[1.5px] border-gray-200 dark:border-slate-700 bg-emerald-50/30 dark:bg-emerald-950/10 text-[#1F2937] dark:text-slate-200">
                       FINISHING REM.
                     </th>
 
                     {/* Status */}
-                    <th className="px-3 py-2.5 text-center min-w-[125px] border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-3 py-2.5 text-center min-w-[125px] border-[1.5px] border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       STATUS
                     </th>
 
                     {/* Action */}
                     {isAdmin && (
-                      <th className="px-2 py-2.5 text-center w-9 border border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
+                      <th className="px-2 py-2.5 text-center w-9 border-[1.5px] border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                         ACT
                       </th>
                     )}
@@ -496,12 +531,15 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                     // Cut status
                     let cutStatusLabel = 'Not cut';
                     let cutStatusBadgeBg = 'bg-[#6B7280] dark:bg-slate-700';
+                    let cutBorderColor = '#6B7280';
                     if (cuttingQty >= rowOrderQty && rowOrderQty > 0) {
                       cutStatusLabel = 'Cut done';
                       cutStatusBadgeBg = 'bg-[#16A34A] dark:bg-emerald-600';
+                      cutBorderColor = '#16A34A';
                     } else if (cuttingQty > 0) {
                       cutStatusLabel = 'Cutting';
                       cutStatusBadgeBg = 'bg-[#D97706] dark:bg-amber-600';
+                      cutBorderColor = '#D97706';
                     }
 
                     // Balances
@@ -550,14 +588,14 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
 
                     return (
                       <React.Fragment key={orderId}>
-                        {/* SUB-ROW 1: INPUT */}
-                        <tr
-                          className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5 border-t border-gray-200 dark:border-slate-700`}
-                        >
-                          {/* Sticky Column 1: SL (Rowspan 6) */}
+                        {/* ========================================================
+                            SUB-ROW 1: CUTTING (Starts order, merges left & right)
+                           ======================================================== */}
+                        <tr className="transition-colors bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-white/5 border-t border-gray-200 dark:border-slate-700">
+                          {/* Sticky Column 1: SL (Rowspan 6) with Line-color left accent */}
                           <td
                             rowSpan={6}
-                            className={`sticky left-0 z-20 px-2 py-1.5 text-center font-bold text-gray-700 dark:text-slate-300 border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
+                            className={`sticky left-0 z-20 px-2 py-1.5 text-center font-bold text-gray-700 dark:text-slate-300 border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 border-l-[4px] ${config.borderClass}`}
                           >
                             {orderSlMap.get(orderId) || (index + 1)}
                           </td>
@@ -565,7 +603,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Sticky Column 2: Buyer (Rowspan 6) */}
                           <td
                             rowSpan={6}
-                            className={`sticky left-10 z-20 px-2.5 py-1.5 font-bold text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 whitespace-nowrap max-w-[120px] truncate bg-white dark:bg-slate-800 ${status.rowTintClass}`}
+                            className="sticky left-10 z-20 px-2.5 py-1.5 font-bold text-gray-900 dark:text-gray-100 border-[1.5px] border-gray-200 dark:border-slate-700 whitespace-nowrap max-w-[120px] truncate bg-white dark:bg-slate-800"
                             title={order.buyer || '-'}
                           >
                             {order.buyer && order.buyer.trim() ? highlightMatch(order.buyer) : '-'}
@@ -574,7 +612,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Sticky Column 3: PO (Rowspan 6) */}
                           <td
                             rowSpan={6}
-                            className={`sticky left-[135px] z-20 px-2.5 py-1.5 font-extrabold text-gray-900 dark:text-white border border-gray-200 dark:border-slate-700 whitespace-nowrap bg-white dark:bg-slate-800 ${status.rowTintClass}`}
+                            className="sticky left-[135px] z-20 px-2.5 py-1.5 font-extrabold text-gray-900 dark:text-white border-[1.5px] border-gray-200 dark:border-slate-700 whitespace-nowrap bg-white dark:bg-slate-800"
                           >
                             {highlightMatch(order.po)}
                           </td>
@@ -582,7 +620,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Sticky Column 4: Style (Rowspan 6) */}
                           <td
                             rowSpan={6}
-                            className={`sticky left-[230px] z-20 px-2.5 py-1.5 font-medium text-gray-700 dark:text-slate-300 border border-gray-200 dark:border-slate-700 max-w-[130px] truncate bg-white dark:bg-slate-800 ${status.rowTintClass}`}
+                            className="sticky left-[230px] z-20 px-2.5 py-1.5 font-medium text-gray-700 dark:text-slate-300 border-[1.5px] border-gray-200 dark:border-slate-700 max-w-[130px] truncate bg-white dark:bg-slate-800"
                             title={order.style || ''}
                           >
                             {highlightMatch(order.style)}
@@ -591,31 +629,31 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Sticky Column 5: Order Qty (PO total, Rowspan 6) */}
                           <td
                             rowSpan={6}
-                            className={`sticky left-[335px] z-20 px-2.5 py-1.5 text-right font-black text-gray-900 dark:text-white border border-gray-200 dark:border-slate-700 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)] bg-white dark:bg-slate-800 ${status.rowTintClass}`}
+                            className="sticky left-[335px] z-20 px-2.5 py-1.5 text-right font-black text-gray-900 dark:text-white border-[1.5px] border-gray-200 dark:border-slate-700 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)] bg-white dark:bg-slate-800"
                           >
                             {poTotalOrderQty.toLocaleString()}
                           </td>
 
-                          {/* Column 5: Colour (Rowspan 6) */}
+                          {/* Column 6: Colour (Rowspan 6) */}
                           <td
                             rowSpan={6}
-                            className={`px-2 py-1.5 text-gray-900 dark:text-slate-300 border border-gray-200 dark:border-slate-700 font-bold text-[13px] whitespace-nowrap bg-white dark:bg-slate-800 ${status.rowTintClass}`}
+                            className="px-2 py-1.5 text-gray-900 dark:text-slate-300 border-[1.5px] border-gray-200 dark:border-slate-700 font-bold text-[13px] whitespace-nowrap bg-white dark:bg-slate-800"
                           >
                             {highlightMatch(order.colour) || '-'}
                           </td>
 
-                          {/* Column 6: Wash (Rowspan 6) */}
+                          {/* Column 7: Wash (Rowspan 6) */}
                           <td
                             rowSpan={6}
-                            className={`px-2 py-1.5 text-gray-900 dark:text-slate-400 border border-gray-200 dark:border-slate-700 font-bold text-[13px] bg-white dark:bg-slate-800 ${status.rowTintClass}`}
+                            className="px-2 py-1.5 text-gray-900 dark:text-slate-400 border-[1.5px] border-gray-200 dark:border-slate-700 font-bold text-[13px] bg-white dark:bg-slate-800"
                           >
                             {order.wash || '-'}
                           </td>
 
-                          {/* Column 7: Line (Rowspan 6) */}
+                          {/* Column 8: Line (Rowspan 6) */}
                           <td
                             rowSpan={6}
-                            className={`px-1 py-1 border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
+                            className="px-1 py-1 border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                           >
                             <select
                               value={order.line_no || ''}
@@ -632,10 +670,10 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             </select>
                           </td>
 
-                          {/* Column 8: Start Date (Rowspan 6) */}
+                          {/* Column 9: Start Date (Rowspan 6) */}
                           <td
                             rowSpan={6}
-                            className={`px-1 py-1 border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
+                            className="px-1 py-1 border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                           >
                             <input
                               type="date"
@@ -649,127 +687,196 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             />
                           </td>
 
-                          {/* Column 9: Qty (Rowspan 6) */}
+                          {/* Column 10: Qty (Rowspan 6) */}
                           <td
                             rowSpan={6}
-                            className={`px-2 py-1.5 text-right font-extrabold text-gray-900 dark:text-slate-200 border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
+                            className="px-2 py-1.5 text-right font-extrabold text-gray-900 dark:text-slate-200 border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                           >
                             {rowOrderQty.toLocaleString()}
                           </td>
 
-                          {/* Column 10: Cutting (Rowspan 6) */}
+                          {/* TYPE: CUTTING with Cut-Status color left stripe */}
                           <td
-                            rowSpan={6}
-                            className={`px-1 py-1 border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
+                            className="px-1.5 py-1 text-center font-bold text-[10px] text-white bg-slate-700 dark:bg-slate-800 border-[1.5px] border-gray-200 dark:border-slate-700 border-l-[6px]"
+                            style={{ borderLeftColor: cutBorderColor }}
                           >
-                            <input
-                              type="number"
-                              min="0"
-                              defaultValue={cuttingQty || ''}
-                              key={`cutting_${orderId}_${cuttingQty}`}
-                              placeholder="0"
-                              onBlur={(e) => {
-                                const val = parseInt(e.target.value, 10);
-                                const cleanVal = isNaN(val) ? 0 : Math.max(0, val);
-                                if (cleanVal !== cuttingQty) {
-                                  onUpdateOrder(orderId, { cutting_qty: cleanVal });
-                                }
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  (e.target as HTMLInputElement).blur();
-                                }
-                              }}
-                              className="w-full h-8 px-2 text-right text-[13px] font-bold text-gray-900 dark:text-white rounded-md border border-gray-200 dark:border-white/20 focus:border-[#0F8B8D] bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F8B8D]"
-                            />
+                            <span className="font-black tracking-wide">CUTTING</span>
                           </td>
 
-                          {/* Column 11: Extra % (Rowspan 6) */}
-                          <td
-                            rowSpan={6}
-                            className={`px-1.5 py-1.5 text-right font-bold text-[13px] border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass} ${
-                              extraPct > 0
-                                ? 'text-[#16A34A] dark:text-emerald-400'
-                                : extraPct < 0
-                                ? 'text-[#DC2626] dark:text-rose-400'
-                                : 'text-[#6B7280] dark:text-slate-400'
-                            }`}
-                          >
-                            {extraPct > 0 ? `+${extraPct}%` : `${extraPct}%`}
+                          {/* 8 Daily CUTTING cells (User can enter daily cutting numbers here!) */}
+                          {days.map((day) => {
+                            const cutVal = getOrderCuttingForDate(order, day.dateStr);
+
+                            return (
+                              <td
+                                key={`cut_${day.dateStr}`}
+                                className={`p-0 text-center relative border-[1.5px] border-gray-200 dark:border-slate-700 transition-colors ${
+                                  day.isFriday
+                                    ? 'bg-[#F3F4F6] dark:bg-slate-800/80'
+                                    : 'bg-white/60 dark:bg-slate-900/60'
+                                }`}
+                              >
+                                <input
+                                  type="number"
+                                  min="0"
+                                  placeholder="-"
+                                  defaultValue={cutVal ?? ''}
+                                  key={`cut_${orderId}_${day.dateStr}_${cutVal ?? 'empty'}`}
+                                  onBlur={(e) => {
+                                    handleUpdateCuttingDaily(order, day.dateStr, e.target.value);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      (e.target as HTMLInputElement).blur();
+                                    }
+                                  }}
+                                  className="w-full h-7 px-0.5 text-center text-[10px] font-bold text-gray-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0F8B8D] transition-all"
+                                  title={`Daily cutting on ${day.displayDay}`}
+                                />
+                              </td>
+                            );
+                          })}
+
+                          {/* Total (CUTTING) */}
+                          <td className="px-2 py-1 text-right font-extrabold text-gray-900 dark:text-white border-[1.5px] border-gray-200 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800">
+                            {cuttingQty.toLocaleString()}
                           </td>
 
-                          {/* Column 12: Cut Status (Rowspan 6) */}
+                          {/* Smart Combined BALANCE & STATUS (CUTTING Row) */}
+                          <td className="px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800">
+                            {cuttingQty === 0 ? (
+                              <span className="text-gray-400 font-semibold text-[10px]">- Not cut</span>
+                            ) : (
+                              <div className="flex flex-col items-end leading-tight">
+                                <div className="font-black text-gray-900 dark:text-white text-[11px]">
+                                  {cuttingQty.toLocaleString()}{' '}
+                                  <span
+                                    className={`font-bold text-[10px] ${
+                                      extraPct >= 0
+                                        ? 'text-[#16A34A] dark:text-emerald-400'
+                                        : 'text-[#DC2626] dark:text-rose-400'
+                                    }`}
+                                  >
+                                    ({extraPct >= 0 ? `+${extraPct}%` : `${extraPct}%`})
+                                  </span>
+                                </div>
+                                <span
+                                  className={`inline-block mt-0.5 px-2 py-0.2 rounded-full text-[9px] font-bold text-white whitespace-nowrap ${cutStatusBadgeBg}`}
+                                >
+                                  {cutStatusLabel}
+                                </span>
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Merged Column: TOTAL WASH SENT (Rowspan 6) */}
                           <td
                             rowSpan={6}
-                            className={`px-1.5 py-1 text-center border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
+                            className={`px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 ${washSentColor} bg-white dark:bg-slate-800`}
+                          >
+                            {totalWashSent.toLocaleString()}
+                          </td>
+
+                          {/* Merged Column: WASH REMAINING (Rowspan 6) */}
+                          <td
+                            rowSpan={6}
+                            className={`px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 ${washRemColor} bg-white dark:bg-slate-800`}
+                          >
+                            {washRemaining.toLocaleString()}
+                          </td>
+
+                          {/* Merged Column: TOTAL WASH RECV (Rowspan 6) */}
+                          <td
+                            rowSpan={6}
+                            className={`px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 ${washRecvColor} bg-white dark:bg-slate-800`}
+                          >
+                            {totalWashRecv.toLocaleString()}
+                          </td>
+
+                          {/* Merged Column: WASH RECV REMAINING (Rowspan 6) */}
+                          <td
+                            rowSpan={6}
+                            className={`px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 ${washRecvRemColor} bg-white dark:bg-slate-800`}
+                          >
+                            {washRecvRemaining.toLocaleString()}
+                          </td>
+
+                          {/* Merged Column: TOTAL FINISHING (Rowspan 6) */}
+                          <td
+                            rowSpan={6}
+                            className={`px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 ${finishingColor} bg-white dark:bg-slate-800`}
+                          >
+                            {totalFinishing.toLocaleString()}
+                          </td>
+
+                          {/* Merged Column: FINISHING REMAINING (Rowspan 6) */}
+                          <td
+                            rowSpan={6}
+                            className={`px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 ${finishingRemColor} bg-white dark:bg-slate-800`}
+                          >
+                            {finishingRemaining.toLocaleString()}
+                          </td>
+
+                          {/* Status Badge (Rowspan 6) */}
+                          <td
+                            rowSpan={6}
+                            className={`px-2 py-1 text-center border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
                           >
                             <span
-                              className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${cutStatusBadgeBg}`}
+                              className={`inline-block px-2.5 py-1 rounded-full text-[10px] border whitespace-nowrap font-bold shadow-2xs ${status.badgeClass}`}
                             >
-                              {cutStatusLabel}
+                              {status.label}
                             </span>
                           </td>
 
-                          {/* Column 13: Input Bal. (Rowspan 6) */}
-                          <td
-                            rowSpan={6}
-                            className={`px-2 py-1 text-right font-bold border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${
-                              cuttingQty === 0
-                                ? 'text-gray-400'
-                                : inputBalance === 0
-                                ? 'text-[#16A34A] dark:text-emerald-400 font-extrabold'
-                                : inputBalance > 0
-                                ? 'text-[#DC2626] dark:text-rose-400 font-extrabold'
-                                : 'text-[#D97706] dark:text-amber-400 font-extrabold'
-                            }`}
-                          >
-                            {cuttingQty === 0 ? '-' : inputBalance === 0 ? '0 ✓' : inputBalance.toLocaleString()}
-                          </td>
-
-                          {/* Column 14: Output Bal. (Rowspan 6) */}
-                          <td
-                            rowSpan={6}
-                            className={`px-2 py-1 text-right font-bold border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${
-                              totalInput === 0
-                                ? 'text-gray-400'
-                                : outputBalance === 0
-                                ? 'text-[#16A34A] dark:text-emerald-400 font-extrabold'
-                                : outputBalance > 0
-                                ? 'text-[#DC2626] dark:text-rose-400 font-extrabold'
-                                : 'text-[#D97706] dark:text-amber-400 font-extrabold'
-                            }`}
-                          >
-                            {totalInput === 0 ? '-' : outputBalance === 0 ? '0 ✓' : outputBalance.toLocaleString()}
-                          </td>
-
-                          {/* SUB-ROW 0: CUTTING */}
-                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-white bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 border-l-4 border-l-slate-600">
-                             <span className={`px-2 py-0.5 rounded-full ${cutStatusBadgeBg}`}>CUTTING</span>
-                          </td>
-                          {days.map((day) => (
-                             <td key={`cut_${day.dateStr}`} className="p-0 border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50" />
-                          ))}
-                          <td className="px-2 py-1 text-right font-black text-gray-900 dark:text-white border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
-                             {cuttingQty.toLocaleString()}
-                          </td>
-                          <td className="border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50" />
-                          <td rowSpan={6} className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${washSentColor} bg-white dark:bg-slate-800`}>{totalWashSent.toLocaleString()}</td>
-                          <td rowSpan={6} className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${washRemColor} bg-white dark:bg-slate-800`}>{washRemaining.toLocaleString()}</td>
-                          <td rowSpan={6} className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${washRecvColor} bg-white dark:bg-slate-800`}>{totalWashRecv.toLocaleString()}</td>
-                          <td rowSpan={6} className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${washRecvRemColor} bg-white dark:bg-slate-800`}>{washRecvRemaining.toLocaleString()}</td>
-                          <td rowSpan={6} className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${finishingColor} bg-white dark:bg-slate-800`}>{totalFinishing.toLocaleString()}</td>
-                          <td rowSpan={6} className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${finishingRemColor} bg-white dark:bg-slate-800`}>{finishingRemaining.toLocaleString()}</td>
-                          <td rowSpan={6} className={`px-2 py-1 text-center border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}>
-                             <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] border whitespace-nowrap font-bold shadow-2xs ${status.badgeClass}`}>{status.label}</span>
-                          </td>
-                          {isAdmin && <td rowSpan={6} className={`px-1 py-1 text-center border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}> ...del... </td>}
+                          {/* Admin Delete Action (Rowspan 6) */}
+                          {isAdmin && (
+                            <td
+                              rowSpan={6}
+                              className={`px-1 py-1 text-center border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
+                            >
+                              {confirmDeleteId === orderId ? (
+                                <div className="flex flex-col items-center gap-1 p-1 bg-white dark:bg-slate-900 rounded border border-rose-300 shadow-md">
+                                  <span className="text-[9px] text-rose-600 font-bold">
+                                    Del?
+                                  </span>
+                                  <div className="flex gap-1">
+                                    <button
+                                      type="button"
+                                      disabled={isDeleting}
+                                      onClick={() => handleDelete(orderId)}
+                                      className="px-1 py-0.5 bg-rose-600 text-white rounded text-[8px] font-bold"
+                                    >
+                                      {isDeleting ? '...' : 'Y'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmDeleteId(null)}
+                                      className="px-1 py-0.5 bg-slate-200 dark:bg-slate-700 rounded text-[8px] font-bold"
+                                    >
+                                      N
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDeleteId(orderId)}
+                                  className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                                  title="Delete order"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </td>
+                          )}
                         </tr>
 
-                        {/* SUB-ROW 1: INPUT */}
-                        <tr
-                          className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5 border-t border-gray-200 dark:border-slate-700`}
-                        >
-                          {/* Column 13: Type (INPUT) with left border stripe */}
+                        {/* ========================================================
+                            SUB-ROW 2: INPUT
+                           ======================================================== */}
+                        <tr className="transition-colors bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-white/5 border-t border-gray-200 dark:border-slate-700">
+                          {/* TYPE: INPUT with Blue left border */}
                           <td className="px-1.5 py-1 text-center font-bold text-[10px] text-white bg-blue-600 dark:bg-blue-800 border-[1.5px] border-gray-200 dark:border-slate-700 border-l-[6px] border-l-[#2563EB] dark:border-l-blue-500">
                             INPUT
                           </td>
@@ -786,7 +893,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             return (
                               <td
                                 key={`in_${day.dateStr}`}
-                                className={`p-0 text-center relative border border-gray-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800 ${
+                                className={`p-0 text-center relative border-[1.5px] border-gray-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800 ${
                                   day.isFriday
                                     ? 'bg-[#F3F4F6] dark:bg-slate-800/80'
                                     : isFlashed
@@ -825,131 +932,40 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           })}
 
                           {/* Total (INPUT) */}
-                          <td className="px-2 py-1 text-right font-extrabold text-gray-900 dark:text-white border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                          <td className="px-2 py-1 text-right font-extrabold text-gray-900 dark:text-white border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                             {totalInput.toLocaleString()}
                           </td>
 
-                          {/* Input Bal. */}
+                          {/* Input Bal. with Done / Short Alert */}
                           <td
-                            className={`px-2 py-1 text-right font-bold border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${
-                              inputBalance <= 0
-                                ? 'text-[#16A34A] dark:text-emerald-400'
-                                : 'text-[#DC2626] dark:text-rose-400 font-extrabold bg-rose-50/50 dark:bg-rose-950/30'
-                            }`}
+                            className="px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                             title={`Input Bal: ${inputBalance}`}
                           >
-                            {inputBalance.toLocaleString()}
+                            {cuttingQty === 0 ? (
+                              <span className="text-gray-400">-</span>
+                            ) : inputBalance <= 0 ? (
+                              <span className="text-[#16A34A] dark:text-emerald-400 font-black text-[11px]">
+                                0 ✓ Done
+                              </span>
+                            ) : (
+                              <div className="flex flex-col items-end leading-tight">
+                                <span className="text-[#DC2626] dark:text-rose-400 font-black text-[11px]">
+                                  {inputBalance.toLocaleString()}
+                                </span>
+                                <span className="text-[9px] text-[#DC2626] dark:text-rose-400 font-bold">
+                                  Short
+                                </span>
+                              </div>
+                            )}
                           </td>
-
-                          {/* Merged Column: TOTAL WASH SENT (Rowspan 5) */}
-                          <td
-                            rowSpan={5}
-                            className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${washSentColor} bg-white dark:bg-slate-800`}
-                          >
-                            {totalWashSent.toLocaleString()}
-                          </td>
-
-                          {/* Merged Column: WASH REMAINING (Rowspan 5) */}
-                          <td
-                            rowSpan={5}
-                            className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${washRemColor} bg-white dark:bg-slate-800`}
-                          >
-                            {washRemaining.toLocaleString()}
-                          </td>
-
-                          {/* Merged Column: TOTAL WASH RECV (Rowspan 5) */}
-                          <td
-                            rowSpan={5}
-                            className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${washRecvColor} bg-white dark:bg-slate-800`}
-                          >
-                            {totalWashRecv.toLocaleString()}
-                          </td>
-
-                          {/* Merged Column: WASH RECV REMAINING (Rowspan 5) */}
-                          <td
-                            rowSpan={5}
-                            className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${washRecvRemColor} bg-white dark:bg-slate-800`}
-                          >
-                            {washRecvRemaining.toLocaleString()}
-                          </td>
-
-                          {/* Merged Column: TOTAL FINISHING (Rowspan 5) */}
-                          <td
-                            rowSpan={5}
-                            className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${finishingColor} bg-white dark:bg-slate-800`}
-                          >
-                            {totalFinishing.toLocaleString()}
-                          </td>
-
-                          {/* Merged Column: FINISHING REMAINING (Rowspan 5) */}
-                          <td
-                            rowSpan={5}
-                            className={`px-2 py-1 text-right border border-gray-200 dark:border-slate-700 ${finishingRemColor} bg-white dark:bg-slate-800`}
-                          >
-                            {finishingRemaining.toLocaleString()}
-                          </td>
-
-                          {/* Status Badge (Rowspan 5) */}
-                          <td
-                            rowSpan={5}
-                            className={`px-2 py-1 text-center border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
-                          >
-                            <span
-                              className={`inline-block px-2.5 py-1 rounded-full text-[10px] border whitespace-nowrap font-bold shadow-2xs ${status.badgeClass}`}
-                            >
-                              {status.label}
-                            </span>
-                          </td>
-
-                          {/* Admin Delete Action (Rowspan 5) */}
-                          {isAdmin && (
-                            <td
-                              rowSpan={5}
-                              className={`px-1 py-1 text-center border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${status.rowTintClass}`}
-                            >
-                              {confirmDeleteId === orderId ? (
-                                <div className="flex flex-col items-center gap-1 p-1 bg-white dark:bg-slate-900 rounded border border-rose-300 shadow-md">
-                                  <span className="text-[9px] text-rose-600 font-bold">
-                                    Del?
-                                  </span>
-                                  <div className="flex gap-1">
-                                    <button
-                                      type="button"
-                                      disabled={isDeleting}
-                                      onClick={() => handleDelete(orderId)}
-                                      className="px-1 py-0.5 bg-rose-600 text-white rounded text-[8px] font-bold"
-                                    >
-                                      {isDeleting ? '...' : 'Y'}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setConfirmDeleteId(null)}
-                                      className="px-1 py-0.5 bg-slate-200 text-slate-800 rounded text-[8px]"
-                                    >
-                                      N
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => setConfirmDeleteId(orderId)}
-                                  className="p-1 text-slate-400 hover:text-rose-500 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
-                                  title="Delete order"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                            </td>
-                          )}
                         </tr>
 
-                        {/* SUB-ROW 2: OUTPUT */}
-                        <tr
-                          className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5`}
-                        >
-                          {/* Column 13: Type (OUTPUT) */}
-                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-indigo-800 dark:text-indigo-300 bg-white dark:bg-indigo-950/30 border border-gray-200 dark:border-slate-700 border-l-4 border-l-[#16A34A] dark:border-l-indigo-500">
+                        {/* ========================================================
+                            SUB-ROW 3: OUTPUT
+                           ======================================================== */}
+                        <tr className="transition-colors bg-emerald-50/25 dark:bg-emerald-950/15 hover:bg-emerald-50/40 dark:hover:bg-white/5 border-t border-gray-200 dark:border-slate-700">
+                          {/* TYPE: OUTPUT with Green left border */}
+                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-white bg-emerald-600 dark:bg-emerald-800 border-[1.5px] border-gray-200 dark:border-slate-700 border-l-[6px] border-l-[#16A34A] dark:border-l-emerald-500">
                             OUTPUT
                           </td>
 
@@ -965,7 +981,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             return (
                               <td
                                 key={`out_${day.dateStr}`}
-                                className={`p-0 text-center relative border border-gray-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800 ${
+                                className={`p-0 text-center relative border-[1.5px] border-gray-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800 ${
                                   day.isFriday
                                     ? 'bg-[#F3F4F6] dark:bg-slate-800/80'
                                     : isFlashed
@@ -1004,28 +1020,40 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           })}
 
                           {/* Total (OUTPUT) */}
-                          <td className="px-2 py-1 text-right font-extrabold text-gray-900 dark:text-white border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                          <td className="px-2 py-1 text-right font-extrabold text-gray-900 dark:text-white border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                             {totalOutput.toLocaleString()}
                           </td>
 
-                          {/* Output Bal. */}
+                          {/* Output Bal. with Done / Short Alert */}
                           <td
-                            className={`px-2 py-1 text-right font-bold border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${
-                              outputBalance <= 0
-                                ? 'text-[#16A34A] dark:text-emerald-400'
-                                : 'text-[#DC2626] dark:text-rose-400 font-extrabold bg-rose-50/50 dark:bg-rose-950/30'
-                            }`}
+                            className="px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                             title={`Output Bal: ${outputBalance}`}
                           >
-                            {outputBalance.toLocaleString()}
+                            {totalInput === 0 ? (
+                              <span className="text-gray-400">-</span>
+                            ) : outputBalance <= 0 ? (
+                              <span className="text-[#16A34A] dark:text-emerald-400 font-black text-[11px]">
+                                0 ✓ Done
+                              </span>
+                            ) : (
+                              <div className="flex flex-col items-end leading-tight">
+                                <span className="text-[#DC2626] dark:text-rose-400 font-black text-[11px]">
+                                  {outputBalance.toLocaleString()}
+                                </span>
+                                <span className="text-[9px] text-[#DC2626] dark:text-rose-400 font-bold">
+                                  Short
+                                </span>
+                              </div>
+                            )}
                           </td>
                         </tr>
 
-                        {/* SUB-ROW 3: WASH SENT */}
-                        <tr
-                          className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5`}
-                        >
-                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-purple-800 dark:text-purple-300 bg-white dark:bg-sky-950/40 border border-gray-200 dark:border-slate-700 border-l-4 border-l-[#7C3AED] dark:border-l-sky-500">
+                        {/* ========================================================
+                            SUB-ROW 4: WASH SENT
+                           ======================================================== */}
+                        <tr className="transition-colors bg-purple-50/25 dark:bg-purple-950/15 hover:bg-purple-50/40 dark:hover:bg-white/5 border-t border-gray-200 dark:border-slate-700">
+                          {/* TYPE: WASH SENT with Purple left border */}
+                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-white bg-purple-600 dark:bg-purple-800 border-[1.5px] border-gray-200 dark:border-slate-700 border-l-[6px] border-l-[#7C3AED] dark:border-l-purple-500">
                             WASH SENT
                           </td>
 
@@ -1040,7 +1068,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             return (
                               <td
                                 key={`ws_${day.dateStr}`}
-                                className={`p-0 text-center relative border border-gray-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800 ${
+                                className={`p-0 text-center relative border-[1.5px] border-gray-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800 ${
                                   day.isFriday
                                     ? 'bg-[#F3F4F6] dark:bg-slate-800/80'
                                     : isFlashed
@@ -1078,27 +1106,32 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             );
                           })}
 
-                          <td className="px-2 py-1 text-right font-extrabold text-gray-900 dark:text-white border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                          <td className="px-2 py-1 text-right font-extrabold text-gray-900 dark:text-white border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                             {totalWashSent.toLocaleString()}
                           </td>
 
                           <td
-                            className={`px-2 py-1 text-right font-bold border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${
-                              washRemaining <= 0
-                                ? 'text-[#16A34A] dark:text-emerald-400'
-                                : 'text-[#DC2626] dark:text-rose-400 font-extrabold bg-rose-50/50 dark:bg-rose-950/30'
-                            }`}
+                            className="px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                             title={`Wash Rem: ${washRemaining}`}
                           >
-                            {washRemaining.toLocaleString()}
+                            {washRemaining <= 0 ? (
+                              <span className="text-[#16A34A] dark:text-emerald-400 font-black text-[11px]">
+                                0 ✓ Done
+                              </span>
+                            ) : (
+                              <span className="text-[#DC2626] dark:text-rose-400 font-black text-[11px]">
+                                {washRemaining.toLocaleString()} Rem.
+                              </span>
+                            )}
                           </td>
                         </tr>
 
-                        {/* SUB-ROW 4: WASH RECV */}
-                        <tr
-                          className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5`}
-                        >
-                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-teal-800 dark:text-purple-300 bg-white dark:bg-purple-950/40 border border-gray-200 dark:border-slate-700 border-l-4 border-l-[#0D9488] dark:border-l-purple-500">
+                        {/* ========================================================
+                            SUB-ROW 5: WASH RECV
+                           ======================================================== */}
+                        <tr className="transition-colors bg-teal-50/25 dark:bg-teal-950/15 hover:bg-teal-50/40 dark:hover:bg-white/5 border-t border-gray-200 dark:border-slate-700">
+                          {/* TYPE: WASH RECV with Teal left border */}
+                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-white bg-teal-600 dark:bg-teal-800 border-[1.5px] border-gray-200 dark:border-slate-700 border-l-[6px] border-l-[#0891B2] dark:border-l-teal-500">
                             WASH RECV
                           </td>
 
@@ -1113,7 +1146,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             return (
                               <td
                                 key={`wr_${day.dateStr}`}
-                                className={`p-0 text-center relative border border-gray-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800 ${
+                                className={`p-0 text-center relative border-[1.5px] border-gray-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800 ${
                                   day.isFriday
                                     ? 'bg-[#F3F4F6] dark:bg-slate-800/80'
                                     : isFlashed
@@ -1151,27 +1184,34 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             );
                           })}
 
-                          <td className="px-2 py-1 text-right font-extrabold text-gray-900 dark:text-white border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                          <td className="px-2 py-1 text-right font-extrabold text-gray-900 dark:text-white border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                             {totalWashRecv.toLocaleString()}
                           </td>
 
                           <td
-                            className={`px-2 py-1 text-right font-bold border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${
-                              washRecvRemaining <= 0
-                                ? 'text-[#16A34A] dark:text-emerald-400'
-                                : 'text-[#DC2626] dark:text-rose-400 font-extrabold bg-rose-50/50 dark:bg-rose-950/30'
-                            }`}
+                            className="px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                             title={`Wash Recv Rem: ${washRecvRemaining}`}
                           >
-                            {washRecvRemaining.toLocaleString()}
+                            {totalWashSent === 0 ? (
+                              <span className="text-gray-400">-</span>
+                            ) : washRecvRemaining <= 0 ? (
+                              <span className="text-[#16A34A] dark:text-emerald-400 font-black text-[11px]">
+                                0 ✓ Done
+                              </span>
+                            ) : (
+                              <span className="text-[#DC2626] dark:text-rose-400 font-black text-[11px]">
+                                {washRecvRemaining.toLocaleString()} Rem.
+                              </span>
+                            )}
                           </td>
                         </tr>
 
-                        {/* SUB-ROW 5: FINISHING */}
-                        <tr
-                          className={`transition-colors ${status.rowTintClass} hover:bg-slate-50 dark:hover:bg-white/5`}
-                        >
-                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-orange-800 dark:text-emerald-300 bg-white dark:bg-emerald-950/40 border border-gray-200 dark:border-slate-700 border-l-4 border-l-[#EA580C] dark:border-l-emerald-500">
+                        {/* ========================================================
+                            SUB-ROW 6: FINISHING (Ends order with 3px line-colored border)
+                           ======================================================== */}
+                        <tr className={`transition-colors bg-orange-50/25 dark:bg-orange-950/15 hover:bg-orange-50/40 dark:hover:bg-white/5 border-t border-gray-200 dark:border-slate-700 border-b-[3px] ${config.borderClass}`}>
+                          {/* TYPE: FINISHING with Orange left border */}
+                          <td className="px-1.5 py-1 text-center font-bold text-[10px] text-white bg-orange-600 dark:bg-orange-800 border-[1.5px] border-gray-200 dark:border-slate-700 border-l-[6px] border-l-[#EA580C] dark:border-l-orange-500">
                             FINISHING
                           </td>
 
@@ -1186,7 +1226,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             return (
                               <td
                                 key={`fn_${day.dateStr}`}
-                                className={`p-0 text-center relative border border-gray-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800 ${
+                                className={`p-0 text-center relative border-[1.5px] border-gray-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800 ${
                                   day.isFriday
                                     ? 'bg-[#F3F4F6] dark:bg-slate-800/80'
                                     : isFlashed
@@ -1224,19 +1264,25 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             );
                           })}
 
-                          <td className="px-2 py-1 text-right font-extrabold text-gray-900 dark:text-white border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                          <td className="px-2 py-1 text-right font-extrabold text-gray-900 dark:text-white border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                             {totalFinishing.toLocaleString()}
                           </td>
 
                           <td
-                            className={`px-2 py-1 text-right font-bold border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 ${
-                              finishingRemaining <= 0
-                                ? 'text-[#16A34A] dark:text-emerald-400'
-                                : 'text-[#DC2626] dark:text-rose-400 font-extrabold bg-rose-50/50 dark:bg-rose-950/30'
-                            }`}
+                            className="px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                             title={`Finish Rem: ${finishingRemaining}`}
                           >
-                            {finishingRemaining.toLocaleString()}
+                            {totalWashRecv === 0 ? (
+                              <span className="text-gray-400">-</span>
+                            ) : finishingRemaining <= 0 ? (
+                              <span className="text-[#16A34A] dark:text-emerald-400 font-black text-[11px]">
+                                0 ✓ Done
+                              </span>
+                            ) : (
+                              <span className="text-[#DC2626] dark:text-rose-400 font-black text-[11px]">
+                                {finishingRemaining.toLocaleString()} Rem.
+                              </span>
+                            )}
                           </td>
                         </tr>
                       </React.Fragment>
@@ -1246,30 +1292,23 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
 
                 {/* Pinned Totals Row for this Line Group */}
                 <tfoot className="sticky bottom-0 z-30 bg-[#E5E7EB] dark:bg-[#071B1E] text-gray-900 dark:text-white border-t-2 border-[#9CA3AF] dark:border-white/20 font-black text-[10px] uppercase">
-                  {/* Totals Row 1: INPUT TOTALS */}
                   <tr className="border-b border-gray-200 dark:border-slate-700">
                     <td
                       colSpan={4}
-                      className="sticky left-0 z-40 bg-[#E5E7EB] dark:bg-[#071B1E] px-2.5 py-2 text-right border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white"
+                      className="sticky left-0 z-40 bg-[#E5E7EB] dark:bg-[#071B1E] px-2.5 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white"
                     >
                       {config.label} TOTALS ({groupOrders.length} orders)
                     </td>
-                    <td className="sticky left-[335px] z-40 bg-[#E5E7EB] dark:bg-[#071B1E] px-2.5 py-2 text-right border-r-2 border-[#9CA3AF] dark:border-white/20 border border-gray-200 dark:border-slate-700 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)] text-gray-900 dark:text-white">
+                    <td className="sticky left-[335px] z-40 bg-[#E5E7EB] dark:bg-[#071B1E] px-2.5 py-2 text-right border-r-2 border-[#9CA3AF] dark:border-white/20 border-[1.5px] border-gray-200 dark:border-slate-700 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)] text-gray-900 dark:text-white">
                       {groupOrders.reduce((s, o) => s + Number(o.order_qty || 0), 0).toLocaleString()}
                     </td>
-                    <td colSpan={4} className="px-2 py-2 text-center text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-700">
+                    <td colSpan={4} className="px-2 py-2 text-center text-slate-600 dark:text-slate-400 border-[1.5px] border-gray-200 dark:border-slate-700">
                       -
                     </td>
-                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white">
+                    <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white">
                       {groupOrders.reduce((s, o) => s + Number(o.order_qty || 0), 0).toLocaleString()}
                     </td>
-                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 text-[#16A34A] dark:text-emerald-300">
-                      {groupOrders.reduce((s, o) => s + Number(o.cutting_qty || 0), 0).toLocaleString()}
-                    </td>
-                    <td colSpan={2} className="px-2 py-2 text-center text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-700">
-                      -
-                    </td>
-                    <td className="px-1.5 py-2 text-center font-bold text-teal-800 dark:text-teal-300 bg-teal-100/70 dark:bg-teal-950/60 border border-gray-200 dark:border-white/15">
+                    <td className="px-1.5 py-2 text-center font-bold text-teal-800 dark:text-teal-300 bg-teal-100/70 dark:bg-teal-950/60 border-[1.5px] border-gray-200 dark:border-white/15">
                       IN Σ
                     </td>
                     {days.map((day) => {
@@ -1280,39 +1319,39 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       return (
                         <td
                           key={`group_sum_in_${day.dateStr}`}
-                          className={`px-1 py-2 text-center text-[10px] border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white ${
-                            day.isFriday ? 'bg-slate-300/80 dark:bg-slate-800' : ''
+                          className={`px-1 py-2 text-center text-[10px] border-[1.5px] border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white ${
+                            day.isFriday ? 'bg-slate-300/80 dark:bg-slate-800 text-[#DC2626] font-extrabold' : ''
                           }`}
                         >
                           {dayIn ? dayIn.toLocaleString() : '-'}
                         </td>
                       );
                     })}
-                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 text-teal-800 dark:text-teal-300 font-bold">
+                    <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 text-teal-800 dark:text-teal-300 font-bold">
                       {groupOrders.reduce((s, o) => s + Number(o.total_input || 0), 0).toLocaleString()}
                     </td>
-                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white">
+                    <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white">
                       -
                     </td>
-                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 text-sky-800 dark:text-sky-300 font-bold">
+                    <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 text-sky-800 dark:text-sky-300 font-bold">
                       {groupOrders.reduce((s, o) => s + Number(o.total_wash_sent || 0), 0).toLocaleString()}
                     </td>
-                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 font-bold text-gray-900 dark:text-white">
+                    <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 font-bold text-gray-900 dark:text-white">
                       {groupOrders.reduce((s, o) => s + (Number(o.order_qty || 0) - Number(o.total_wash_sent || 0)), 0).toLocaleString()}
                     </td>
-                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 text-purple-800 dark:text-purple-300 font-bold">
+                    <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 text-purple-800 dark:text-purple-300 font-bold">
                       {groupOrders.reduce((s, o) => s + Number(o.total_wash_recv || 0), 0).toLocaleString()}
                     </td>
-                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 font-bold text-gray-900 dark:text-white">
+                    <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 font-bold text-gray-900 dark:text-white">
                       {groupOrders.reduce((s, o) => s + (Number(o.total_wash_sent || 0) - Number(o.total_wash_recv || 0)), 0).toLocaleString()}
                     </td>
-                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 text-emerald-800 dark:text-emerald-300 font-bold">
+                    <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 text-emerald-800 dark:text-emerald-300 font-bold">
                       {groupOrders.reduce((s, o) => s + Number(o.total_finishing || 0), 0).toLocaleString()}
                     </td>
-                    <td className="px-2 py-2 text-right border border-gray-200 dark:border-slate-700 font-bold text-gray-900 dark:text-white">
+                    <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 font-bold text-gray-900 dark:text-white">
                       {groupOrders.reduce((s, o) => s + (Number(o.total_wash_recv || 0) - Number(o.total_finishing || 0)), 0).toLocaleString()}
                     </td>
-                    <td colSpan={isAdmin ? 2 : 1} className="px-2 py-2 text-center text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-700">
+                    <td colSpan={isAdmin ? 2 : 1} className="px-2 py-2 text-center text-slate-600 dark:text-slate-400 border-[1.5px] border-gray-200 dark:border-slate-700">
                       -
                     </td>
                   </tr>

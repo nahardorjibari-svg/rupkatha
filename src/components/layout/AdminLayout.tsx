@@ -24,7 +24,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   return (
     <div
       className={`min-h-screen flex flex-col antialiased transition-colors duration-200 ${
-        isDark ? 'bg-[#0B2E33] text-slate-100' : 'bg-[#F5F6F8] text-slate-800'
+        isDark ? 'bg-[#0B2E33] text-slate-100' : 'bg-white text-slate-800'
       }`}
     >
       {/* 1. Slim Modern Sidebar */}

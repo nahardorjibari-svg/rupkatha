@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Printer, FileSpreadsheet, FileText, Download, Loader2, Sun, Moon } from 'lucide-react';
+import { Printer, FileSpreadsheet, FileText, Download, Loader2 } from 'lucide-react';
 import type { PlanningOrder, DayColumn } from '../../types/planning';
 import type { DailyMatrix } from '../../hooks/planning/usePlanningDaily';
 import { getOrderStatus } from '../../lib/planningStatus';
-import { useTheme } from '../../context/ThemeContext';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -24,7 +23,6 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
   dateRangeLabel,
   unitLabel,
 }) => {
-  const { toggleTheme, isDark } = useTheme();
   const [isExportingExcel, setIsExportingExcel] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
@@ -33,7 +31,6 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
     window.print();
   };
 
-  // Export Excel (.xlsx) using SheetJS
   // Export Excel (.xlsx) using SheetJS with smart styling & borders
   const handleExcelExport = () => {
     setIsExportingExcel(true);
@@ -47,14 +44,10 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         'Wash',
         'Start Date',
         'Order Qty',
-        'Cutting Qty',
-        'Cut Status',
-        'Input Bal.',
-        'Output Bal.',
         'Type',
         'Total',
-        'Balance',
-        ...days.map((d) => `${d.displayDay} (${d.dayOfWeek})`),
+        'Balance & Status',
+        ...days.map((d) => d.displayDay),
         'Total Wash Sent',
         'Wash Rem.',
         'Total Wash Recv',
@@ -73,6 +66,15 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
       sheetData.push([]); // Blank row
       sheetData.push(headerRow);
 
+      // Read any locally stored cutting daily map
+      let cuttingDailyMap: Record<string, Record<string, number>> = {};
+      try {
+        const saved = localStorage.getItem('rupkatha_planning_cutting_daily');
+        if (saved) cuttingDailyMap = JSON.parse(saved);
+      } catch {
+        // ignore
+      }
+
       orders.forEach((order) => {
         const orderId = order.id;
         const status = getOrderStatus(order);
@@ -84,58 +86,189 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         const totalWashRecv = Number(order.total_wash_recv || 0);
         const totalFinishing = Number(order.total_finishing || 0);
 
+        const extraPct =
+          orderQty > 0 ? Math.round(((cutQty - orderQty) / orderQty) * 100) : 0;
+        let cutStatusLabel = 'Not cut';
+        if (cutQty >= orderQty && orderQty > 0) {
+          cutStatusLabel = 'Cut done';
+        } else if (cutQty > 0) {
+          cutStatusLabel = 'Cutting';
+        }
+
+        const cuttingBalanceStr =
+          cutQty === 0
+            ? '- Not cut'
+            : `${cutQty} (${extraPct >= 0 ? '+' : ''}${extraPct}%) ${cutStatusLabel}`;
+
         const inBal = cutQty - totalIn;
+        const inBalStr =
+          cutQty === 0 ? '-' : inBal <= 0 ? '0 ✓ Done' : `${inBal} Short`;
+
         const outBal = totalIn - totalOut;
+        const outBalStr =
+          totalIn === 0 ? '-' : outBal <= 0 ? '0 ✓ Done' : `${outBal} Short`;
+
         const washRem = orderQty - totalWashSent;
+        const washRemStr = washRem <= 0 ? '0 ✓ Done' : `${washRem} Rem.`;
+
         const washRecvRem = totalWashSent - totalWashRecv;
+        const washRecvRemStr =
+          totalWashSent === 0 ? '-' : washRecvRem <= 0 ? '0 ✓ Done' : `${washRecvRem} Rem.`;
+
         const finishRem = totalWashRecv - totalFinishing;
+        const finishRemStr =
+          totalWashRecv === 0 ? '-' : finishRem <= 0 ? '0 ✓ Done' : `${finishRem} Rem.`;
+
         const buyerDisplay = order.buyer || '-';
 
-        // Sub-row 0: CUTTING
+        // Sub-row 1: CUTTING
+        const cutDays = days.map((d) => {
+          const val = cuttingDailyMap[orderId]?.[d.dateStr];
+          if (val !== undefined && val > 0) return val;
+          if (order.start_date === d.dateStr && cutQty > 0) return cutQty;
+          return '';
+        });
+
         const cutRow = [
-          order.line_no || 'No line', buyerDisplay, order.po, order.style || '', order.colour || '', order.wash || '', order.start_date || '',
-          orderQty, cutQty, status.label, '', '', 'CUTTING', cutQty, '', ...days.map(() => ''),
-          '', '', '', '', '', '', status.label,
+          order.line_no || 'No line',
+          buyerDisplay,
+          order.po,
+          order.style || '',
+          order.colour || '',
+          order.wash || '',
+          order.start_date || '',
+          orderQty,
+          'CUTTING',
+          cutQty,
+          cuttingBalanceStr,
+          ...cutDays,
+          totalWashSent,
+          washRemStr,
+          totalWashRecv,
+          washRecvRemStr,
+          totalFinishing,
+          finishRemStr,
+          status.label,
         ];
         sheetData.push(cutRow);
 
-        // Sub-row 1: INPUT
+        // Sub-row 2: INPUT
         const inRow = [
-          order.line_no || 'No line', buyerDisplay, order.po, order.style || '', order.colour || '', order.wash || '', order.start_date || '',
-          orderQty, cutQty, status.label, inputBalance, outputBalance, 'INPUT', totalIn, inBal, ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.input_qty ?? ''),
-          totalWashSent, washRem, totalWashRecv, washRecvRem, totalFinishing, finishRem, status.label,
+          order.line_no || 'No line',
+          buyerDisplay,
+          order.po,
+          order.style || '',
+          order.colour || '',
+          order.wash || '',
+          order.start_date || '',
+          orderQty,
+          'INPUT',
+          totalIn,
+          inBalStr,
+          ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.input_qty ?? ''),
+          totalWashSent,
+          washRemStr,
+          totalWashRecv,
+          washRecvRemStr,
+          totalFinishing,
+          finishRemStr,
+          status.label,
         ];
         sheetData.push(inRow);
 
-        // Sub-row 2: OUTPUT
+        // Sub-row 3: OUTPUT
         const outRow = [
-          order.line_no || 'No line', buyerDisplay, order.po, order.style || '', order.colour || '', order.wash || '', order.start_date || '',
-          orderQty, cutQty, status.label, inputBalance, outputBalance, 'OUTPUT', totalOut, outBal, ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.output_qty ?? ''),
-          totalWashSent, washRem, totalWashRecv, washRecvRem, totalFinishing, finishRem, status.label,
+          order.line_no || 'No line',
+          buyerDisplay,
+          order.po,
+          order.style || '',
+          order.colour || '',
+          order.wash || '',
+          order.start_date || '',
+          orderQty,
+          'OUTPUT',
+          totalOut,
+          outBalStr,
+          ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.output_qty ?? ''),
+          totalWashSent,
+          washRemStr,
+          totalWashRecv,
+          washRecvRemStr,
+          totalFinishing,
+          finishRemStr,
+          status.label,
         ];
         sheetData.push(outRow);
 
-        // Sub-row 3: WASH SENT
+        // Sub-row 4: WASH SENT
         const wsRow = [
-          order.line_no || 'No line', buyerDisplay, order.po, order.style || '', order.colour || '', order.wash || '', order.start_date || '',
-          orderQty, cutQty, status.label, inputBalance, outputBalance, 'WASH SENT', totalWashSent, washRem, ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.wash_sent_qty ?? ''),
-          totalWashSent, washRem, totalWashRecv, washRecvRem, totalFinishing, finishRem, status.label,
+          order.line_no || 'No line',
+          buyerDisplay,
+          order.po,
+          order.style || '',
+          order.colour || '',
+          order.wash || '',
+          order.start_date || '',
+          orderQty,
+          'WASH SENT',
+          totalWashSent,
+          washRemStr,
+          ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.wash_sent_qty ?? ''),
+          totalWashSent,
+          washRemStr,
+          totalWashRecv,
+          washRecvRemStr,
+          totalFinishing,
+          finishRemStr,
+          status.label,
         ];
         sheetData.push(wsRow);
 
-        // Sub-row 4: WASH RECV
+        // Sub-row 5: WASH RECV
         const wrRow = [
-          order.line_no || 'No line', buyerDisplay, order.po, order.style || '', order.colour || '', order.wash || '', order.start_date || '',
-          orderQty, cutQty, status.label, inputBalance, outputBalance, 'WASH RECV', totalWashRecv, washRecvRem, ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.wash_recv_qty ?? ''),
-          totalWashSent, washRem, totalWashRecv, washRecvRem, totalFinishing, finishRem, status.label,
+          order.line_no || 'No line',
+          buyerDisplay,
+          order.po,
+          order.style || '',
+          order.colour || '',
+          order.wash || '',
+          order.start_date || '',
+          orderQty,
+          'WASH RECV',
+          totalWashRecv,
+          washRecvRemStr,
+          ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.wash_recv_qty ?? ''),
+          totalWashSent,
+          washRemStr,
+          totalWashRecv,
+          washRecvRemStr,
+          totalFinishing,
+          finishRemStr,
+          status.label,
         ];
         sheetData.push(wrRow);
 
-        // Sub-row 5: FINISHING
+        // Sub-row 6: FINISHING
         const fnRow = [
-          order.line_no || 'No line', buyerDisplay, order.po, order.style || '', order.colour || '', order.wash || '', order.start_date || '',
-          orderQty, cutQty, status.label, inputBalance, outputBalance, 'FINISHING', totalFinishing, finishRem, ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.finishing_qty ?? ''),
-          totalWashSent, washRem, totalWashRecv, washRecvRem, totalFinishing, finishRem, status.label,
+          order.line_no || 'No line',
+          buyerDisplay,
+          order.po,
+          order.style || '',
+          order.colour || '',
+          order.wash || '',
+          order.start_date || '',
+          orderQty,
+          'FINISHING',
+          totalFinishing,
+          finishRemStr,
+          ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.finishing_qty ?? ''),
+          totalWashSent,
+          washRemStr,
+          totalWashRecv,
+          washRecvRemStr,
+          totalFinishing,
+          finishRemStr,
+          status.label,
         ];
         sheetData.push(fnRow);
       });
@@ -144,21 +277,20 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
 
       // Set smart column widths
       ws['!cols'] = [
-        { wch: 11 }, // Line
-        { wch: 15 }, // Buyer
-        { wch: 14 }, // PO
+        { wch: 10 }, // Line
+        { wch: 16 }, // Buyer
+        { wch: 15 }, // PO
         { wch: 18 }, // Style
-        { wch: 13 }, // Colour
-        { wch: 12 }, // Wash
+        { wch: 12 }, // Colour
+        { wch: 10 }, // Wash
         { wch: 12 }, // Start Date
         { wch: 11 }, // Order Qty
-        { wch: 11 }, // Cutting
         { wch: 12 }, // Type
         { wch: 10 }, // Total
-        { wch: 10 }, // Balance
+        { wch: 18 }, // Balance & Status
         ...days.map(() => ({ wch: 8 })),
         { wch: 14 }, // Total Wash Sent
-        { wch: 11 }, // Wash Rem
+        { wch: 12 }, // Wash Rem
         { wch: 14 }, // Total Wash Recv
         { wch: 13 }, // Wash Recv Rem
         { wch: 13 }, // Total Finishing
@@ -175,10 +307,10 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
 
       // Data starts at row index 5 (0-indexed)
       let curRow = 5;
-      const rightColStart = 12 + days.length;
+      const rightColStart = 11 + days.length;
       orders.forEach(() => {
-        // Merge columns 0 to 8: Line, Buyer, PO, Style, Colour, Wash, Start Date, Order Qty, Cutting Qty
-        for (let col = 0; col <= 8; col++) {
+        // Merge columns 0 to 7: Line, Buyer, PO, Style, Colour, Wash, Start Date, Order Qty
+        for (let col = 0; col <= 7; col++) {
           merges.push({
             s: { r: curRow, c: col },
             e: { r: curRow + 5, c: col },
@@ -216,30 +348,30 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
             };
           } else if (R === 4) {
             cell.s = {
-              fill: { fgColor: { rgb: '0F8B8D' } },
-              font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 },
+              fill: { fgColor: { rgb: 'F3F4F6' } },
+              font: { bold: true, color: { rgb: '111827' }, sz: 10 },
               alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
               border: {
-                top: { style: 'thin', color: { rgb: '0A5E60' } },
-                bottom: { style: 'medium', color: { rgb: '0A5E60' } },
-                left: { style: 'thin', color: { rgb: '14A2A4' } },
-                right: { style: 'thin', color: { rgb: '14A2A4' } },
+                top: { style: 'thin', color: { rgb: 'D1D5DB' } },
+                bottom: { style: 'medium', color: { rgb: 'D1D5DB' } },
+                left: { style: 'thin', color: { rgb: 'D1D5DB' } },
+                right: { style: 'thin', color: { rgb: 'D1D5DB' } },
               },
             };
           } else {
-            const isRightAlign = (C >= 7 && C <= 8) || C === 10 || C === 11 || (C >= rightColStart && C < headerRow.length - 1);
-            const isCenterAlign = C === 0 || C === 6 || C === 9 || (C >= 12 && C < rightColStart) || C === headerRow.length - 1;
+            const isRightAlign = C === 7 || C === 9 || C === 10 || (C >= rightColStart && C < headerRow.length - 1);
+            const isCenterAlign = C === 0 || C === 5 || C === 6 || C === 8 || (C >= 11 && C < rightColStart) || C === headerRow.length - 1;
             cell.s = {
-              font: { sz: 9.5, bold: C === 1 || C === 2 || C === 9 },
+              font: { sz: 9.5, bold: C === 1 || C === 2 || C === 8 },
               alignment: {
                 vertical: 'center',
                 horizontal: isRightAlign ? 'right' : isCenterAlign ? 'center' : 'left',
               },
               border: {
-                top: { style: 'thin', color: { rgb: 'CBD5E1' } },
-                bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
-                left: { style: 'thin', color: { rgb: 'CBD5E1' } },
-                right: { style: 'thin', color: { rgb: 'CBD5E1' } },
+                top: { style: 'thin', color: { rgb: 'D1D5DB' } },
+                bottom: { style: 'thin', color: { rgb: 'D1D5DB' } },
+                left: { style: 'thin', color: { rgb: 'D1D5DB' } },
+                right: { style: 'thin', color: { rgb: 'D1D5DB' } },
               },
             };
           }
@@ -286,11 +418,10 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         'Style',
         'Colour',
         'Ord Qty',
-        'Cut',
         'Type',
         'Tot',
-        'Bal',
-        ...days.map((d) => `${d.displayDay}`),
+        'Balance & Status',
+        ...days.map((d) => d.displayDay),
         'Wash Sent',
         'Wash Rem',
         'Wash Recv',
@@ -299,6 +430,14 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
       ];
 
       const tableRows: any[][] = [];
+
+      let cuttingDailyMap: Record<string, Record<string, number>> = {};
+      try {
+        const saved = localStorage.getItem('rupkatha_planning_cutting_daily');
+        if (saved) cuttingDailyMap = JSON.parse(saved);
+      } catch {
+        // ignore
+      }
 
       orders.forEach((order) => {
         const orderId = order.id;
@@ -311,11 +450,45 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         const totalWashRecv = Number(order.total_wash_recv || 0);
         const totalFinishing = Number(order.total_finishing || 0);
 
+        const extraPct =
+          orderQty > 0 ? Math.round(((cutQty - orderQty) / orderQty) * 100) : 0;
+        let cutStatusLabel = 'Not cut';
+        if (cutQty >= orderQty && orderQty > 0) {
+          cutStatusLabel = 'Cut done';
+        } else if (cutQty > 0) {
+          cutStatusLabel = 'Cutting';
+        }
+
+        const cuttingBalanceStr =
+          cutQty === 0
+            ? '- Not cut'
+            : `${cutQty} (${extraPct >= 0 ? '+' : ''}${extraPct}%) ${cutStatusLabel}`;
+
         const inBal = cutQty - totalIn;
+        const inBalStr =
+          cutQty === 0 ? '-' : inBal <= 0 ? '0 ✓ Done' : `${inBal} Short`;
+
         const outBal = totalIn - totalOut;
+        const outBalStr =
+          totalIn === 0 ? '-' : outBal <= 0 ? '0 ✓ Done' : `${outBal} Short`;
+
         const washRem = orderQty - totalWashSent;
+        const washRemStr = washRem <= 0 ? '0 ✓ Done' : `${washRem} Rem.`;
+
         const washRecvRem = totalWashSent - totalWashRecv;
+        const washRecvRemStr =
+          totalWashSent === 0 ? '-' : washRecvRem <= 0 ? '0 ✓ Done' : `${washRecvRem} Rem.`;
+
         const finishRem = totalWashRecv - totalFinishing;
+        const finishRemStr =
+          totalWashRecv === 0 ? '-' : finishRem <= 0 ? '0 ✓ Done' : `${finishRem} Rem.`;
+
+        const cutDays = days.map((d) => {
+          const val = cuttingDailyMap[orderId]?.[d.dateStr];
+          if (val !== undefined && val > 0) return String(val);
+          if (order.start_date === d.dateStr && cutQty > 0) return String(cutQty);
+          return '-';
+        });
 
         // CUTTING row
         tableRows.push([
@@ -325,16 +498,15 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           order.style || '-',
           order.colour || '-',
           orderQty.toLocaleString(),
+          'CUTTING',
           cutQty.toLocaleString(),
-          'CUT',
-          '',
-          '',
-          ...days.map(() => '-'),
-          '',
-          '',
-          '',
-          '',
-          '',
+          cuttingBalanceStr,
+          ...cutDays,
+          totalWashSent.toLocaleString(),
+          washRemStr,
+          totalWashRecv.toLocaleString(),
+          totalFinishing.toLocaleString(),
+          status.label,
         ]);
 
         // IN row
@@ -345,13 +517,12 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           '',
           '',
           '',
-          '',
-          'IN',
+          'INPUT',
           totalIn.toLocaleString(),
-          inBal.toLocaleString(),
+          inBalStr,
           ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.input_qty ?? '-'),
           totalWashSent.toLocaleString(),
-          washRem.toLocaleString(),
+          washRemStr,
           totalWashRecv.toLocaleString(),
           totalFinishing.toLocaleString(),
           status.label,
@@ -365,10 +536,9 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           '',
           '',
           '',
-          '',
-          'OUT',
+          'OUTPUT',
           totalOut.toLocaleString(),
-          outBal.toLocaleString(),
+          outBalStr,
           ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.output_qty ?? '-'),
           '',
           '',
@@ -385,10 +555,9 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           '',
           '',
           '',
-          '',
-          'WASH IN',
+          'WASH SENT',
           totalWashSent.toLocaleString(),
-          washRem.toLocaleString(),
+          washRemStr,
           ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.wash_sent_qty ?? '-'),
           '',
           '',
@@ -405,10 +574,9 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           '',
           '',
           '',
-          '',
-          'WASH OUT',
+          'WASH RECV',
           totalWashRecv.toLocaleString(),
-          washRecvRem.toLocaleString(),
+          washRecvRemStr,
           ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.wash_recv_qty ?? '-'),
           '',
           '',
@@ -425,10 +593,9 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           '',
           '',
           '',
-          '',
-          'FINISH',
+          'FINISHING',
           totalFinishing.toLocaleString(),
-          finishRem.toLocaleString(),
+          finishRemStr,
           ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.finishing_qty ?? '-'),
           '',
           '',
@@ -444,30 +611,22 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         startY: 34,
         theme: 'grid',
         styles: {
-          fontSize: 6.5,
+          fontSize: 7,
           cellPadding: 1.5,
           halign: 'center',
-          lineColor: [200, 200, 200],
-          lineWidth: 0.15,
+          lineColor: [209, 213, 219],
+          lineWidth: 0.2,
         },
         headStyles: {
-          fillColor: [15, 139, 141],
-          textColor: [255, 255, 255],
+          fillColor: [243, 244, 246],
+          textColor: [17, 24, 39],
           fontStyle: 'bold',
+          lineColor: [209, 213, 219],
+          lineWidth: 0.3,
         },
-        columnStyles: {
-          0: { halign: 'left' },
-          1: { halign: 'left' },
-          2: { halign: 'left', fontStyle: 'bold' },
-          3: { halign: 'left' },
-          4: { halign: 'left' },
-          5: { halign: 'right' },
-          6: { halign: 'right' },
-          7: { halign: 'center', fontStyle: 'bold' },
-          8: { halign: 'right', fontStyle: 'bold' },
-          9: { halign: 'right' },
+        alternateRowStyles: {
+          fillColor: [255, 255, 255],
         },
-        margin: { left: 10, right: 10 },
       });
 
       const fileName = `Rupkatha_Line_Plan_${new Date().toISOString().slice(0, 10)}.pdf`;
@@ -483,57 +642,45 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
 
   return (
     <div className="flex items-center gap-1.5 print:hidden">
+      {/* Print */}
       <button
         type="button"
         onClick={handlePrint}
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/10 transition-colors shadow-xs"
-        title="Print A3 Line Plan"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-xs cursor-pointer"
+        title="Print Line Plan (Ctrl+P)"
       >
-        <Printer className="w-3.5 h-3.5 text-slate-500" />
+        <Printer className="w-3.5 h-3.5" />
         <span className="hidden sm:inline">Print</span>
       </button>
 
+      {/* Excel */}
       <button
         type="button"
-        onClick={toggleTheme}
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/10 transition-colors shadow-xs cursor-pointer"
-        title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
-        aria-label={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
-      >
-        {isDark ? (
-          <Sun className="w-3.5 h-3.5 text-amber-400" />
-        ) : (
-          <Moon className="w-3.5 h-3.5 text-[#0F8B8D]" />
-        )}
-        <span className="hidden sm:inline">{isDark ? 'Light' : 'Dark'}</span>
-      </button>
-
-      <button
-        type="button"
-        onClick={handleExcelExport}
         disabled={isExportingExcel}
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors shadow-xs disabled:opacity-50"
-        title="Download Excel Sheet"
+        onClick={handleExcelExport}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-xs cursor-pointer disabled:opacity-50"
+        title="Download Excel Spreadsheet (.xlsx)"
       >
         {isExportingExcel ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
         ) : (
-          <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+          <FileSpreadsheet className="w-3.5 h-3.5" />
         )}
         <span className="hidden sm:inline">Excel</span>
       </button>
 
+      {/* PDF */}
       <button
         type="button"
-        onClick={handlePdfExport}
         disabled={isExportingPdf}
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors shadow-xs disabled:opacity-50"
-        title="Download PDF"
+        onClick={handlePdfExport}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors shadow-xs cursor-pointer disabled:opacity-50"
+        title="Download PDF Document (.pdf)"
       >
         {isExportingPdf ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
         ) : (
-          <FileText className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+          <FileText className="w-3.5 h-3.5" />
         )}
         <span className="hidden sm:inline">PDF</span>
       </button>
