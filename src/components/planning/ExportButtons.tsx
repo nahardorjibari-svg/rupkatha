@@ -15,6 +15,7 @@ interface ExportButtonsProps {
   dateRangeLabel: string;
   unitLabel: string;
   selectedBuyers?: string[];
+  selectedSubContracts?: string[];
 }
 
 export const ExportButtons: React.FC<ExportButtonsProps> = ({
@@ -24,6 +25,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
   dateRangeLabel,
   unitLabel,
   selectedBuyers = [],
+  selectedSubContracts = [],
 }) => {
   const [isExportingExcel, setIsExportingExcel] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -98,9 +100,10 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
       const rawUnit = unitLabel || 'All Units';
       const subTitleUnit = rawUnit.toLowerCase().includes('all') ? 'All Units (Composite)' : rawUnit;
       const buyerSubtitle = selectedBuyers.length > 0 ? ` — Buyers: ${selectedBuyers.join(', ')}` : '';
+      const subContractSubtitle = selectedSubContracts.length > 0 ? ` — Sub-contract: ${selectedSubContracts.join(', ')}` : '';
       worksheet.mergeCells(2, 1, 2, totalCols);
       const r2 = worksheet.getCell(2, 1);
-      r2.value = `8-Day Line Plan — ${subTitleUnit}${buyerSubtitle}`;
+      r2.value = `8-Day Line Plan — ${subTitleUnit}${buyerSubtitle}${subContractSubtitle}`;
       r2.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF374151' } };
       r2.alignment = { horizontal: 'center', vertical: 'middle' };
       worksheet.getRow(2).height = 18;
@@ -272,14 +275,12 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
             ? '- Not cut'
             : `${cutQty} (${extraPct >= 0 ? '+' : ''}${extraPct}%) ${cutStatusText}`;
 
-        // Line 2 (INPUT): "1236 Short" when input < cutting (red text), "0 ✓ Done" when complete (green text), blank when no cutting
+        // Line 2 (INPUT): cutting_qty - total_input
+        // 0 or negative: green "0 ✓ Done", positive: red "N Short"
         const inBal = cutQty - totalIn;
         let line2Text = '';
         let line2Color = 'FF6B7280';
-        if (cutQty === 0) {
-          line2Text = '-';
-          line2Color = 'FF6B7280';
-        } else if (inBal <= 0) {
+        if (inBal <= 0) {
           line2Text = '0 ✓ Done';
           line2Color = 'FF16A34A';
         } else {
@@ -287,14 +288,12 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           line2Color = 'FFDC2626';
         }
 
-        // Line 3 (OUTPUT): "886 Short" when output < input (red), "0 ✓ Done" when complete (green), blank when no input
+        // Line 3 (OUTPUT): total_input - total_output
+        // 0 or negative: green "0 ✓ Done", positive: red "N Short"
         const outBal = totalIn - totalOut;
         let line3Text = '';
         let line3Color = 'FF6B7280';
-        if (totalIn === 0) {
-          line3Text = '-';
-          line3Color = 'FF6B7280';
-        } else if (outBal <= 0) {
+        if (outBal <= 0) {
           line3Text = '0 ✓ Done';
           line3Color = 'FF16A34A';
         } else {
@@ -302,45 +301,42 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           line3Color = 'FFDC2626';
         }
 
-        // Line 4 (WASH SENT): "1200 Rem." when wash_sent < order_qty (red), "0 ✓" when complete (green), blank when no wash
-        const washRem = orderQty - totalWashSent;
+        // Line 4 (WASH SENT): cutting_qty - total_wash_sent (NOT order_qty)
+        // 0: green "0 ✓ Done", positive: red "N Rem.", negative: amber "+N Excess"
+        const washRem = cutQty - totalWashSent;
         let line4Text = '';
         let line4Color = 'FF6B7280';
-        if (totalWashSent === 0 && (!order.wash || order.wash === '-')) {
-          line4Text = '-';
-          line4Color = 'FF6B7280';
-        } else if (washRem <= 0) {
-          line4Text = '0 ✓';
+        if (washRem === 0) {
+          line4Text = '0 ✓ Done';
           line4Color = 'FF16A34A';
+        } else if (washRem < 0) {
+          line4Text = `+${Math.abs(washRem)} Excess`;
+          line4Color = 'FFD97706';
         } else {
           line4Text = `${washRem} Rem.`;
           line4Color = 'FFDC2626';
         }
 
-        // Line 5 (WASH RECV): "0" or remaining (red/green), blank when no wash sent
+        // Line 5 (WASH RECV): total_wash_sent - total_wash_recv
+        // 0: green "0 ✓ Done", positive: red "N Rem."
         const washRecvRem = totalWashSent - totalWashRecv;
         let line5Text = '';
         let line5Color = 'FF6B7280';
-        if (totalWashSent === 0) {
-          line5Text = '-';
-          line5Color = 'FF6B7280';
-        } else if (washRecvRem <= 0) {
-          line5Text = '0 ✓';
+        if (washRecvRem <= 0) {
+          line5Text = '0 ✓ Done';
           line5Color = 'FF16A34A';
         } else {
           line5Text = `${washRecvRem} Rem.`;
           line5Color = 'FFDC2626';
         }
 
-        // Line 6 (FINISHING): remaining or "0 ✓" or blank
+        // Line 6 (FINISHING): total_wash_recv - total_finishing
+        // 0: green "0 ✓ Done", positive: red "N Rem."
         const finishRem = totalWashRecv - totalFinishing;
         let line6Text = '';
         let line6Color = 'FF6B7280';
-        if (totalWashRecv === 0) {
-          line6Text = '-';
-          line6Color = 'FF6B7280';
-        } else if (finishRem <= 0) {
-          line6Text = '0 ✓';
+        if (finishRem <= 0) {
+          line6Text = '0 ✓ Done';
           line6Color = 'FF16A34A';
         } else {
           line6Text = `${finishRem} Rem.`;
@@ -705,7 +701,8 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
       doc.setFontSize(12);
       doc.setTextColor(30, 41, 59);
       const buyerPdfSubtitle = selectedBuyers.length > 0 ? ` — Buyers: ${selectedBuyers.join(', ')}` : '';
-      doc.text(`8-Day Line Plan (${unitLabel})${buyerPdfSubtitle}`, 14, 23);
+      const subContractPdfSubtitle = selectedSubContracts.length > 0 ? ` — Sub-contract: ${selectedSubContracts.join(', ')}` : '';
+      doc.text(`8-Day Line Plan (${unitLabel})${buyerPdfSubtitle}${subContractPdfSubtitle}`, 14, 23);
 
       doc.setFontSize(10);
       doc.setTextColor(100, 116, 139);
@@ -772,23 +769,22 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
             : `${cutQty} (${extraPct >= 0 ? '+' : ''}${extraPct}%) ${cutStatusLabel}`;
 
         const inBal = cutQty - totalIn;
-        const inBalStr =
-          cutQty === 0 ? '-' : inBal <= 0 ? '0 ✓ Done' : `${inBal} Short`;
+        const inBalStr = inBal <= 0 ? '0 ✓ Done' : `${inBal} Short`;
 
         const outBal = totalIn - totalOut;
-        const outBalStr =
-          totalIn === 0 ? '-' : outBal <= 0 ? '0 ✓ Done' : `${outBal} Short`;
+        const outBalStr = outBal <= 0 ? '0 ✓ Done' : `${outBal} Short`;
 
-        const washRem = orderQty - totalWashSent;
-        const washRemStr = washRem <= 0 ? '0 ✓ Done' : `${washRem} Rem.`;
+        const washRem = cutQty - totalWashSent;
+        const washRemStr =
+          washRem === 0 ? '0 ✓ Done' : washRem < 0 ? `+${Math.abs(washRem)} Excess` : `${washRem} Rem.`;
 
         const washRecvRem = totalWashSent - totalWashRecv;
         const washRecvRemStr =
-          totalWashSent === 0 ? '-' : washRecvRem <= 0 ? '0 ✓ Done' : `${washRecvRem} Rem.`;
+          washRecvRem <= 0 ? '0 ✓ Done' : `${washRecvRem} Rem.`;
 
         const finishRem = totalWashRecv - totalFinishing;
         const finishRemStr =
-          totalWashRecv === 0 ? '-' : finishRem <= 0 ? '0 ✓ Done' : `${finishRem} Rem.`;
+          finishRem <= 0 ? '0 ✓ Done' : `${finishRem} Rem.`;
 
         const remarksText = orderRemarksMap[orderId] ?? order.remarks ?? '-';
 

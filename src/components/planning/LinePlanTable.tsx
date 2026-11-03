@@ -5,7 +5,7 @@ import type { DailyMatrix } from '../../hooks/planning/usePlanningDaily';
 import { getOrderStatus } from '../../lib/planningStatus';
 import { useAuth } from '../../context/AuthContext';
 
-// Helper component for Sub-Contract editable input cell with datalist suggestions and saving spinner
+// Helper component for Sub-Contract editable input cell with interactive suggestions dropdown and saving spinner
 const SubContractCell: React.FC<{
   orderId: string;
   initialValue?: string | null;
@@ -14,52 +14,102 @@ const SubContractCell: React.FC<{
 }> = ({ orderId, initialValue, suggestions, onSave }) => {
   const [val, setVal] = useState(initialValue || '');
   const [saving, setSaving] = useState(false);
-  const datalistId = `subcontract-options-${orderId}`;
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setVal(initialValue || '');
   }, [initialValue]);
 
-  const handleCommit = async () => {
-    const trimmed = val.trim();
-    if (trimmed === (initialValue || '')) return;
+  // Filter suggestions based on typed text (case-insensitive)
+  const filteredSuggestions = useMemo(() => {
+    const q = val.trim().toLowerCase();
+    if (!q) return suggestions;
+    return suggestions.filter((s) => s.toLowerCase().includes(q));
+  }, [suggestions, val]);
+
+  const handleCommit = async (customVal?: string) => {
+    const targetVal = (customVal !== undefined ? customVal : val).trim();
+    setIsOpen(false);
+    if (targetVal === (initialValue || '')) return;
     setSaving(true);
     try {
-      await onSave(trimmed);
+      await onSave(targetVal);
     } finally {
       setSaving(false);
     }
   };
 
+  const handleSelectSuggestion = (suggestion: string) => {
+    setVal(suggestion);
+    setIsOpen(false);
+    handleCommit(suggestion);
+  };
+
   return (
-    <div className="relative flex items-center w-full">
+    <div ref={containerRef} className="relative flex items-center w-full">
       <input
         type="text"
-        list={datalistId}
         value={val}
-        onChange={(e) => setVal(e.target.value)}
-        onBlur={handleCommit}
+        onFocus={() => {
+          if (suggestions.length > 0) {
+            setIsOpen(true);
+          }
+        }}
+        onChange={(e) => {
+          setVal(e.target.value);
+          setIsOpen(true);
+        }}
+        onBlur={() => {
+          setTimeout(() => {
+            if (!containerRef.current?.contains(document.activeElement)) {
+              setIsOpen(false);
+              handleCommit();
+            }
+          }, 150);
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
+            setIsOpen(false);
             handleCommit();
             (e.target as HTMLInputElement).blur();
           } else if (e.key === 'Tab') {
+            setIsOpen(false);
             handleCommit();
+          } else if (e.key === 'Escape') {
+            setIsOpen(false);
           }
         }}
         placeholder="Sub-contract co."
         className="w-full px-2 py-1.5 text-[11px] font-semibold rounded-md bg-white dark:bg-slate-900 text-gray-900 dark:text-white border border-gray-200 dark:border-white/20 focus:outline-none focus:ring-1 focus:ring-[#0F8B8D] focus:border-[#0F8B8D] placeholder:text-gray-400 dark:placeholder:text-slate-500 placeholder:italic transition-all pr-6"
         title="Sub-contract company"
       />
-      <datalist id={datalistId}>
-        {suggestions.map((s) => (
-          <option key={s} value={s} />
-        ))}
-      </datalist>
       {saving && (
         <span className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none">
           <Loader2 className="w-3.5 h-3.5 text-[#0F8B8D] animate-spin" />
         </span>
+      )}
+
+      {/* Floating Suggestions Dropdown */}
+      {isOpen && filteredSuggestions.length > 0 && (
+        <div className="absolute left-0 top-full mt-1 w-full min-w-[140px] max-h-44 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xl z-50 py-1 text-left scrollbar-custom">
+          {filteredSuggestions.map((suggestion) => (
+            <button
+              key={suggestion}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelectSuggestion(suggestion);
+              }}
+              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-slate-200 hover:bg-[#0F8B8D]/15 hover:text-[#0F8B8D] dark:hover:bg-teal-950/50 dark:hover:text-teal-300 transition-colors flex items-center justify-between cursor-pointer"
+            >
+              <span className="truncate">{suggestion}</span>
+              {suggestion === val.trim() && (
+                <span className="text-[9px] text-[#0F8B8D] font-extrabold ml-1">✓</span>
+              )}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -72,6 +122,7 @@ interface LinePlanTableProps {
   flashedCells: Record<string, boolean>;
   savingCells: Record<string, boolean>;
   searchQuery: string;
+  allSubContracts?: string[];
   onUpdateOrder: (
     orderId: string,
     updates: Partial<Omit<PlanningOrder, 'id' | 'is_done' | 'total_input' | 'total_output'>>
@@ -103,6 +154,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
   flashedCells,
   savingCells,
   searchQuery,
+  allSubContracts,
   onUpdateOrder,
   onDeleteOrder,
   onUpsertDailyCell,
@@ -202,12 +254,18 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
   // Distinct previous sub_contract companies for auto-suggestions
   const distinctSubContracts = useMemo(() => {
     const set = new Set<string>();
+    if (allSubContracts) {
+      allSubContracts.forEach((s) => {
+        const trimmed = (s || '').trim();
+        if (trimmed) set.add(trimmed);
+      });
+    }
     orders.forEach((o) => {
       const s = (o.sub_contract || '').trim();
       if (s) set.add(s);
     });
     return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [orders]);
+  }, [orders, allSubContracts]);
 
   // Compute total Order Qty grouped by PO across all colour rows
   const poTotalQtyMap = useMemo(() => {
@@ -618,7 +676,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                     // Balances
                     const inputBalance = cuttingQty - totalInput;
                     const outputBalance = totalInput - totalOutput;
-                    const washRemaining = rowOrderQty - totalWashSent;
+                    const washRemaining = cuttingQty - totalWashSent;
                     const washRecvRemaining = totalWashSent - totalWashRecv;
                     const finishingRemaining = totalWashRecv - totalFinishing;
 
@@ -631,9 +689,11 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                         : 'text-gray-900 dark:text-slate-300 font-bold';
 
                     const washRemColor =
-                      washRemaining > 0
-                        ? 'text-[#DC2626] dark:text-rose-400 font-extrabold'
-                        : 'text-[#16A34A] dark:text-emerald-400 font-bold';
+                      washRemaining === 0
+                        ? 'text-[#16A34A] dark:text-emerald-400 font-bold'
+                        : washRemaining < 0
+                        ? 'text-[#D97706] dark:text-amber-400 font-extrabold'
+                        : 'text-[#DC2626] dark:text-rose-400 font-extrabold';
 
                     const washRecvColor =
                       totalWashSent > 0
@@ -988,9 +1048,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             className="px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                             title={`Input Bal: ${inputBalance}`}
                           >
-                            {cuttingQty === 0 ? (
-                              <span className="text-gray-400">-</span>
-                            ) : inputBalance <= 0 ? (
+                            {inputBalance <= 0 ? (
                               <span className="text-[#16A34A] dark:text-emerald-400 font-black text-[11px]">
                                 0 ✓ Done
                               </span>
@@ -1076,9 +1134,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             className="px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                             title={`Output Bal: ${outputBalance}`}
                           >
-                            {totalInput === 0 ? (
-                              <span className="text-gray-400">-</span>
-                            ) : outputBalance <= 0 ? (
+                            {outputBalance <= 0 ? (
                               <span className="text-[#16A34A] dark:text-emerald-400 font-black text-[11px]">
                                 0 ✓ Done
                               </span>
@@ -1161,9 +1217,13 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             className="px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                             title={`Wash Rem: ${washRemaining}`}
                           >
-                            {washRemaining <= 0 ? (
+                            {washRemaining === 0 ? (
                               <span className="text-[#16A34A] dark:text-emerald-400 font-black text-[11px]">
                                 0 ✓ Done
+                              </span>
+                            ) : washRemaining < 0 ? (
+                              <span className="text-[#D97706] dark:text-amber-400 font-black text-[11px]">
+                                +{Math.abs(washRemaining).toLocaleString()} Excess
                               </span>
                             ) : (
                               <span className="text-[#DC2626] dark:text-rose-400 font-black text-[11px]">
@@ -1239,9 +1299,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             className="px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                             title={`Wash Recv Rem: ${washRecvRemaining}`}
                           >
-                            {totalWashSent === 0 ? (
-                              <span className="text-gray-400">-</span>
-                            ) : washRecvRemaining <= 0 ? (
+                            {washRecvRemaining <= 0 ? (
                               <span className="text-[#16A34A] dark:text-emerald-400 font-black text-[11px]">
                                 0 ✓ Done
                               </span>
@@ -1319,9 +1377,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             className="px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                             title={`Finish Rem: ${finishingRemaining}`}
                           >
-                            {totalWashRecv === 0 ? (
-                              <span className="text-gray-400">-</span>
-                            ) : finishingRemaining <= 0 ? (
+                            {finishingRemaining <= 0 ? (
                               <span className="text-[#16A34A] dark:text-emerald-400 font-black text-[11px]">
                                 0 ✓ Done
                               </span>

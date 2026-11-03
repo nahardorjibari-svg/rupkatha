@@ -46,6 +46,9 @@ export const LinePlanPage: React.FC = () => {
   const [selectedBuyers, setSelectedBuyers] = useState<string[]>([]);
   const [buyerDropdownOpen, setBuyerDropdownOpen] = useState(false);
 
+  // Sub-Contract Multi-Select Chip Filter state
+  const [selectedSubContracts, setSelectedSubContracts] = useState<string[]>([]);
+
   // Window position in React state: default -1 (yesterday is index 0)
   const [offsetDays, setOffsetDays] = useState(-1);
 
@@ -107,12 +110,69 @@ export const LinePlanPage: React.FC = () => {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [orders]);
 
-  // Tab Filtering & Search Overrides combined with Buyer Multi-Select
+  // Distinct sub-contract company names across all loaded orders for this factory unit
+  const allSubContracts = useMemo(() => {
+    const set = new Set<string>();
+    orders.forEach((o) => {
+      const s = (o.sub_contract || '').trim();
+      if (s) set.add(s);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [orders]);
+
+  // Distinct sub_contract values for chips (with count and line group color)
+  const distinctSubContractChips = useMemo(() => {
+    const map = new Map<string, { name: string; count: number; firstLine: string }>();
+
+    orders.forEach((o) => {
+      const name = (o.sub_contract || '').trim();
+      if (!name) return;
+
+      const existing = map.get(name);
+      if (existing) {
+        existing.count++;
+      } else {
+        map.set(name, {
+          name,
+          count: 1,
+          firstLine: (o.line_no || '').trim(),
+        });
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [orders]);
+
+  // Helper for chip line border and accent color
+  const getLineChipColor = (lineNo?: string | null): { border: string; activeBg: string; activeText: string } => {
+    switch (lineNo) {
+      case 'Line-1':
+        return { border: 'border-blue-600', activeBg: 'bg-blue-50 dark:bg-blue-950/40', activeText: 'text-blue-700 dark:text-blue-300' };
+      case 'Line-2':
+        return { border: 'border-purple-600', activeBg: 'bg-purple-50 dark:bg-purple-950/40', activeText: 'text-purple-700 dark:text-purple-300' };
+      case 'Line-3':
+        return { border: 'border-orange-600', activeBg: 'bg-orange-50 dark:bg-orange-950/40', activeText: 'text-orange-700 dark:text-orange-300' };
+      case 'Line-4':
+        return { border: 'border-teal-600', activeBg: 'bg-teal-50 dark:bg-teal-950/40', activeText: 'text-teal-700 dark:text-teal-300' };
+      default:
+        return { border: 'border-[#0F8B8D]', activeBg: 'bg-teal-50 dark:bg-teal-950/40', activeText: 'text-[#0F8B8D] dark:text-teal-300' };
+    }
+  };
+
+  // Tab Filtering & Search Overrides combined with Buyer Multi-Select & Sub-Contract Chip Filter
   const filteredOrders = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
 
     return orders.filter((o) => {
-      // 1. Buyer multi-select filter
+      // 1. Sub-contract multi-select chip filter
+      if (selectedSubContracts.length > 0) {
+        const orderSub = (o.sub_contract || '').trim();
+        if (!selectedSubContracts.includes(orderSub)) {
+          return false;
+        }
+      }
+
+      // 2. Buyer multi-select filter
       if (selectedBuyers.length > 0) {
         const orderBuyer = (o.buyer || '').trim();
         if (!selectedBuyers.includes(orderBuyer)) {
@@ -120,7 +180,7 @@ export const LinePlanPage: React.FC = () => {
         }
       }
 
-      // 2. Search query filter
+      // 3. Search query filter
       if (q) {
         const poMatch = (o.po || '').toLowerCase().includes(q);
         const styleMatch = (o.style || '').toLowerCase().includes(q);
@@ -129,7 +189,7 @@ export const LinePlanPage: React.FC = () => {
         return poMatch || styleMatch || buyerMatch || subMatch;
       }
 
-      // 3. Otherwise apply tab filters
+      // 4. Otherwise apply tab filters
       const isDone = Boolean(o.is_done);
       const lineNo = (o.line_no || '').trim();
 
@@ -144,15 +204,20 @@ export const LinePlanPage: React.FC = () => {
       // 'active': not done AND has line assigned
       return !isDone && Boolean(lineNo);
     });
-  }, [orders, selectedBuyers, searchQuery, currentTab]);
+  }, [orders, selectedSubContracts, selectedBuyers, searchQuery, currentTab]);
 
-  // Tab counts (reflects selected buyers if filtered)
+  // Tab counts (reflects selected sub-contracts and buyers if filtered)
   const counts = useMemo(() => {
     let active = 0;
     let upcoming = 0;
     let done = 0;
 
     orders.forEach((o) => {
+      if (selectedSubContracts.length > 0) {
+        const orderSub = (o.sub_contract || '').trim();
+        if (!selectedSubContracts.includes(orderSub)) return;
+      }
+
       if (selectedBuyers.length > 0) {
         const orderBuyer = (o.buyer || '').trim();
         if (!selectedBuyers.includes(orderBuyer)) return;
@@ -171,7 +236,7 @@ export const LinePlanPage: React.FC = () => {
     });
 
     return { active, upcoming, done };
-  }, [orders, selectedBuyers]);
+  }, [orders, selectedSubContracts, selectedBuyers]);
 
   return (
     <AdminLayout>
@@ -401,6 +466,7 @@ export const LinePlanPage: React.FC = () => {
                   dateRangeLabel={dateRangeLabel}
                   unitLabel={unitLabel}
                   selectedBuyers={selectedBuyers}
+                  selectedSubContracts={selectedSubContracts}
                 />
 
                 {/* Refresh button */}
@@ -433,7 +499,8 @@ export const LinePlanPage: React.FC = () => {
 
           {/* Sub Navigation Tabs (Only in Production Plan mode) */}
           {viewMode === 'production_plan' && (
-            <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-200/80 dark:border-white/10 print:hidden">
+            <React.Fragment>
+              <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-200/80 dark:border-white/10 print:hidden">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -517,6 +584,21 @@ export const LinePlanPage: React.FC = () => {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                {selectedSubContracts.length > 0 && (
+                  <div className="text-xs font-semibold text-[#0F8B8D] dark:text-teal-300 bg-teal-50 dark:bg-teal-950/40 px-3 py-1 rounded-lg border border-teal-200 dark:border-teal-800 flex items-center gap-1.5 shadow-2xs">
+                    <span>
+                      Sub-contract ({selectedSubContracts.length}): {selectedSubContracts.join(', ')}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSubContracts([])}
+                      className="underline hover:text-teal-900 dark:hover:text-white ml-1 cursor-pointer font-bold"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+
                 {selectedBuyers.length > 0 && (
                   <div className="text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/40 px-3 py-1 rounded-lg border border-teal-200 dark:border-teal-800 flex items-center gap-1.5 shadow-2xs">
                     <span>
@@ -548,6 +630,71 @@ export const LinePlanPage: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* Sub-Contract Filter Chips Row (Below Active/Upcoming/Done tabs) */}
+            {distinctSubContractChips.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-slate-100 dark:border-white/5 print:hidden transition-all duration-300">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mr-1 flex items-center gap-1">
+                  Sub-contract:
+                </span>
+                {distinctSubContractChips.map((chip) => {
+                  const isSelected = selectedSubContracts.includes(chip.name);
+                  const color = getLineChipColor(chip.firstLine);
+
+                  return (
+                    <button
+                      key={chip.name}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedSubContracts((prev) =>
+                            prev.filter((s) => s !== chip.name)
+                          );
+                        } else {
+                          setSelectedSubContracts((prev) => [...prev, chip.name]);
+                        }
+                      }}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer select-none ${
+                        isSelected
+                          ? `border-2 ${color.border} ${color.activeBg} ${color.activeText} shadow-xs font-extrabold`
+                          : 'border border-slate-300 dark:border-white/15 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-400 dark:hover:border-white/30'
+                      }`}
+                      title={`Filter orders for ${chip.name} (${chip.count} orders)`}
+                    >
+                      <span>{chip.name}</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                          isSelected
+                            ? 'bg-black/10 dark:bg-white/10'
+                            : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                        }`}
+                      >
+                        ({chip.count})
+                      </span>
+                      {isSelected && (
+                        <span
+                          className="text-xs font-black opacity-75 hover:opacity-100 ml-0.5"
+                          aria-hidden="true"
+                        >
+                          ×
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+
+                {selectedSubContracts.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSubContracts([])}
+                    className="text-xs text-[#0F8B8D] dark:text-[#2BA5B5] hover:underline font-bold ml-1.5 cursor-pointer"
+                  >
+                    Clear ({selectedSubContracts.length})
+                  </button>
+                )}
+              </div>
+            )}
+            </React.Fragment>
           )}
         </div>
 
@@ -560,7 +707,7 @@ export const LinePlanPage: React.FC = () => {
               </h1>
               <h2 className="text-sm font-semibold text-slate-700">
                 {viewMode === 'production_plan'
-                  ? `8-Day Line Plan (${unitLabel})${selectedBuyers.length > 0 ? ` — Buyers: ${selectedBuyers.join(', ')}` : ''}`
+                  ? `8-Day Line Plan (${unitLabel})${selectedBuyers.length > 0 ? ` — Buyers: ${selectedBuyers.join(', ')}` : ''}${selectedSubContracts.length > 0 ? ` — Sub-contract: ${selectedSubContracts.join(', ')}` : ''}`
                   : `Line Summary (${unitLabel})`}
               </h2>
             </div>
@@ -580,6 +727,7 @@ export const LinePlanPage: React.FC = () => {
             flashedCells={flashedCells}
             savingCells={savingCells}
             searchQuery={searchQuery}
+            allSubContracts={allSubContracts}
             onUpdateOrder={updateOrder}
             onDeleteOrder={deleteOrder}
             onUpsertDailyCell={upsertDailyCell}
