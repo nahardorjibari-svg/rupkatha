@@ -192,17 +192,18 @@ export const LinePlanPage: React.FC = () => {
       // 4. Otherwise apply tab filters
       const isDone = Boolean(o.is_done);
       const lineNo = (o.line_no || '').trim();
+      const subContract = (o.sub_contract || '').trim();
 
       if (currentTab === 'done') {
         return isDone;
       }
 
       if (currentTab === 'upcoming') {
-        return !isDone && !lineNo;
+        return !isDone && !lineNo && !subContract;
       }
 
-      // 'active': not done AND has line assigned
-      return !isDone && Boolean(lineNo);
+      // 'active': not done AND (has line assigned OR has sub_contract assigned)
+      return !isDone && (Boolean(lineNo) || Boolean(subContract));
     });
   }, [orders, selectedSubContracts, selectedBuyers, searchQuery, currentTab]);
 
@@ -225,10 +226,11 @@ export const LinePlanPage: React.FC = () => {
 
       const isDone = Boolean(o.is_done);
       const lineNo = (o.line_no || '').trim();
+      const subContract = (o.sub_contract || '').trim();
 
       if (isDone) {
         done++;
-      } else if (!lineNo) {
+      } else if (!lineNo && !subContract) {
         upcoming++;
       } else {
         active++;
