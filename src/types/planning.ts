@@ -16,6 +16,7 @@ export interface PlanningOrder {
   cutting_qty: number;
   wash_send: number;
   factory_unit: 'knit' | 'woven';
+  sub_contract?: string | null;
   is_done: boolean;
   status_key?: string;
   total_input?: number;
@@ -23,6 +24,7 @@ export interface PlanningOrder {
   total_wash_sent?: number;
   total_wash_recv?: number;
   total_finishing?: number;
+  remarks?: string | null;
   created_by?: string | null;
   created_at?: string;
   updated_at?: string;

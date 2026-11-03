@@ -1,9 +1,69 @@
-import React, { useState, useMemo } from 'react';
-import { Trash2, Calendar } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Trash2, Calendar, Loader2 } from 'lucide-react';
 import type { PlanningOrder, DayColumn, DailyCellType } from '../../types/planning';
 import type { DailyMatrix } from '../../hooks/planning/usePlanningDaily';
 import { getOrderStatus } from '../../lib/planningStatus';
 import { useAuth } from '../../context/AuthContext';
+
+// Helper component for Sub-Contract editable input cell with datalist suggestions and saving spinner
+const SubContractCell: React.FC<{
+  orderId: string;
+  initialValue?: string | null;
+  suggestions: string[];
+  onSave: (val: string) => Promise<void>;
+}> = ({ orderId, initialValue, suggestions, onSave }) => {
+  const [val, setVal] = useState(initialValue || '');
+  const [saving, setSaving] = useState(false);
+  const datalistId = `subcontract-options-${orderId}`;
+
+  useEffect(() => {
+    setVal(initialValue || '');
+  }, [initialValue]);
+
+  const handleCommit = async () => {
+    const trimmed = val.trim();
+    if (trimmed === (initialValue || '')) return;
+    setSaving(true);
+    try {
+      await onSave(trimmed);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="relative flex items-center w-full">
+      <input
+        type="text"
+        list={datalistId}
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={handleCommit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            handleCommit();
+            (e.target as HTMLInputElement).blur();
+          } else if (e.key === 'Tab') {
+            handleCommit();
+          }
+        }}
+        placeholder="Sub-contract co."
+        className="w-full px-2 py-1.5 text-[11px] font-semibold rounded-md bg-white dark:bg-slate-900 text-gray-900 dark:text-white border border-gray-200 dark:border-white/20 focus:outline-none focus:ring-1 focus:ring-[#0F8B8D] focus:border-[#0F8B8D] placeholder:text-gray-400 dark:placeholder:text-slate-500 placeholder:italic transition-all pr-6"
+        title="Sub-contract company"
+      />
+      <datalist id={datalistId}>
+        {suggestions.map((s) => (
+          <option key={s} value={s} />
+        ))}
+      </datalist>
+      {saving && (
+        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none">
+          <Loader2 className="w-3.5 h-3.5 text-[#0F8B8D] animate-spin" />
+        </span>
+      )}
+    </div>
+  );
+};
 
 interface LinePlanTableProps {
   orders: PlanningOrder[];
@@ -66,6 +126,34 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
     }
   });
 
+  // Local storage / state for remarks (typing kore leka jabe)
+  const [orderRemarks, setOrderRemarks] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem('rupkatha_planning_order_remarks');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const handleUpdateRemarks = (orderId: string, val: string) => {
+    setOrderRemarks((prev) => {
+      const next = { ...prev, [orderId]: val };
+      try {
+        localStorage.setItem('rupkatha_planning_order_remarks', JSON.stringify(next));
+      } catch (e) {
+        console.error(e);
+      }
+      return next;
+    });
+
+    try {
+      onUpdateOrder(orderId, { remarks: val } as any).catch(() => {});
+    } catch {
+      // ignore
+    }
+  };
+
   const getOrderCuttingForDate = (order: PlanningOrder, dateStr: string): number | null => {
     const fromMap = cuttingDaily[order.id]?.[dateStr];
     if (fromMap !== undefined) {
@@ -110,6 +198,16 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
       return next;
     });
   };
+
+  // Distinct previous sub_contract companies for auto-suggestions
+  const distinctSubContracts = useMemo(() => {
+    const set = new Set<string>();
+    orders.forEach((o) => {
+      const s = (o.sub_contract || '').trim();
+      if (s) set.add(s);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [orders]);
 
   // Compute total Order Qty grouped by PO across all colour rows
   const poTotalQtyMap = useMemo(() => {
@@ -370,10 +468,10 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       </div>
                     </th>
                     <th
-                      colSpan={isAdmin ? 10 : 9}
+                      colSpan={isAdmin ? 5 : 4}
                       className="bg-white dark:bg-slate-900 px-2 py-1 text-center text-[11px] text-gray-700 dark:text-slate-300 uppercase font-bold border-[1.5px] border-gray-200 dark:border-slate-700"
                     >
-                      Totals, Balances, Wash & Finishing Tracking
+                      Totals, Balance, Remarks & Status
                     </th>
                   </tr>
                   <tr>
@@ -393,13 +491,8 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                     </th>
 
                     {/* Sticky Column 4: Style */}
-                    <th className="sticky left-[230px] z-40 bg-white dark:bg-[#082024] px-2.5 py-2.5 min-w-[105px] border-[1.5px] border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
+                    <th className="sticky left-[230px] z-40 bg-white dark:bg-[#082024] px-2.5 py-2.5 min-w-[105px] border-[1.5px] border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)]">
                       STYLE
-                    </th>
-
-                    {/* Sticky Column 5: Order Qty */}
-                    <th className="sticky left-[335px] z-40 bg-white dark:bg-slate-900 px-2.5 py-2.5 text-right min-w-[80px] border-[1.5px] border-gray-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
-                      ORDER QTY
                     </th>
 
                     {/* Colour */}
@@ -413,8 +506,13 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                     </th>
 
                     {/* Line */}
-                    <th className="px-2 py-2.5 min-w-[80px] border-[1.5px] border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
+                    <th className="px-2 py-2.5 min-w-[85px] border-[1.5px] border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
                       LINE
+                    </th>
+
+                    {/* Sub-Contract */}
+                    <th className="px-2 py-2.5 min-w-[120px] max-w-[140px] border-[1.5px] border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
+                      SUB-CONTRACT
                     </th>
 
                     {/* Start Date */}
@@ -460,34 +558,9 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                       BALANCE
                     </th>
 
-                    {/* Total Wash Sent */}
-                    <th className="px-2 py-2.5 text-right min-w-[80px] border-[1.5px] border-gray-200 dark:border-slate-700 bg-sky-50/50 dark:bg-sky-950/20 text-[#1F2937] dark:text-slate-200">
-                      TOTAL WASH SENT
-                    </th>
-
-                    {/* Wash Rem. */}
-                    <th className="px-2 py-2.5 text-right min-w-[75px] border-[1.5px] border-gray-200 dark:border-slate-700 bg-sky-50/30 dark:bg-sky-950/10 text-[#1F2937] dark:text-slate-200">
-                      WASH REM.
-                    </th>
-
-                    {/* Total Wash Recv */}
-                    <th className="px-2 py-2.5 text-right min-w-[80px] border-[1.5px] border-gray-200 dark:border-slate-700 bg-purple-50/50 dark:bg-purple-950/20 text-[#1F2937] dark:text-slate-200">
-                      TOTAL WASH RECV
-                    </th>
-
-                    {/* Wash Recv Rem. */}
-                    <th className="px-2 py-2.5 text-right min-w-[80px] border-[1.5px] border-gray-200 dark:border-slate-700 bg-purple-50/30 dark:bg-purple-950/10 text-[#1F2937] dark:text-slate-200">
-                      WASH RECV REM.
-                    </th>
-
-                    {/* Total Finishing */}
-                    <th className="px-2 py-2.5 text-right min-w-[80px] border-[1.5px] border-gray-200 dark:border-slate-700 bg-emerald-50/50 dark:bg-emerald-950/20 text-[#1F2937] dark:text-slate-200">
-                      TOTAL FINISHING
-                    </th>
-
-                    {/* Finishing Rem. */}
-                    <th className="px-2 py-2.5 text-right min-w-[80px] border-[1.5px] border-gray-200 dark:border-slate-700 bg-emerald-50/30 dark:bg-emerald-950/10 text-[#1F2937] dark:text-slate-200">
-                      FINISHING REM.
+                    {/* Remarks - typing kore leka jabe */}
+                    <th className="px-3 py-2.5 text-center min-w-[160px] max-w-[220px] border-[1.5px] border-gray-200 dark:border-slate-700 text-[#1F2937] dark:text-slate-200">
+                      REMARKS
                     </th>
 
                     {/* Status */}
@@ -620,21 +693,13 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                           {/* Sticky Column 4: Style (Rowspan 6) */}
                           <td
                             rowSpan={6}
-                            className="sticky left-[230px] z-20 px-2.5 py-1.5 font-medium text-gray-700 dark:text-slate-300 border-[1.5px] border-gray-200 dark:border-slate-700 max-w-[130px] truncate bg-white dark:bg-slate-800"
+                            className="sticky left-[230px] z-20 px-2.5 py-1.5 font-medium text-gray-700 dark:text-slate-300 border-[1.5px] border-gray-200 dark:border-slate-700 max-w-[130px] truncate bg-white dark:bg-slate-800 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)]"
                             title={order.style || ''}
                           >
                             {highlightMatch(order.style)}
                           </td>
 
-                          {/* Sticky Column 5: Order Qty (PO total, Rowspan 6) */}
-                          <td
-                            rowSpan={6}
-                            className="sticky left-[335px] z-20 px-2.5 py-1.5 text-right font-black text-gray-900 dark:text-white border-[1.5px] border-gray-200 dark:border-slate-700 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)] bg-white dark:bg-slate-800"
-                          >
-                            {poTotalOrderQty.toLocaleString()}
-                          </td>
-
-                          {/* Column 6: Colour (Rowspan 6) */}
+                          {/* Column 5: Colour (Rowspan 6) */}
                           <td
                             rowSpan={6}
                             className="px-2 py-1.5 text-gray-900 dark:text-slate-300 border-[1.5px] border-gray-200 dark:border-slate-700 font-bold text-[13px] whitespace-nowrap bg-white dark:bg-slate-800"
@@ -642,7 +707,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             {highlightMatch(order.colour) || '-'}
                           </td>
 
-                          {/* Column 7: Wash (Rowspan 6) */}
+                          {/* Column 6: Wash (Rowspan 6) */}
                           <td
                             rowSpan={6}
                             className="px-2 py-1.5 text-gray-900 dark:text-slate-400 border-[1.5px] border-gray-200 dark:border-slate-700 font-bold text-[13px] bg-white dark:bg-slate-800"
@@ -650,7 +715,7 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             {order.wash || '-'}
                           </td>
 
-                          {/* Column 8: Line (Rowspan 6) */}
+                          {/* Column 7: Line (Rowspan 6) */}
                           <td
                             rowSpan={6}
                             className="px-1 py-1 border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
@@ -668,6 +733,21 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                               <option value="Line-3">Line-3</option>
                               <option value="Line-4">Line-4</option>
                             </select>
+                          </td>
+
+                          {/* Column 8: Sub-Contract (Rowspan 6) */}
+                          <td
+                            rowSpan={6}
+                            className="px-1.5 py-1 border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 min-w-[120px] max-w-[140px]"
+                          >
+                            <SubContractCell
+                              orderId={orderId}
+                              initialValue={order.sub_contract}
+                              suggestions={distinctSubContracts}
+                              onSave={async (val) => {
+                                await onUpdateOrder(orderId, { sub_contract: val });
+                              }}
+                            />
                           </td>
 
                           {/* Column 9: Start Date (Rowspan 6) */}
@@ -769,52 +849,19 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                             )}
                           </td>
 
-                          {/* Merged Column: TOTAL WASH SENT (Rowspan 6) */}
+                          {/* Merged Column: REMARKS (Rowspan 6) - typing kore leka jabe */}
                           <td
                             rowSpan={6}
-                            className={`px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 ${washSentColor} bg-white dark:bg-slate-800`}
+                            className="p-1.5 border-[1.5px] border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 min-w-[160px] max-w-[220px]"
                           >
-                            {totalWashSent.toLocaleString()}
-                          </td>
-
-                          {/* Merged Column: WASH REMAINING (Rowspan 6) */}
-                          <td
-                            rowSpan={6}
-                            className={`px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 ${washRemColor} bg-white dark:bg-slate-800`}
-                          >
-                            {washRemaining.toLocaleString()}
-                          </td>
-
-                          {/* Merged Column: TOTAL WASH RECV (Rowspan 6) */}
-                          <td
-                            rowSpan={6}
-                            className={`px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 ${washRecvColor} bg-white dark:bg-slate-800`}
-                          >
-                            {totalWashRecv.toLocaleString()}
-                          </td>
-
-                          {/* Merged Column: WASH RECV REMAINING (Rowspan 6) */}
-                          <td
-                            rowSpan={6}
-                            className={`px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 ${washRecvRemColor} bg-white dark:bg-slate-800`}
-                          >
-                            {washRecvRemaining.toLocaleString()}
-                          </td>
-
-                          {/* Merged Column: TOTAL FINISHING (Rowspan 6) */}
-                          <td
-                            rowSpan={6}
-                            className={`px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 ${finishingColor} bg-white dark:bg-slate-800`}
-                          >
-                            {totalFinishing.toLocaleString()}
-                          </td>
-
-                          {/* Merged Column: FINISHING REMAINING (Rowspan 6) */}
-                          <td
-                            rowSpan={6}
-                            className={`px-2 py-1 text-right border-[1.5px] border-gray-200 dark:border-slate-700 ${finishingRemColor} bg-white dark:bg-slate-800`}
-                          >
-                            {finishingRemaining.toLocaleString()}
+                            <textarea
+                              value={orderRemarks[orderId] ?? order.remarks ?? ''}
+                              onChange={(e) => handleUpdateRemarks(orderId, e.target.value)}
+                              placeholder="Type remarks..."
+                              rows={4}
+                              className="w-full h-full min-h-[95px] p-2 text-[11px] font-medium leading-relaxed text-gray-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-[#0F8B8D] focus:border-[#0F8B8D] resize-none transition-all placeholder:text-slate-400 placeholder:italic"
+                              title="Type remarks for this order"
+                            />
                           </td>
 
                           {/* Status Badge (Rowspan 6) */}
@@ -1299,13 +1346,10 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                     >
                       {config.label} TOTALS ({groupOrders.length} orders)
                     </td>
-                    <td className="sticky left-[335px] z-40 bg-[#E5E7EB] dark:bg-[#071B1E] px-2.5 py-2 text-right border-r-2 border-[#9CA3AF] dark:border-white/20 border-[1.5px] border-gray-200 dark:border-slate-700 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.06)] text-gray-900 dark:text-white">
-                      {groupOrders.reduce((s, o) => s + Number(o.order_qty || 0), 0).toLocaleString()}
-                    </td>
-                    <td colSpan={4} className="px-2 py-2 text-center text-slate-600 dark:text-slate-400 border-[1.5px] border-gray-200 dark:border-slate-700">
+                    <td colSpan={5} className="px-2 py-2 text-center text-slate-600 dark:text-slate-400 border-[1.5px] border-gray-200 dark:border-slate-700">
                       -
                     </td>
-                    <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white">
+                    <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white font-extrabold">
                       {groupOrders.reduce((s, o) => s + Number(o.order_qty || 0), 0).toLocaleString()}
                     </td>
                     <td className="px-1.5 py-2 text-center font-bold text-teal-800 dark:text-teal-300 bg-teal-100/70 dark:bg-teal-950/60 border-[1.5px] border-gray-200 dark:border-white/15">
@@ -1333,23 +1377,9 @@ export const LinePlanTable: React.FC<LinePlanTableProps> = ({
                     <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white">
                       -
                     </td>
-                    <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 text-sky-800 dark:text-sky-300 font-bold">
-                      {groupOrders.reduce((s, o) => s + Number(o.total_wash_sent || 0), 0).toLocaleString()}
-                    </td>
-                    <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 font-bold text-gray-900 dark:text-white">
-                      {groupOrders.reduce((s, o) => s + (Number(o.order_qty || 0) - Number(o.total_wash_sent || 0)), 0).toLocaleString()}
-                    </td>
-                    <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 text-purple-800 dark:text-purple-300 font-bold">
-                      {groupOrders.reduce((s, o) => s + Number(o.total_wash_recv || 0), 0).toLocaleString()}
-                    </td>
-                    <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 font-bold text-gray-900 dark:text-white">
-                      {groupOrders.reduce((s, o) => s + (Number(o.total_wash_sent || 0) - Number(o.total_wash_recv || 0)), 0).toLocaleString()}
-                    </td>
-                    <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 text-emerald-800 dark:text-emerald-300 font-bold">
-                      {groupOrders.reduce((s, o) => s + Number(o.total_finishing || 0), 0).toLocaleString()}
-                    </td>
-                    <td className="px-2 py-2 text-right border-[1.5px] border-gray-200 dark:border-slate-700 font-bold text-gray-900 dark:text-white">
-                      {groupOrders.reduce((s, o) => s + (Number(o.total_wash_recv || 0) - Number(o.total_finishing || 0)), 0).toLocaleString()}
+                    {/* Remarks column placeholder */}
+                    <td className="px-2 py-2 text-center text-slate-600 dark:text-slate-400 border-[1.5px] border-gray-200 dark:border-slate-700">
+                      -
                     </td>
                     <td colSpan={isAdmin ? 2 : 1} className="px-2 py-2 text-center text-slate-600 dark:text-slate-400 border-[1.5px] border-gray-200 dark:border-slate-700">
                       -

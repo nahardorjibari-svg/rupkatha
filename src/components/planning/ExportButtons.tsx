@@ -14,6 +14,7 @@ interface ExportButtonsProps {
   dailyData: DailyMatrix;
   dateRangeLabel: string;
   unitLabel: string;
+  selectedBuyers?: string[];
 }
 
 export const ExportButtons: React.FC<ExportButtonsProps> = ({
@@ -22,6 +23,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
   dailyData,
   dateRangeLabel,
   unitLabel,
+  selectedBuyers = [],
 }) => {
   const [isExportingExcel, setIsExportingExcel] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -50,41 +52,38 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           fitToHeight: 0,
           showGridLines: true,
         },
-        views: [{ state: 'frozen', xSplit: 9, ySplit: 5 }],
+        views: [{ state: 'frozen', xSplit: 10, ySplit: 5 }],
       });
 
       // Repeat header rows 1-5 on printed pages
       worksheet.pageSetup.printTitlesRow = '1:5';
 
-      // EXACT COLUMN ORDER AND WIDTHS (24 columns):
-      // Line (8), Buyer (22), PO (18), Style (18), Colour (10), Wash (12), Start Date (12), Order Qty (10), Type (12),
+      // 21 Columns:
+      // Line (8), Sub-Contract (16), Buyer (22), PO (18), Style (18), Colour (10), Wash (12), Start Date (12), Qty (10), Type (12),
       // [date columns dd/mm x 8, width 7 each],
-      // Total (10), Balance & Status (22), Total Wash Sent (14), Wash Rem. (10), Total Wash Recv (14), Wash Recv Rem. (12), Total Finishing (14)
+      // Total (10), Balance & Status (22), Remarks (24)
       const columnWidths = [
         8,  // 1: Line
-        22, // 2: Buyer
-        18, // 3: PO
-        18, // 4: Style
-        10, // 5: Colour
-        12, // 6: Wash
-        12, // 7: Start Date
-        10, // 8: Order Qty
-        12, // 9: Type
-        ...days.map(() => 7), // 10-17: 8 date columns
-        10, // 18: Total
-        22, // 19: Balance & Status
-        14, // 20: Total Wash Sent
-        10, // 21: Wash Rem.
-        14, // 22: Total Wash Recv
-        12, // 23: Wash Recv Rem.
-        14, // 24: Total Finishing
+        16, // 2: Sub-Contract
+        22, // 3: Buyer
+        18, // 4: PO
+        18, // 5: Style
+        10, // 6: Colour
+        12, // 7: Wash
+        12, // 8: Start Date
+        10, // 9: Qty
+        12, // 10: Type
+        ...days.map(() => 7), // 11-18: 8 date columns
+        10, // 19: Total
+        22, // 20: Balance & Status
+        24, // 21: Remarks
       ];
 
       columnWidths.forEach((w, idx) => {
         worksheet.getColumn(idx + 1).width = w;
       });
 
-      const totalCols = columnWidths.length; // 24
+      const totalCols = columnWidths.length; // 21
 
       // HEADER (rows 1-3, merged full width, centered):
       // Row 1: "RUPKATHA APPARELS LTD." bold 12pt
@@ -98,9 +97,10 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
       // Row 2: "8-Day Line Plan — All Units (Composite)" or Knit/Woven based on filter, 10pt
       const rawUnit = unitLabel || 'All Units';
       const subTitleUnit = rawUnit.toLowerCase().includes('all') ? 'All Units (Composite)' : rawUnit;
+      const buyerSubtitle = selectedBuyers.length > 0 ? ` — Buyers: ${selectedBuyers.join(', ')}` : '';
       worksheet.mergeCells(2, 1, 2, totalCols);
       const r2 = worksheet.getCell(2, 1);
-      r2.value = `8-Day Line Plan — ${subTitleUnit}`;
+      r2.value = `8-Day Line Plan — ${subTitleUnit}${buyerSubtitle}`;
       r2.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF374151' } };
       r2.alignment = { horizontal: 'center', vertical: 'middle' };
       worksheet.getRow(2).height = 18;
@@ -119,22 +119,19 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
       // Row 5: column headers (bg #D9D9D9 or light gray, bold, 1px borders, all centered)
       const headerLabels = [
         'Line',
+        'Sub-Contract',
         'Buyer',
         'PO',
         'Style',
         'Colour',
         'Wash',
         'Start Date',
-        'Order Qty',
+        'Qty',
         'Type',
         ...days.map((d) => d.displayDay),
         'Total',
         'Balance & Status',
-        'Total Wash Sent',
-        'Wash Rem.',
-        'Total Wash Recv',
-        'Wash Recv Rem.',
-        'Total Finishing',
+        'Remarks',
       ];
 
       const r5 = worksheet.getRow(5);
@@ -157,11 +154,19 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         };
       });
 
-      // Read cutting daily map from localStorage
+      // Read cutting daily map & order remarks from localStorage
       let cuttingDailyMap: Record<string, Record<string, number>> = {};
       try {
         const saved = localStorage.getItem('rupkatha_planning_cutting_daily');
         if (saved) cuttingDailyMap = JSON.parse(saved);
+      } catch {
+        // ignore
+      }
+
+      let orderRemarksMap: Record<string, string> = {};
+      try {
+        const saved = localStorage.getItem('rupkatha_planning_order_remarks');
+        if (saved) orderRemarksMap = JSON.parse(saved);
       } catch {
         // ignore
       }
@@ -348,13 +353,13 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           const row = worksheet.getRow(rowNum);
           row.height = 18;
 
-          // Col 9: Type
-          const typeCell = row.getCell(9);
+          // Col 10: Type
+          const typeCell = row.getCell(10);
           typeCell.value = cfg.type;
           typeCell.font = { name: 'Calibri', size: 9.5, bold: true, color: { argb: 'FF111827' } };
           typeCell.alignment = { horizontal: 'left', vertical: 'middle' };
 
-          // Cols 10 to 17: Date columns
+          // Cols 11 to 18: Date columns
           let dailyVals: (number | null)[] = [];
           let rowTotalVal: number | string = '';
 
@@ -379,7 +384,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           }
 
           dailyVals.forEach((val, dIdx) => {
-            const dCell = row.getCell(10 + dIdx);
+            const dCell = row.getCell(11 + dIdx);
             dCell.value = val !== null && val !== undefined ? val : '';
             if (val !== null && val !== undefined) {
               dCell.numFmt = '#,##0';
@@ -388,8 +393,8 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
             dCell.alignment = { horizontal: 'center', vertical: 'middle' };
           });
 
-          // Col 18: Total
-          const totCell = row.getCell(18);
+          // Col 19: Total
+          const totCell = row.getCell(19);
           totCell.value = rowTotalVal;
           if (typeof rowTotalVal === 'number') {
             totCell.numFmt = '#,##0';
@@ -397,61 +402,11 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           totCell.font = { name: 'Calibri', size: 9.5, bold: true, color: { argb: 'FF111827' } };
           totCell.alignment = { horizontal: 'right', vertical: 'middle' };
 
-          // Right columns (Cols 20-24) based on sub-row
-          // Col 20: Total Wash Sent (on WASH SENT row only)
-          // Col 21: Wash Rem. (on WASH SENT row only)
-          // Col 22: Total Wash Recv (on WASH RECV row only)
-          // Col 23: Wash Recv Rem. (on WASH RECV row only)
-          // Col 24: Total Finishing (on FINISHING row only)
-          if (sIdx === 3) {
-            // WASH SENT
-            const c20 = row.getCell(20);
-            c20.value = totalWashSent > 0 ? totalWashSent : 0;
-            c20.numFmt = '#,##0';
-            c20.font = { name: 'Calibri', size: 9.5, bold: true };
-            c20.alignment = { horizontal: 'right', vertical: 'middle' };
-
-            const c21 = row.getCell(21);
-            c21.value = washRem <= 0 ? '0 ✓' : `${washRem} Rem.`;
-            c21.font = {
-              name: 'Calibri',
-              size: 9.5,
-              bold: true,
-              color: { argb: washRem <= 0 ? 'FF16A34A' : 'FFDC2626' },
-            };
-            c21.alignment = { horizontal: 'right', vertical: 'middle' };
-          } else if (sIdx === 4) {
-            // WASH RECV
-            const c22 = row.getCell(22);
-            c22.value = totalWashRecv > 0 ? totalWashRecv : 0;
-            c22.numFmt = '#,##0';
-            c22.font = { name: 'Calibri', size: 9.5, bold: true };
-            c22.alignment = { horizontal: 'right', vertical: 'middle' };
-
-            const c23 = row.getCell(23);
-            c23.value = washRecvRem <= 0 ? '0 ✓' : `${washRecvRem} Rem.`;
-            c23.font = {
-              name: 'Calibri',
-              size: 9.5,
-              bold: true,
-              color: { argb: washRecvRem <= 0 ? 'FF16A34A' : 'FFDC2626' },
-            };
-            c23.alignment = { horizontal: 'right', vertical: 'middle' };
-          } else if (sIdx === 5) {
-            // FINISHING
-            const c24 = row.getCell(24);
-            c24.value = totalFinishing > 0 ? totalFinishing : 0;
-            c24.numFmt = '#,##0';
-            c24.font = { name: 'Calibri', size: 9.5, bold: true };
-            c24.alignment = { horizontal: 'right', vertical: 'middle' };
-          }
-
-          // Apply cell fills and borders for this row (cols 1 to 24)
+          // Apply cell fills and borders for this row (cols 1 to 21)
           for (let col = 1; col <= totalCols; col++) {
             const cell = row.getCell(col);
 
-            // Row bg color or Friday bg color for date columns
-            const isFridayCol = col >= 10 && col <= 17 && days[col - 10]?.isFriday;
+            const isFridayCol = col >= 11 && col <= 18 && days[col - 11]?.isFriday;
             const cellBg = isFridayCol ? 'FFF3F4F6' : cfg.bg;
 
             cell.fill = {
@@ -460,10 +415,6 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
               fgColor: { argb: cellBg },
             };
 
-            // Border styling
-            // All cells 1px solid #D1D5DB
-            // Thick bottom border (2px #374151) after each order's FINISHING row (sIdx === 5)
-            // Thick border between different Line groups
             const isFinishingRow = sIdx === 5;
             let bottomBorder: ExcelJS.Border = { style: 'thin', color: { argb: 'FFD1D5DB' } };
 
@@ -484,64 +435,69 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           }
         });
 
-        // Left columns (Line, Buyer, PO, Style, Colour, Wash, Start Date, Order Qty):
-        // merged vertically across all 6 sub-rows using ExcelJS mergeCells. Value shown only once.
-        for (let col = 1; col <= 8; col++) {
+        // Left columns (Line, Sub-Contract, Buyer, PO, Style, Colour, Wash, Start Date, Qty):
+        // merged vertically across all 6 sub-rows (cols 1 to 9)
+        for (let col = 1; col <= 9; col++) {
           worksheet.mergeCells(startRow, col, endRow, col);
         }
 
-        // Values and alignment for merged left columns:
         // Col 1: Line
         const lineCell = worksheet.getCell(startRow, 1);
         lineCell.value = order.line_no || 'No line';
         lineCell.font = { name: 'Calibri', size: 9.5, bold: true, color: { argb: 'FF1F2937' } };
         lineCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-        // Col 2: Buyer
-        const buyerCell = worksheet.getCell(startRow, 2);
+        // Col 2: Sub-Contract
+        const subCell = worksheet.getCell(startRow, 2);
+        subCell.value = order.sub_contract || '-';
+        subCell.font = { name: 'Calibri', size: 9.5, bold: true, color: { argb: 'FF0F8B8D' } };
+        subCell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+
+        // Col 3: Buyer
+        const buyerCell = worksheet.getCell(startRow, 3);
         buyerCell.value = order.buyer || '-';
         buyerCell.font = { name: 'Calibri', size: 9.5, bold: true, color: { argb: 'FF111827' } };
         buyerCell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
 
-        // Col 3: PO
-        const poCell = worksheet.getCell(startRow, 3);
+        // Col 4: PO
+        const poCell = worksheet.getCell(startRow, 4);
         poCell.value = order.po || '-';
         poCell.font = { name: 'Calibri', size: 9.5, bold: true, color: { argb: 'FF111827' } };
         poCell.alignment = { horizontal: 'left', vertical: 'middle' };
 
-        // Col 4: Style
-        const styleCell = worksheet.getCell(startRow, 4);
+        // Col 5: Style
+        const styleCell = worksheet.getCell(startRow, 5);
         styleCell.value = order.style || '-';
         styleCell.font = { name: 'Calibri', size: 9.5, bold: false, color: { argb: 'FF374151' } };
         styleCell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
 
-        // Col 5: Colour
-        const colourCell = worksheet.getCell(startRow, 5);
+        // Col 6: Colour
+        const colourCell = worksheet.getCell(startRow, 6);
         colourCell.value = order.colour || '-';
         colourCell.font = { name: 'Calibri', size: 9, bold: false, color: { argb: 'FF4B5563' } };
         colourCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-        // Col 6: Wash
-        const washCell = worksheet.getCell(startRow, 6);
+        // Col 7: Wash
+        const washCell = worksheet.getCell(startRow, 7);
         washCell.value = order.wash || '-';
         washCell.font = { name: 'Calibri', size: 9, bold: false, color: { argb: 'FF4B5563' } };
         washCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-        // Col 7: Start Date
-        const dateCell = worksheet.getCell(startRow, 7);
+        // Col 8: Start Date
+        const dateCell = worksheet.getCell(startRow, 8);
         dateCell.value = order.start_date || '-';
         dateCell.font = { name: 'Calibri', size: 9, bold: false, color: { argb: 'FF4B5563' } };
         dateCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-        // Col 8: Order Qty
-        const oQtyCell = worksheet.getCell(startRow, 8);
+        // Col 9: Qty
+        const oQtyCell = worksheet.getCell(startRow, 9);
         oQtyCell.value = orderQty;
         oQtyCell.numFmt = '#,##0';
         oQtyCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF111827' } };
         oQtyCell.alignment = { horizontal: 'right', vertical: 'middle' };
 
         // Ensure left merged cells have crisp white background and proper borders
-        for (let col = 1; col <= 8; col++) {
+        for (let col = 1; col <= 9; col++) {
           for (let r = startRow; r <= endRow; r++) {
             const c = worksheet.getCell(r, col);
             c.fill = {
@@ -563,9 +519,9 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           }
         }
 
-        // "Balance & Status" column (one merged cell per order across all 6 rows, Col 19):
-        worksheet.mergeCells(startRow, 19, endRow, 19);
-        const balCell = worksheet.getCell(startRow, 19);
+        // "Balance & Status" column (Col 20): merged vertically across 6 sub-rows
+        worksheet.mergeCells(startRow, 20, endRow, 20);
+        const balCell = worksheet.getCell(startRow, 20);
         balCell.value = {
           richText: [
             { text: line1Text + '\n', font: { color: { argb: cutColor }, bold: true, size: 9, name: 'Calibri' } },
@@ -578,7 +534,34 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         };
         balCell.alignment = { wrapText: true, vertical: 'middle', horizontal: 'center' };
         for (let r = startRow; r <= endRow; r++) {
-          const c = worksheet.getCell(r, 19);
+          const c = worksheet.getCell(r, 20);
+          c.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFFFFFFF' },
+          };
+          const isFinishingRow = r === endRow;
+          c.border = {
+            top: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+            bottom: isFinishingRow
+              ? isLineGroupEnd
+                ? { style: 'double', color: { argb: 'FF1F2937' } }
+                : { style: 'medium', color: { argb: 'FF374151' } }
+              : { style: 'thin', color: { argb: 'FFD1D5DB' } },
+            left: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+            right: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+          };
+        }
+
+        // "Remarks" column (Col 21): merged vertically across 6 sub-rows
+        worksheet.mergeCells(startRow, 21, endRow, 21);
+        const remCell = worksheet.getCell(startRow, 21);
+        const savedRemarks = orderRemarksMap[orderId] ?? order.remarks ?? '';
+        remCell.value = savedRemarks;
+        remCell.font = { name: 'Calibri', size: 9.5, bold: false, color: { argb: 'FF111827' } };
+        remCell.alignment = { wrapText: true, vertical: 'middle', horizontal: 'left' };
+        for (let r = startRow; r <= endRow; r++) {
+          const c = worksheet.getCell(r, 21);
           c.fill = {
             type: 'pattern',
             pattern: 'solid',
@@ -600,37 +583,37 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         curRow += 6;
       });
 
-      // TOTALS ROW at the bottom: sum of Order Qty, each date column (INPUT and OUTPUT), Total Input, Total Output. Bg #E5E7EB bold.
+      // TOTALS ROW at the bottom
       const totalsRowIdx = curRow;
       const tRow = worksheet.getRow(totalsRowIdx);
       tRow.height = 24;
 
-      // Merge cols 1 to 7 for "TOTALS" label
-      worksheet.mergeCells(totalsRowIdx, 1, totalsRowIdx, 7);
+      // Merge cols 1 to 8 for "TOTALS" label
+      worksheet.mergeCells(totalsRowIdx, 1, totalsRowIdx, 8);
       const tLabelCell = worksheet.getCell(totalsRowIdx, 1);
       tLabelCell.value = 'TOTALS:';
       tLabelCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF111827' } };
       tLabelCell.alignment = { horizontal: 'right', vertical: 'middle' };
 
-      // Col 8: Sum of Order Qty
+      // Col 9: Sum of Qty
       const totalOrderQtySum = sortedOrders.reduce((s, o) => s + Number(o.order_qty || 0), 0);
-      const tOQtyCell = worksheet.getCell(totalsRowIdx, 8);
+      const tOQtyCell = worksheet.getCell(totalsRowIdx, 9);
       tOQtyCell.value = totalOrderQtySum;
       tOQtyCell.numFmt = '#,##0';
       tOQtyCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF111827' } };
       tOQtyCell.alignment = { horizontal: 'right', vertical: 'middle' };
 
-      // Col 9: Type indicator
-      const tTypeCell = worksheet.getCell(totalsRowIdx, 9);
+      // Col 10: Type indicator
+      const tTypeCell = worksheet.getCell(totalsRowIdx, 10);
       tTypeCell.value = 'IN / OUT';
       tTypeCell.font = { name: 'Calibri', size: 8.5, bold: true, color: { argb: 'FF374151' } };
       tTypeCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-      // Cols 10 to 17: Date columns (INPUT and OUTPUT sums)
+      // Cols 11 to 18: Date columns (INPUT and OUTPUT sums)
       days.forEach((d, dIdx) => {
         const dInputSum = sortedOrders.reduce((s, o) => s + Number(dailyData[o.id]?.[d.dateStr]?.input_qty || 0), 0);
         const dOutputSum = sortedOrders.reduce((s, o) => s + Number(dailyData[o.id]?.[d.dateStr]?.output_qty || 0), 0);
-        const cell = worksheet.getCell(totalsRowIdx, 10 + dIdx);
+        const cell = worksheet.getCell(totalsRowIdx, 11 + dIdx);
 
         cell.value = {
           richText: [
@@ -641,10 +624,10 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         cell.alignment = { wrapText: true, horizontal: 'center', vertical: 'middle' };
       });
 
-      // Col 18: Total Input / Total Output
+      // Col 19: Total Input / Total Output
       const grandInputSum = sortedOrders.reduce((s, o) => s + Number(o.total_input || 0), 0);
       const grandOutputSum = sortedOrders.reduce((s, o) => s + Number(o.total_output || 0), 0);
-      const tTotCell = worksheet.getCell(totalsRowIdx, 18);
+      const tTotCell = worksheet.getCell(totalsRowIdx, 19);
       tTotCell.value = {
         richText: [
           { text: `${grandInputSum > 0 ? grandInputSum.toLocaleString() : '0'}\n`, font: { name: 'Calibri', size: 8.5, bold: true, color: { argb: 'FF2563EB' } } },
@@ -653,7 +636,17 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
       };
       tTotCell.alignment = { wrapText: true, horizontal: 'right', vertical: 'middle' };
 
-      // Apply fill and border to all cells in Totals row (1 to 24)
+      // Col 20: Balance placeholder
+      const tBalCell = worksheet.getCell(totalsRowIdx, 20);
+      tBalCell.value = '-';
+      tBalCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      // Col 21: Remarks placeholder
+      const tRemCell = worksheet.getCell(totalsRowIdx, 21);
+      tRemCell.value = '-';
+      tRemCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      // Apply fill and border to all cells in Totals row (1 to 21)
       for (let col = 1; col <= totalCols; col++) {
         const cell = worksheet.getCell(totalsRowIdx, col);
         cell.fill = {
@@ -675,7 +668,6 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
 
-      // FILE NAME: LinePlan_<unit>_<startDate>_<endDate>.xlsx
       const cleanUnit = (unitLabel || 'AllUnits').replace(/[^a-zA-Z0-9]/g, '');
       const startD = days[0]?.dateStr || 'start';
       const endD = days[days.length - 1]?.dateStr || 'end';
@@ -703,7 +695,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
   const handlePdfExport = () => {
     setIsExportingPdf(true);
     try {
-      // Landscape A3 format to fit 8 days and wash/finishing columns comfortably
+      // Landscape A3 format
       const doc = new jsPDF({ orientation: 'landscape', format: 'a3' });
 
       doc.setFontSize(16);
@@ -712,7 +704,8 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
 
       doc.setFontSize(12);
       doc.setTextColor(30, 41, 59);
-      doc.text(`8-Day Line Plan (${unitLabel})`, 14, 23);
+      const buyerPdfSubtitle = selectedBuyers.length > 0 ? ` — Buyers: ${selectedBuyers.join(', ')}` : '';
+      doc.text(`8-Day Line Plan (${unitLabel})${buyerPdfSubtitle}`, 14, 23);
 
       doc.setFontSize(10);
       doc.setTextColor(100, 116, 139);
@@ -720,19 +713,18 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
 
       const tableHeaders = [
         'Line',
+        'Sub-Contract',
         'Buyer',
         'PO',
         'Style',
         'Colour',
-        'Ord Qty',
+        'Start Date',
+        'Qty',
         'Type',
         'Tot',
         'Balance & Status',
         ...days.map((d) => d.displayDay),
-        'Wash Sent',
-        'Wash Rem',
-        'Wash Recv',
-        'Finishing',
+        'Remarks',
         'Status',
       ];
 
@@ -742,6 +734,14 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
       try {
         const saved = localStorage.getItem('rupkatha_planning_cutting_daily');
         if (saved) cuttingDailyMap = JSON.parse(saved);
+      } catch {
+        // ignore
+      }
+
+      let orderRemarksMap: Record<string, string> = {};
+      try {
+        const saved = localStorage.getItem('rupkatha_planning_order_remarks');
+        if (saved) orderRemarksMap = JSON.parse(saved);
       } catch {
         // ignore
       }
@@ -790,6 +790,8 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         const finishRemStr =
           totalWashRecv === 0 ? '-' : finishRem <= 0 ? '0 ✓ Done' : `${finishRem} Rem.`;
 
+        const remarksText = orderRemarksMap[orderId] ?? order.remarks ?? '-';
+
         const cutDays = days.map((d) => {
           const val = cuttingDailyMap[orderId]?.[d.dateStr];
           if (val !== undefined && val > 0) return String(val);
@@ -800,19 +802,18 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
         // CUTTING row
         tableRows.push([
           order.line_no || 'No line',
+          order.sub_contract || '-',
           order.buyer || '-',
           order.po,
           order.style || '-',
           order.colour || '-',
+          order.start_date || '-',
           orderQty.toLocaleString(),
           'CUTTING',
           cutQty.toLocaleString(),
           cuttingBalanceStr,
           ...cutDays,
-          totalWashSent.toLocaleString(),
-          washRemStr,
-          totalWashRecv.toLocaleString(),
-          totalFinishing.toLocaleString(),
+          remarksText,
           status.label,
         ]);
 
@@ -824,19 +825,20 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           '',
           '',
           '',
+          '',
+          '',
           'INPUT',
           totalIn.toLocaleString(),
           inBalStr,
           ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.input_qty ?? '-'),
-          totalWashSent.toLocaleString(),
-          washRemStr,
-          totalWashRecv.toLocaleString(),
-          totalFinishing.toLocaleString(),
+          '',
           status.label,
         ]);
 
         // OUT row
         tableRows.push([
+          '',
+          '',
           '',
           '',
           '',
@@ -849,13 +851,12 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.output_qty ?? '-'),
           '',
           '',
-          '',
-          '',
-          '',
         ]);
 
         // WASH SENT row
         tableRows.push([
+          '',
+          '',
           '',
           '',
           '',
@@ -868,13 +869,12 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.wash_sent_qty ?? '-'),
           '',
           '',
-          '',
-          '',
-          '',
         ]);
 
         // WASH RECV row
         tableRows.push([
+          '',
+          '',
           '',
           '',
           '',
@@ -887,9 +887,6 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.wash_recv_qty ?? '-'),
           '',
           '',
-          '',
-          '',
-          '',
         ]);
 
         // FINISHING row
@@ -900,13 +897,12 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
           '',
           '',
           '',
+          '',
+          '',
           'FINISHING',
           totalFinishing.toLocaleString(),
           finishRemStr,
           ...days.map((d) => dailyData[orderId]?.[d.dateStr]?.finishing_qty ?? '-'),
-          '',
-          '',
-          '',
           '',
           '',
         ]);

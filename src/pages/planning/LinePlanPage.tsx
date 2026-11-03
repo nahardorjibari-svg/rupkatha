@@ -12,6 +12,8 @@ import {
   BarChart3,
   Sun,
   Moon,
+  Filter,
+  ChevronDown,
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { useUnit } from '../../context/UnitContext';
@@ -39,6 +41,10 @@ export const LinePlanPage: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<PlanningTab>('active');
   const [searchQuery, setSearchQuery] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Buyer Multi-Select Filter state
+  const [selectedBuyers, setSelectedBuyers] = useState<string[]>([]);
+  const [buyerDropdownOpen, setBuyerDropdownOpen] = useState(false);
 
   // Window position in React state: default -1 (yesterday is index 0)
   const [offsetDays, setOffsetDays] = useState(-1);
@@ -91,22 +97,39 @@ export const LinePlanPage: React.FC = () => {
     onDataChanged: refreshOrders,
   });
 
-  // Tab Filtering & Search Overrides
+  // Distinct buyers list sorted A-Z from loaded orders
+  const allBuyers = useMemo(() => {
+    const set = new Set<string>();
+    orders.forEach((o) => {
+      const b = (o.buyer || '').trim();
+      if (b) set.add(b);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [orders]);
+
+  // Tab Filtering & Search Overrides combined with Buyer Multi-Select
   const filteredOrders = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
 
-    // If search active: search across ALL rows, regardless of tab
-    if (q) {
-      return orders.filter((o) => {
+    return orders.filter((o) => {
+      // 1. Buyer multi-select filter
+      if (selectedBuyers.length > 0) {
+        const orderBuyer = (o.buyer || '').trim();
+        if (!selectedBuyers.includes(orderBuyer)) {
+          return false;
+        }
+      }
+
+      // 2. Search query filter
+      if (q) {
         const poMatch = (o.po || '').toLowerCase().includes(q);
         const styleMatch = (o.style || '').toLowerCase().includes(q);
         const buyerMatch = (o.buyer || '').toLowerCase().includes(q);
-        return poMatch || styleMatch || buyerMatch;
-      });
-    }
+        const subMatch = (o.sub_contract || '').toLowerCase().includes(q);
+        return poMatch || styleMatch || buyerMatch || subMatch;
+      }
 
-    // Otherwise apply tab filters
-    return orders.filter((o) => {
+      // 3. Otherwise apply tab filters
       const isDone = Boolean(o.is_done);
       const lineNo = (o.line_no || '').trim();
 
@@ -121,15 +144,20 @@ export const LinePlanPage: React.FC = () => {
       // 'active': not done AND has line assigned
       return !isDone && Boolean(lineNo);
     });
-  }, [orders, searchQuery, currentTab]);
+  }, [orders, selectedBuyers, searchQuery, currentTab]);
 
-  // Tab counts
+  // Tab counts (reflects selected buyers if filtered)
   const counts = useMemo(() => {
     let active = 0;
     let upcoming = 0;
     let done = 0;
 
     orders.forEach((o) => {
+      if (selectedBuyers.length > 0) {
+        const orderBuyer = (o.buyer || '').trim();
+        if (!selectedBuyers.includes(orderBuyer)) return;
+      }
+
       const isDone = Boolean(o.is_done);
       const lineNo = (o.line_no || '').trim();
 
@@ -143,7 +171,7 @@ export const LinePlanPage: React.FC = () => {
     });
 
     return { active, upcoming, done };
-  }, [orders]);
+  }, [orders, selectedBuyers]);
 
   return (
     <AdminLayout>
@@ -274,6 +302,97 @@ export const LinePlanPage: React.FC = () => {
                   )}
                 </div>
 
+                {/* Buyer Multi-Select Filter */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setBuyerDropdownOpen((prev) => !prev)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer shadow-xs ${
+                      selectedBuyers.length > 0
+                        ? 'bg-[#0F8B8D]/15 text-[#0F8B8D] dark:text-[#2BA5B5] border-[#0F8B8D]/40'
+                        : 'bg-white dark:bg-black/20 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/15 hover:bg-slate-50 dark:hover:bg-white/5'
+                    }`}
+                    title="Filter by buyer"
+                  >
+                    <Filter className="w-3.5 h-3.5 text-[#0F8B8D]" />
+                    <span>
+                      {selectedBuyers.length === 0
+                        ? 'All Buyers'
+                        : selectedBuyers.length === 1
+                        ? selectedBuyers[0]
+                        : `${selectedBuyers.length} Buyers`}
+                    </span>
+                    <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+                  </button>
+
+                  {buyerDropdownOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setBuyerDropdownOpen(false)}
+                      />
+                      <div className="absolute right-0 top-full mt-1.5 w-64 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl z-50 p-2.5 space-y-2">
+                        <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold text-slate-500">
+                          <span>Filter Buyers ({allBuyers.length})</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedBuyers([...allBuyers])}
+                              className="text-[#0F8B8D] hover:underline cursor-pointer"
+                            >
+                              Select all
+                            </button>
+                            <span>·</span>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedBuyers([])}
+                              className="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="max-h-52 overflow-y-auto space-y-1 scrollbar-custom pr-1">
+                          {allBuyers.length === 0 ? (
+                            <div className="text-xs text-slate-400 py-3 text-center">
+                              No buyers found
+                            </div>
+                          ) : (
+                            allBuyers.map((buyer) => {
+                              const isChecked = selectedBuyers.includes(buyer);
+                              return (
+                                <label
+                                  key={buyer}
+                                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/80 cursor-pointer text-xs font-semibold text-slate-800 dark:text-slate-200 select-none"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => {
+                                      if (isChecked) {
+                                        setSelectedBuyers((prev) =>
+                                          prev.filter((b) => b !== buyer)
+                                        );
+                                      } else {
+                                        setSelectedBuyers((prev) => [...prev, buyer]);
+                                      }
+                                    }}
+                                    className="rounded text-[#0F8B8D] focus:ring-[#0F8B8D] w-3.5 h-3.5 accent-[#0F8B8D]"
+                                  />
+                                  <span className="truncate flex-1" title={buyer}>
+                                    {buyer}
+                                  </span>
+                                </label>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
                 {/* Export Buttons (Print, Excel, PDF) */}
                 <ExportButtons
                   orders={filteredOrders}
@@ -281,6 +400,7 @@ export const LinePlanPage: React.FC = () => {
                   dailyData={dailyData}
                   dateRangeLabel={dateRangeLabel}
                   unitLabel={unitLabel}
+                  selectedBuyers={selectedBuyers}
                 />
 
                 {/* Refresh button */}
@@ -396,20 +516,37 @@ export const LinePlanPage: React.FC = () => {
                 </button>
               </div>
 
-              {searchQuery && (
-                <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-3 py-1 rounded-lg border border-amber-200 dark:border-amber-800 flex items-center gap-1.5">
-                  <span>
-                    Filtering {filteredOrders.length} search matches for &quot;{searchQuery}&quot;
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="underline hover:text-amber-800 ml-1"
-                  >
-                    Clear
-                  </button>
-                </div>
-              )}
+              <div className="flex flex-wrap items-center gap-2">
+                {selectedBuyers.length > 0 && (
+                  <div className="text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/40 px-3 py-1 rounded-lg border border-teal-200 dark:border-teal-800 flex items-center gap-1.5 shadow-2xs">
+                    <span>
+                      Buyers ({selectedBuyers.length}): {selectedBuyers.join(', ')}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBuyers([])}
+                      className="underline hover:text-teal-900 dark:hover:text-white ml-1 cursor-pointer font-bold"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+
+                {searchQuery && (
+                  <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-3 py-1 rounded-lg border border-amber-200 dark:border-amber-800 flex items-center gap-1.5 shadow-2xs">
+                    <span>
+                      Filtering {filteredOrders.length} search matches for &quot;{searchQuery}&quot;
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="underline hover:text-amber-800 ml-1 cursor-pointer font-bold"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -423,7 +560,7 @@ export const LinePlanPage: React.FC = () => {
               </h1>
               <h2 className="text-sm font-semibold text-slate-700">
                 {viewMode === 'production_plan'
-                  ? `8-Day Line Plan (${unitLabel})`
+                  ? `8-Day Line Plan (${unitLabel})${selectedBuyers.length > 0 ? ` — Buyers: ${selectedBuyers.join(', ')}` : ''}`
                   : `Line Summary (${unitLabel})`}
               </h2>
             </div>
