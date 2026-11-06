@@ -220,7 +220,7 @@ export const StaffMonthSheet: React.FC = () => {
     setEditInTime(formatDhaka24HTime(raw.check_in_at));
     setEditOutTime(formatDhaka24HTime(raw.check_out_at));
     setEditOtHours(raw.ot_hours ? String(raw.ot_hours) : '0');
-    setEditStatus(raw.particular || 'Auto');
+    setEditStatus((raw.particular || 'auto').toLowerCase());
     setEditRemarks(raw.remarks || '');
     setEditReason('');
     setShowConfirmSave(false);
@@ -236,7 +236,7 @@ export const StaffMonthSheet: React.FC = () => {
 
     setSavingEdit(true);
     try {
-      if (editStatus === 'Auto') {
+      if (editStatus === 'auto') {
         // Clear override and restore calculation
         const { error: clearErr } = await supabase.rpc('admin_clear_override', {
           target: id,
@@ -768,11 +768,12 @@ export const StaffMonthSheet: React.FC = () => {
                         : 'bg-slate-50 border-slate-300 text-slate-900'
                     }`}
                   >
-                    <option value="Auto">Auto (Restore Calculation)</option>
-                    <option value="Present">Present</option>
-                    <option value="Absent">Absent</option>
-                    <option value="Offday">Offday</option>
-                    <option value="Leave">Leave</option>
+                    <option value="auto">Auto (Restore Calculation)</option>
+                    <option value="present">Present</option>
+                    <option value="absent">Absent</option>
+                    <option value="offday">Offday</option>
+                    <option value="leave">Leave</option>
+                    <option value="holiday">Holiday</option>
                   </select>
                 </div>
               </div>
