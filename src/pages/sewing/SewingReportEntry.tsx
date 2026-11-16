@@ -51,12 +51,12 @@ import toast from 'react-hot-toast';
 const FIELD_LABEL_MAP: Record<string, string> = {
   back_hour_target: 'Back hour target',
   front_hour_target: 'Front hour target',
-  output_hour_target: 'Out Put hour target',
+  output_hour_target: 'Q.C.P hour target',
   asm_hour_target: 'A.S.M hour target',
   working_hours: 'Working hours',
   back_qty: 'Back Qty',
   front_qty: 'Front Qty',
-  output_qty: 'Out Put Qty',
+  output_qty: 'Q.C.P',
   asm: 'A.S.M',
   op: 'O.P',
   hp: 'H.P',
@@ -366,7 +366,7 @@ export const SewingReportEntry: React.FC = () => {
 
     const targetVal = lines[lineIndex].backHourTarget;
     const ok = window.confirm(
-      `Copy Back hour target (${targetVal !== '' ? targetVal : 'blank'}) to Front, Out Put, and A.S.M?`
+      `Copy Back hour target (${targetVal !== '' ? targetVal : 'blank'}) to Front, A.S.M, and Q.C.P?`
     );
     if (!ok) return;
 
@@ -381,7 +381,68 @@ export const SewingReportEntry: React.FC = () => {
       setIsDirty(true);
       return updatedLines;
     });
-    toast.success(`Copied Back target to Front, Out Put & A.S.M.`);
+    toast.success(`Copied Back target to Front, A.S.M & Q.C.P.`);
+  };
+
+  const handleGridKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    lineIdx: number,
+    rowIdx: number,
+    colIdx: number
+  ) => {
+    const moveFocus = (targetLine: number, targetRow: number, targetCol: number) => {
+      const el = document.querySelector<HTMLInputElement>(
+        `input[data-sewing-cell="${targetLine}-${targetRow}-${targetCol}"]`
+      );
+      if (el && !el.disabled) {
+        el.focus();
+        el.select();
+        return true;
+      }
+      return false;
+    };
+
+    if (e.key === 'Enter' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      for (let r = rowIdx + 1; r <= 3; r++) {
+        if (moveFocus(lineIdx, r, colIdx)) return;
+      }
+      if (lineIdx + 1 < lines.length) {
+        for (let r = 0; r <= 3; r++) {
+          if (moveFocus(lineIdx + 1, r, colIdx)) return;
+        }
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      for (let r = rowIdx - 1; r >= 0; r--) {
+        if (moveFocus(lineIdx, r, colIdx)) return;
+      }
+      if (lineIdx - 1 >= 0) {
+        for (let r = 3; r >= 0; r--) {
+          if (moveFocus(lineIdx - 1, r, colIdx)) return;
+        }
+      }
+    } else if (e.key === 'ArrowRight') {
+      const input = e.currentTarget;
+      if (input.selectionStart === input.value.length && input.selectionEnd === input.value.length) {
+        for (let c = colIdx + 1; c <= 10; c++) {
+          if (moveFocus(lineIdx, rowIdx, c)) {
+            e.preventDefault();
+            return;
+          }
+        }
+      }
+    } else if (e.key === 'ArrowLeft') {
+      const input = e.currentTarget;
+      if (input.selectionStart === 0 && input.selectionEnd === 0) {
+        for (let c = colIdx - 1; c >= 0; c--) {
+          if (moveFocus(lineIdx, rowIdx, c)) {
+            e.preventDefault();
+            return;
+          }
+        }
+      }
+    }
   };
 
   const handleHourChange = (lineIndex: number, hourIndex: number, field: string, value: any, hourNo: number) => {
@@ -722,10 +783,10 @@ export const SewingReportEntry: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             {[
-              { key: 'output', label: 'Out Put', color: '#0F8B8D' },
               { key: 'back', label: 'Back Part', color: '#3B82F6' },
               { key: 'front', label: 'Front Part', color: '#8B5CF6' },
               { key: 'asm', label: 'A.S.M', color: '#F59E0B' },
+              { key: 'output', label: 'Q.C.P', color: '#0F8B8D' },
             ].map(({ key, label }) => {
               const partData = (daySummary.byPart as any)[key] || {};
               const hasTgt = partData.totalTarget !== null;
@@ -748,7 +809,7 @@ export const SewingReportEntry: React.FC = () => {
         {/* LINE TABLES */}
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 w-fit text-xs font-bold text-emerald-800 dark:text-emerald-300">
           <div className="w-3.5 h-3.5 rounded bg-[#16A34A] border border-[#15803D] shrink-0" />
-          <span>OUT PUT = final production (চূড়ান্ত উৎপাদন)</span>
+          <span>Q.C.P = final production (চূড়ান্ত উৎপাদন)</span>
         </div>
 
         <div className="space-y-6">
@@ -823,10 +884,10 @@ export const SewingReportEntry: React.FC = () => {
                     </thead>
                     <tbody>
                       {/* MAIN ROWS */}
-                      {['back', 'front', 'output', 'asm'].map((pKey, pIdx) => {
+                      {['back', 'front', 'asm', 'output'].map((pKey, pIdx) => {
                         const isOutput = pKey === 'output';
                         const bd = pKey === 'back' ? backBreakdown : pKey === 'front' ? frontBreakdown : pKey === 'asm' ? asmBreakdown : outputBreakdown;
-                        const pLabel = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Out Put';
+                        const pLabel = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Q.C.P';
                         const pMetrics = bd.metrics;
                         const qtyField = pKey === 'back' ? 'backQty' : pKey === 'front' ? 'frontQty' : pKey === 'asm' ? 'asm' : 'outputQty';
                         const targetField = pKey === 'back' ? 'backHourTarget' : pKey === 'front' ? 'frontHourTarget' : pKey === 'asm' ? 'asmHourTarget' : 'outputHourTarget';
@@ -887,7 +948,7 @@ export const SewingReportEntry: React.FC = () => {
                             >
                               <div className="flex items-center justify-center gap-1">
                                 {isOutput && <Target className="w-3.5 h-3.5 text-white shrink-0" />}
-                                <span className={isOutput ? 'text-white text-xs font-[900] tracking-wide' : ''}>{pLabel}</span>
+                                <span className={isOutput ? 'text-white text-xs font-[900] tracking-wide whitespace-nowrap' : 'whitespace-nowrap'}>{pLabel}</span>
                               </div>
                             </td>
                             <td 
@@ -900,8 +961,10 @@ export const SewingReportEntry: React.FC = () => {
                             >
                               <input 
                                 type="text" 
+                                data-sewing-cell={`${lineIdx}-${pIdx}-0`}
                                 value={line[targetField] ?? ''} 
                                 onChange={(e) => handleLineChange(lineIdx, targetField, e.target.value)} 
+                                onKeyDown={(e) => handleGridKeyDown(e, lineIdx, pIdx, 0)}
                                 className={`w-full h-8 bg-transparent text-center font-bold border rounded ${isOutput ? 'border-emerald-600 font-black text-sm' : 'border-current/20'}`} 
                               />
                             </td>
@@ -933,9 +996,11 @@ export const SewingReportEntry: React.FC = () => {
                                   <div className="relative">
                                     <input 
                                       type="text" 
+                                      data-sewing-cell={`${lineIdx}-${pIdx}-${hrIdx + 1}`}
                                       disabled={isDisabled} 
                                       value={hr[qtyField] ?? ''} 
                                       onChange={(e) => handleHourChange(lineIdx, hrIdx, qtyField, e.target.value, hr.hourNo)} 
+                                      onKeyDown={(e) => handleGridKeyDown(e, lineIdx, pIdx, hrIdx + 1)}
                                       className={`w-full h-7 rounded border text-center outline-none ${cellStyle.bgClass} ${isOutput ? 'font-[900] text-[13px]' : 'font-bold text-xs'}`} 
                                     />
                                     {isLocked && <span className="absolute right-0.5 top-0.5 text-amber-600"><Lock className="w-2.5 h-2.5" /></span>}
@@ -977,9 +1042,9 @@ export const SewingReportEntry: React.FC = () => {
 
                       {/* HOUR SHORT / EXCESS BLOCK */}
                       <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={16} className="p-0 h-0" /></tr>
-                      {['back', 'front', 'output', 'asm'].map((pKey, pIdx) => {
+                      {['back', 'front', 'asm', 'output'].map((pKey, pIdx) => {
                         const bd = pKey === 'back' ? backBreakdown : pKey === 'front' ? frontBreakdown : pKey === 'asm' ? asmBreakdown : outputBreakdown;
-                        const pLabel = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Out Put';
+                        const pLabel = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Q.C.P';
                         return (
                           <tr key={`short_${pKey}`} className="border-b-[1.5px] bg-red-500/[0.03]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B', height: '32px' }}>
                             {pIdx === 0 && <td rowSpan={4} className="border-r-[1.5px] p-1 text-center align-middle font-black text-red-600 bg-red-500/5 leading-tight text-[10px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><div>HOUR SHORT / EXCESS</div><div className="text-[0.8em] font-bangla">প্রতি ঘণ্টা শর্ট/অতিরিক্ত</div></td>}
@@ -999,9 +1064,9 @@ export const SewingReportEntry: React.FC = () => {
 
                       {/* RUNNING SHORT / EXCESS BLOCK */}
                       <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={16} className="p-0 h-0" /></tr>
-                      {['back', 'front', 'output', 'asm'].map((pKey, pIdx) => {
+                      {['back', 'front', 'asm', 'output'].map((pKey, pIdx) => {
                         const bd = pKey === 'back' ? backBreakdown : pKey === 'front' ? frontBreakdown : pKey === 'asm' ? asmBreakdown : outputBreakdown;
-                        const pLabel = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Out Put';
+                        const pLabel = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Q.C.P';
                         return (
                           <tr key={`run_${pKey}`} className="border-b-[1.5px] bg-amber-500/[0.03]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B', height: '32px' }}>
                             {pIdx === 0 && <td rowSpan={4} className="border-r-[1.5px] p-1 text-center align-middle font-black text-amber-600 bg-amber-500/5 leading-tight text-[10px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><div>RUNNING SHORT / EXCESS</div><div className="text-[0.8em] font-bangla">রানিং শর্ট/অতিরিক্ত</div></td>}
@@ -1021,9 +1086,9 @@ export const SewingReportEntry: React.FC = () => {
 
                       {/* REMAINING TARGET BLOCK */}
                       <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={16} className="p-0 h-0" /></tr>
-                      {['back', 'front', 'output', 'asm'].map((pKey, pIdx) => {
+                      {['back', 'front', 'asm', 'output'].map((pKey, pIdx) => {
                         const bd = pKey === 'back' ? backBreakdown : pKey === 'front' ? frontBreakdown : pKey === 'asm' ? asmBreakdown : outputBreakdown;
-                        const pLabel = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Out Put';
+                        const pLabel = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Q.C.P';
                         return (
                           <tr key={`rem_${pKey}`} className="border-b-[1.5px] bg-blue-500/[0.03]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B', height: '32px' }}>
                             {pIdx === 0 && <td rowSpan={4} className="border-r-[1.5px] p-1 text-center align-middle font-black text-blue-600 bg-blue-500/5 leading-tight text-[10px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><div>REMAINING TARGET</div><div className="text-[0.8em] font-bangla">বাকি লক্ষ্য</div></td>}

@@ -81,11 +81,11 @@ export function exportSewingReportsToPdf({ reports, finishingReports = [], editL
   const summaryRows = [];
   
   // Sewing Rows
-  ['output', 'back', 'front', 'asm'].forEach((pKey) => {
+  ['back', 'front', 'asm', 'output'].forEach((pKey) => {
     const pData = summary.byPart[pKey] || {};
     const label =
       pKey === 'output'
-        ? 'Sewing: Out Put'
+        ? 'Sewing: Q.C.P'
         : pKey === 'back'
         ? 'Sewing: Back Part'
         : pKey === 'front'
@@ -153,7 +153,7 @@ export function exportSewingReportsToPdf({ reports, finishingReports = [], editL
     didParseCell: (data) => {
       if (data.section === 'body') {
         const raw = data.row.raw;
-        if (raw && raw[0] && String(raw[0]).includes('Sewing: Out Put')) {
+        if (raw && raw[0] && String(raw[0]).includes('Sewing: Q.C.P')) {
           data.cell.styles.fillColor = [220, 252, 231];
           data.cell.styles.textColor = [22, 101, 52];
           data.cell.styles.fontStyle = 'bold';
@@ -182,7 +182,7 @@ export function exportSewingReportsToPdf({ reports, finishingReports = [], editL
       l.order_qty || '-',
       `${l.op || 0}/${l.hp || 0}/${l.ir || 0}`,
       `${outM.workingHours}h`,
-      `B:${backM.hourTarget??'-'} F:${frontM.hourTarget??'-'} O:${outM.hourTarget??'-'} A:${asmM.hourTarget??'-'}`,
+      `B:${backM.hourTarget??'-'} F:${frontM.hourTarget??'-'} A:${asmM.hourTarget??'-'} Q:${outM.hourTarget??'-'}`,
       outM.totalTarget ?? '-',
       outM.totalActual ?? '-',
       shortExcessText,
@@ -193,11 +193,11 @@ export function exportSewingReportsToPdf({ reports, finishingReports = [], editL
 
   doc.setFontSize(8);
   doc.setTextColor(21, 128, 61);
-  doc.text('OUT PUT = Final Production (চূড়ান্ত উৎপাদন)', 14, doc.lastAutoTable.finalY + 7);
+  doc.text('Q.C.P = Final Production (চূড়ান্ত উৎপাদন)', 14, doc.lastAutoTable.finalY + 7);
 
   doc.autoTable({
     startY: doc.lastAutoTable.finalY + 10,
-    head: [['Sewing Line', 'Buyer', 'Style', 'Order', 'M.P', 'Hrs', 'Hr Tgts', 'Tot Tgt', 'Out Put Actual', 'Short', 'Ach%', 'Remarks']],
+    head: [['Sewing Line', 'Buyer', 'Style', 'Order', 'M.P', 'Hrs', 'Hr Tgts', 'Tot Tgt', 'Q.C.P Actual', 'Short', 'Ach%', 'Remarks']],
     body: sewingRows,
     theme: 'grid',
     headStyles: { fillColor: [30, 41, 59], fontSize: 8 },

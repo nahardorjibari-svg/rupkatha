@@ -169,11 +169,11 @@ export const SewingReports: React.FC = () => {
   const FIELD_LABEL_MAP: Record<string, string> = {
     back_hour_target: 'Back hour target',
     front_hour_target: 'Front hour target',
-    output_hour_target: 'Out Put hour target',
+    output_hour_target: 'Q.C.P hour target',
     asm_hour_target: 'A.S.M hour target',
     back_qty: 'Back Qty / Inside',
     front_qty: 'Front Qty / Iron',
-    output_qty: 'Out Put Qty / Top Side',
+    output_qty: 'Q.C.P / Top Side',
     asm: 'A.S.M / Poly',
     buyer_name: 'Buyer Name',
     style_no: 'Style No',
@@ -276,10 +276,10 @@ export const SewingReports: React.FC = () => {
             <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-current/20 hover:bg-current/10 cursor-pointer"><Printer className="w-3.5 h-3.5" /><span>Print</span></button>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            {['output', 'back', 'front', 'asm'].map((key) => {
+            {['back', 'front', 'asm', 'output'].map((key) => {
               const partData = (daySummary.byPart as any)[key] || {};
               const hasTgt = partData.totalTarget !== null;
-              const labels: Record<string, string> = { output: 'Sewing Output', back: 'Back Part', front: 'Front Part', asm: 'A.S.M' };
+              const labels: Record<string, string> = { output: 'Sewing Q.C.P', back: 'Back Part', front: 'Front Part', asm: 'A.S.M' };
               return (
                 <div key={key} className={`p-4 rounded-2xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
                   <div className="flex items-center justify-between mb-2">
@@ -333,15 +333,15 @@ export const SewingReports: React.FC = () => {
                 {/* Legend above line cards */}
                 <div className="flex items-center gap-2 mb-4 px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 w-fit text-xs font-bold text-emerald-800 dark:text-emerald-300 print:border-[#16A34A] print:text-black">
                   <div className="w-3.5 h-3.5 rounded bg-[#16A34A] border border-[#15803D] shrink-0 print:bg-[#16A34A]" />
-                  <span>OUT PUT = final production (চূড়ান্ত উৎপাদন)</span>
+                  <span>Q.C.P = final production (চূড়ান্ত উৎপাদন)</span>
                 </div>
 
                 {filteredLines.map((line, idx) => {
                   const parts = [
                     { id: 'back', label: 'BACK' },
                     { id: 'front', label: 'FRONT' },
-                    { id: 'output', label: 'OUT PUT' },
                     { id: 'asm', label: 'A.S.M' },
+                    { id: 'output', label: 'Q.C.P' },
                   ];
                   const breakdowns = parts.map(p => calculatePartHourlyBreakdown(line, p.id));
                   const totalManpower = Number(line.op || 0) + Number(line.hp || 0) + Number(line.ir || 0);
@@ -414,7 +414,7 @@ export const SewingReports: React.FC = () => {
                                   >
                                     <div className="flex items-center justify-center gap-1">
                                       {isOutput && <Target className="w-3.5 h-3.5 text-white shrink-0" />}
-                                      <span className={isOutput ? 'text-white text-xs font-[900] tracking-wide' : ''}>{parts[bIdx].label}</span>
+                                      <span className={isOutput ? 'text-white text-xs font-[900] tracking-wide whitespace-nowrap' : 'whitespace-nowrap'}>{parts[bIdx].label}</span>
                                     </div>
                                   </td>
                                   <td 
@@ -640,7 +640,7 @@ export const SewingReports: React.FC = () => {
                   <th className="p-2 border border-current/10 text-left">Unit</th>
                   <th className="p-2 border border-current/10 text-left">Line/Module</th>
                   <th className="p-2 border border-current/10 text-left">Buyer & Style</th>
-                  <th className="p-2 border border-current/10 text-center">Sewing Output (Ach%)</th>
+                  <th className="p-2 border border-current/10 text-center">Sewing Q.C.P (Ach%)</th>
                   <th className="p-2 border border-current/10 text-center">Inside (Ach%)</th>
                   <th className="p-2 border border-current/10 text-center">Iron (Ach%)</th>
                   <th className="p-2 border border-current/10 text-center">Top Side (Ach%)</th>

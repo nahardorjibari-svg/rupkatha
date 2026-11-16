@@ -186,12 +186,12 @@ export const Dashboard: React.FC = () => {
                 return (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                     <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                      <span className="text-xs text-slate-500 font-bold uppercase">Out Put Target</span>
+                      <span className="text-xs text-slate-500 font-bold uppercase">Q.C.P Target</span>
                       <p className="text-xl font-black text-slate-900 mt-1">{outSum.totalTarget !== null ? formatNum(outSum.totalTarget) : '-'}</p>
                       <p className="text-[11px] text-slate-500">All lines combined</p>
                     </div>
                     <div className="p-4 rounded-xl bg-teal-50 border border-teal-200">
-                      <span className="text-xs text-teal-700 font-bold uppercase">Actual Output</span>
+                      <span className="text-xs text-teal-700 font-bold uppercase">Actual Q.C.P</span>
                       <p className="text-xl font-black text-[#0F8B8D] mt-1">{outSum.totalActual !== null ? formatNum(outSum.totalActual) : '-'}</p>
                       <p className="text-[11px] text-teal-600 font-semibold">{outSum.achievement !== null ? `${outSum.achievement}% Achieved` : 'No Target'}</p>
                     </div>
@@ -222,7 +222,7 @@ export const Dashboard: React.FC = () => {
                         <th className="p-3 border-r border-slate-200">Style</th>
                         <th className="p-3 border-r border-slate-200 text-center">Working Hrs</th>
                         <th className="p-3 border-r border-slate-200 text-center">Target</th>
-                        <th className="p-3 border-r border-slate-200 text-center">Total Output</th>
+                        <th className="p-3 border-r border-slate-200 text-center">Total Q.C.P</th>
                         <th className="p-3 border-r border-slate-200 text-center">Ach%</th>
                         <th className="p-3 border-r border-slate-200 text-center">Short / Excess</th>
                         <th className="p-3 text-center">Status</th>

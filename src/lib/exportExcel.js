@@ -57,14 +57,14 @@ export function exportSewingReportsToExcel({ reports, finishingReports = [], edi
     ['Raj place, Rishipara, Padma, Dhaka · Knit & Woven Garments ERP'],
     [`Top Management Summary - Date: ${date || 'All Dates'} | Unit: ${unit?.toUpperCase() || 'All'}`],
     [],
-    ['SEWING PART OVERVIEW', 'TOTAL TARGET (PCS)', 'ACTUAL OUTPUT (PCS)', 'ACHIEVEMENT %', 'SHORT QTY (PCS)', 'SHORT %', 'STATUS'],
+    ['SEWING PART OVERVIEW', 'TOTAL TARGET (PCS)', 'ACTUAL Q.C.P (PCS)', 'ACHIEVEMENT %', 'SHORT QTY (PCS)', 'SHORT %', 'STATUS'],
   ];
 
-  ['output', 'back', 'front', 'asm'].forEach((pKey) => {
+  ['back', 'front', 'asm', 'output'].forEach((pKey) => {
     const pData = mgmtSummary.byPart[pKey] || {};
     const label =
       pKey === 'output'
-        ? 'Out Put (Total Garments)'
+        ? 'Q.C.P (Total Garments)'
         : pKey === 'back'
         ? 'Back Part'
         : pKey === 'front'
@@ -114,8 +114,8 @@ export function exportSewingReportsToExcel({ reports, finishingReports = [], edi
     'Style No',
     'Order Qty',
     'Working Hours',
-    'Out Put Target',
-    'Actual Output',
+    'Q.C.P Target',
+    'Actual Q.C.P',
     'Short / Excess',
     'Short %',
     'Ach %',
@@ -156,7 +156,7 @@ export function exportSewingReportsToExcel({ reports, finishingReports = [], edi
   const detailRows = [
     ['RUPKATHA APPARELS LTD. - SEWING PRODUCTION REGISTER'],
     [`Date: ${date || 'All Dates'} | Factory Unit: ${unit?.toUpperCase() || 'All'}`],
-    ['NOTE: OUT PUT = Final Production (চূড়ান্ত উৎপাদন)'],
+    ['NOTE: Q.C.P = Final Production (চূড়ান্ত উৎপাদন)'],
     [],
     [
       'Line',
@@ -176,8 +176,8 @@ export function exportSewingReportsToExcel({ reports, finishingReports = [], edi
   ];
 
   allLines.forEach((l) => {
-    const parts = ['back', 'front', 'output', 'asm'];
-    const partLabels = ['Back', 'Front', 'OUT PUT (Final Prod / চূড়ান্ত উৎপাদন) ★', 'A.S.M'];
+    const parts = ['back', 'front', 'asm', 'output'];
+    const partLabels = ['Back', 'Front', 'A.S.M', 'Q.C.P (Final Prod / চূড়ান্ত উৎপাদন) ★'];
     
     parts.forEach((p, pIdx) => {
       const bd = calculatePartHourlyBreakdown(l, p);

@@ -148,7 +148,7 @@ export const ERP_MODULES: ModuleGroup[] = [
             nameBangla: 'ড্যাশবোর্ড',
             path: '/sewing/dashboard',
             icon: 'LayoutDashboard',
-            description: 'Live hourly output board and KPIs',
+            description: 'Live hourly Q.C.P board and KPIs',
             status: 'active',
           },
           {

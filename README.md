@@ -12,16 +12,16 @@ Professional Enterprise Resource Planning (ERP) web application tailored for **R
 ---
 
 ## Sewing Module: Per-Part Targets & Shortage Tracking
-The **Sewing Hourly Production Report** (`/sewing/report`) includes production tracking and target analytics across all four part rows: **Back**, **Front**, **Out Put**, and **A.S.M**:
+The **Sewing Hourly Production Report** (`/sewing/report`) includes production tracking and target analytics across all four part rows: **Back**, **Front**, **A.S.M**, and **Q.C.P**:
 
 1. **Per-Part Targets (Hour & Total Targets)**:
-   - Separate Hour Target (`back_hour_target`, `front_hour_target`, `output_hour_target`, `asm_hour_target`) and Total Target (`hour_target x working_hours`) for Back, Front, Out Put, and A.S.M rows.
+   - Separate Hour Target (`back_hour_target`, `front_hour_target`, `output_hour_target`, `asm_hour_target`) and Total Target (`hour_target x working_hours`) for Back, Front, A.S.M, and Q.C.P rows.
    - Configurable **Working Hours** selector (1 to 10 hours, default 8).
-   - "Apply Back Target to All" helper button copies Back hour target to Front, Out Put, and A.S.M (with confirmation).
+   - "Apply Back Target to All" helper button copies Back hour target to Front, A.S.M, and Q.C.P (with confirmation).
 
 2. **Real-time Color Coding**:
    - **Hour cells vs Hour Target**: Below target = RED (`#FEE2E2` with diff badge, e.g. `-20`), Equal = GREEN (`#DCFCE7` with `✓`), Above target = YELLOW (`#FEF9C3` with `+N`). Uncolored when target is blank.
-   - **Cumulative (Σ) zone**: Running cumulative sum under each hour cell compared dynamically with cumulative target (`hour target x elapsed working hours`) with color coding for Back, Front, Out Put, and A.S.M.
+   - **Cumulative (Σ) zone**: Running cumulative sum under each hour cell compared dynamically with cumulative target (`hour target x elapsed working hours`) with color coding for Back, Front, A.S.M, and Q.C.P.
    - **Total Column**: Shows sum of entered hourly values, compared with Total Target (`-N` or `+N`).
 
 3. **Enhanced Line Layout & Logistics**:
@@ -29,18 +29,18 @@ The **Sewing Hourly Production Report** (`/sewing/report`) includes production t
    - **Target Analytics**: Columns for **HOUR TARGET** and **TOTAL TARGET** (computed as `hour target x working hours`) displayed between Parts/Process and the hourly grid.
    - **Streamlined Dashboard Cards**: The Sewing Dashboard displays a compact, high-density format with 2 cards per row (Line 01-02, Line 03-04) without vertical clutter. Main process rows are immediately followed by the bottom strip.
    - **In-Cell Shortage Indicators**: Shortage is directly visible beneath each Total cell (e.g., `-440` in red, `0` in green, `+30` in amber), keeping variance immediately clear without extra sub-rows.
-   - **High-Visibility OUT PUT Row**: Prominently highlighted in emerald green with bold text and target indicator.
+   - **High-Visibility Q.C.P Row**: Prominently highlighted in emerald green with bold text and target indicator.
    - **Line Management Strip**: Full-width boxed bottom strip (Remarks, Line Chief, Mobile No) aligned with the grid with Bengali sub-labels.
    - **Reporting & Exports**: Full sub-row breakdowns (Hourly Short/Excess, Running Short/Excess, Remaining Target) remain accessible on the Entry and Reports pages, Print, Excel, and PDF exports.
 
 4. **Line Summary Badges & Per-Hour Shortage Metrics**:
-   - Line Header displays **Total MP** and **Total Output**, with live summary chips: `Target X | Actual Y | Ach Z% | Short S pcs (P%)` in Red/Green/Yellow for Out Put and A.S.M.
+   - Line Header displays **Total MP** and **Total Q.C.P**, with live summary chips: `Target X | Actual Y | Ach Z% | Short S pcs (P%)` in Red/Green/Yellow for Q.C.P and A.S.M.
    - Per-hour sum is used for "Short Qty" across line chips, Management Summary, Executive Dashboard ("Short qty by line"), Reports grid, Excel export, and PDF export. Total actual / total target achievement percentage is shown alongside.
 
 5. **Top Management Overview**:
-   - Day summary card at the top of the entry page and on the Sewing Dashboard for all 4 parts: Out Put, Back, Front, and A.S.M.
+   - Day summary card at the top of the entry page and on the Sewing Dashboard for all 4 parts: Back, Front, A.S.M, and Q.C.P.
    - Line-by-line summary table with Best Line and Shortest Line highlights.
-   - Dashboard charts: Target vs Actual bar chart per line, Cumulative Actual vs Target line chart, and Short Qty by Line bar chart with Out Put / Back / Front / A.S.M part selector.
+   - Dashboard charts: Target vs Actual bar chart per line, Cumulative Actual vs Target line chart, and Short Qty by Line bar chart with Back / Front / A.S.M / Q.C.P part selector.
    - Full read-only grid, Print, Excel (`.xlsx`), and PDF (`.pdf`) export with Management Summary including A.S.M.
 
 6. **Finishing Section Merger**:

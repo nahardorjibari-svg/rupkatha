@@ -547,8 +547,8 @@ export const SewingDashboard: React.FC = () => {
     const parts = [
       { id: 'back', label: 'BACK', color: 'bg-[#FF5722]', stripe: '#FF5722' },
       { id: 'front', label: 'FRONT', color: 'bg-[#2196F3]', stripe: '#2196F3' },
-      { id: 'output', label: 'OUT PUT', color: 'bg-[#4CAF50]', stripe: '#4CAF50' },
       { id: 'asm', label: 'A.S.M', color: 'bg-[#9C27B0]', stripe: '#9C27B0' },
+      { id: 'output', label: 'Q.C.P', color: 'bg-[#4CAF50]', stripe: '#4CAF50' },
     ];
 
     const breakdownByPart = useMemo(() => ({
@@ -985,8 +985,8 @@ export const SewingDashboard: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <SummaryChip label="Back" target={combinedSummary.byPart.back.totalTarget} actual={combinedSummary.byPart.back.totalActual} achievement={combinedSummary.byPart.back.achievement} status={combinedSummary.byPart.back.status} />
                 <SummaryChip label="Front" target={combinedSummary.byPart.front.totalTarget} actual={combinedSummary.byPart.front.totalActual} achievement={combinedSummary.byPart.front.achievement} status={combinedSummary.byPart.front.status} />
-                <SummaryChip label="Out Put" target={combinedSummary.byPart.output.totalTarget} actual={combinedSummary.byPart.output.totalActual} achievement={combinedSummary.byPart.output.achievement} status={combinedSummary.byPart.output.status} />
                 <SummaryChip label="A.S.M" target={combinedSummary.byPart.asm.totalTarget} actual={combinedSummary.byPart.asm.totalActual} achievement={combinedSummary.byPart.asm.achievement} status={combinedSummary.byPart.asm.status} />
+                <SummaryChip label="Q.C.P" target={combinedSummary.byPart.output.totalTarget} actual={combinedSummary.byPart.output.totalActual} achievement={combinedSummary.byPart.output.achievement} status={combinedSummary.byPart.output.status} />
               </div>
             </div>
             <div className="flex-1 space-y-3">
@@ -1070,7 +1070,7 @@ export const SewingDashboard: React.FC = () => {
           {/* Legend above line cards */}
           <div className="flex items-center gap-2 mb-4 px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 w-fit text-xs font-bold text-emerald-800 dark:text-emerald-300">
             <div className="w-3.5 h-3.5 rounded bg-[#16A34A] border border-[#15803D] shrink-0" />
-            <span>OUT PUT = final production (চূড়ান্ত উৎপাদন)</span>
+            <span>Q.C.P = final production (চূড়ান্ত উৎপাদন)</span>
           </div>
 
           {unitsToShow.map(u => {
