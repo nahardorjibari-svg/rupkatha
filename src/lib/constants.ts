@@ -50,6 +50,7 @@ export type UserRole =
   | 'merchandiser'
   | 'production_manager'
   | 'store_keeper'
+  | 'store_manager'
   | 'accounts'
   | 'hr'
   | 'commercial'
@@ -81,6 +82,7 @@ export const ROLE_LABELS: Record<UserRole, { en: string; bn: string }> = {
   merchandiser: { en: 'Senior Merchandiser', bn: 'সিনিয়র মার্চেন্ডাইজার' },
   production_manager: { en: 'Production Manager', bn: 'প্রোডাকশন ম্যানেজার' },
   store_keeper: { en: 'Store In-Charge', bn: 'স্টোর ইন-চার্জ' },
+  store_manager: { en: 'Store Manager', bn: 'স্টোর ম্যানেজার' },
   accounts: { en: 'Accounts Officer', bn: 'অ্যাকাউন্টস অফিসার' },
   hr: { en: 'HR & Compliance', bn: 'এইচআর ও কমপ্লায়েন্স' },
   commercial: { en: 'Commercial Manager', bn: 'কমার্শিয়াল ম্যানেজার' },

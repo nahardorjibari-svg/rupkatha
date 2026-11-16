@@ -17,6 +17,11 @@ import { StaffInfo } from '../pages/hr/StaffInfo';
 import { MonthlyAttendanceReport } from '../pages/hr/MonthlyAttendanceReport';
 import { StaffMonthSheet } from '../pages/hr/StaffMonthSheet';
 import { LinePlanPage } from '../pages/planning/LinePlanPage';
+import { StoreDashboard } from '../pages/store/StoreDashboard';
+import { StoreItemsPage } from '../pages/store/StoreItemsPage';
+import { StoreGrnPage } from '../pages/store/StoreGrnPage';
+import { StorePlaceholderPage } from '../pages/store/StorePlaceholderPage';
+import { StoreProtectedRoute } from '../components/store/StoreProtectedRoute';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
 
@@ -219,6 +224,99 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/admin/hr/attendance/:id"
           element={<Navigate to="/hr/attendance/:id" replace />}
+        />
+
+        {/* Store & Inventory Module Routes (Role-based access via StoreProtectedRoute) */}
+        <Route path="/store" element={<Navigate to="/store/dashboard" replace />} />
+        <Route path="/admin/store" element={<Navigate to="/store/dashboard" replace />} />
+        <Route
+          path="/store/dashboard"
+          element={
+            <StoreProtectedRoute>
+              <StoreDashboard />
+            </StoreProtectedRoute>
+          }
+        />
+        <Route
+          path="/store/items"
+          element={
+            <StoreProtectedRoute>
+              <StoreItemsPage />
+            </StoreProtectedRoute>
+          }
+        />
+        <Route
+          path="/store/grn"
+          element={
+            <StoreProtectedRoute>
+              <StoreGrnPage />
+            </StoreProtectedRoute>
+          }
+        />
+        <Route
+          path="/store/issue"
+          element={
+            <StoreProtectedRoute>
+              <StorePlaceholderPage
+                title="Stock Out (Material Issue)"
+                titleBn="স্টক আউট (মালামাল ইস্যু)"
+                description="Departmental requisition, fabric & trims issue to cutting/sewing floors will be available in Part 2."
+                descriptionBn="কাটিং ও সুইং ফ্লোরে মালামাল ইস্যু ও রিকুইজিশন মডিউল পরবর্তী ধাপে যুক্ত হবে।"
+              />
+            </StoreProtectedRoute>
+          }
+        />
+        <Route
+          path="/store/transfer"
+          element={
+            <StoreProtectedRoute>
+              <StorePlaceholderPage
+                title="Stock Transfers"
+                titleBn="স্টক স্থানান্তর"
+                description="Inter-unit (Knit ↔ Woven) and warehouse transfer notes will be available in Part 2."
+                descriptionBn="নিট ও উভেন ইউনিটের মধ্যে মালামাল স্থানান্তর মডিউল পরবর্তী ধাপে যুক্ত হবে।"
+              />
+            </StoreProtectedRoute>
+          }
+        />
+        <Route
+          path="/store/adjustment"
+          element={
+            <StoreProtectedRoute>
+              <StorePlaceholderPage
+                title="Stock Adjustments"
+                titleBn="স্টক সমন্বয়"
+                description="Physical inventory reconciliation and stock adjustment approvals will be available in Part 2."
+                descriptionBn="ফিজিক্যাল ইনভেন্টরি অডিট ও স্টক সমন্বয় মডিউল পরবর্তী ধাপে যুক্ত হবে।"
+              />
+            </StoreProtectedRoute>
+          }
+        />
+        <Route
+          path="/store/ledger"
+          element={
+            <StoreProtectedRoute>
+              <StorePlaceholderPage
+                title="Stock Ledger"
+                titleBn="স্টক খতিয়ান"
+                description="Item-wise chronological stock movement ledger and bin card history will be available in Part 2."
+                descriptionBn="পণ্যভিত্তিক পূর্ণাঙ্গ স্টক খতিয়ান ও বিন কার্ড ইতিহাস পরবর্তী ধাপে যুক্ত হবে।"
+              />
+            </StoreProtectedRoute>
+          }
+        />
+        <Route
+          path="/store/reports"
+          element={
+            <StoreProtectedRoute>
+              <StorePlaceholderPage
+                title="Store Reports"
+                titleBn="স্টোর রিপোর্ট"
+                description="Valuation, slow-moving stock, and supplier GRN analytics reports will be available in Part 2."
+                descriptionBn="স্টক মূল্যায়ন ও সরবরাহকারী বিশ্লেষণ রিপোর্ট পরবর্তী ধাপে যুক্ত হবে।"
+              />
+            </StoreProtectedRoute>
+          }
         />
 
         {/* Protected Dashboard Route (All active authenticated factory staff) */}

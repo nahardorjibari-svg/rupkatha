@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -82,7 +82,14 @@ export const Sidebar: React.FC = () => {
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
     sewing: true, // default expand sewing
     hr_payroll: true, // default expand hr_payroll
+    store_inventory: location.pathname.startsWith('/store'),
   });
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/store')) {
+      setExpandedMenus((prev) => (prev.store_inventory ? prev : { ...prev, store_inventory: true }));
+    }
+  }, [location.pathname]);
 
   const isMini = mode === 'mini';
   const isHidden = mode === 'hidden';
@@ -303,7 +310,15 @@ export const Sidebar: React.FC = () => {
           {(() => {
             const userPermissions = profile?.permissions || [];
 
+            const storeAllowedRoles = ['admin', 'store_keeper', 'store_manager', 'production_manager', 'accounts'];
+
             const canAccessItem = (item: any): boolean => {
+              if (item.id === 'store_inventory') {
+                return (
+                  profile?.is_active !== false &&
+                  storeAllowedRoles.includes(profile?.role || '')
+                );
+              }
               if (item.id === 'dashboard' && isAdmin) return true;
               if (item.id === 'dashboard' && !isAdmin) return false;
               if (item.isAdminOnly) return isAdmin;
@@ -439,12 +454,13 @@ export const Sidebar: React.FC = () => {
                             <div className="pl-6 space-y-1 border-l border-white/10 ml-4 my-1">
                               {item.children.map((child) => {
                                 const isChildActive = location.pathname === child.path;
+                                const isStoreChild = item.id === 'store_inventory';
                                 return (
                                   <NavLink
                                     key={child.id}
                                     to={child.path}
                                     onClick={() => setMobileOpen(false)}
-                                    className={`h-9 px-3 flex items-center gap-2.5 rounded-xl text-xs font-medium transition-all ${
+                                    className={`${isStoreChild ? 'py-1.5 min-h-[38px]' : 'h-9'} px-3 flex items-center gap-2.5 rounded-xl text-xs font-medium transition-all ${
                                       isChildActive
                                         ? 'bg-[#2BA5B5] text-white shadow-xs font-bold'
                                         : isDark
@@ -452,7 +468,29 @@ export const Sidebar: React.FC = () => {
                                         : 'text-[#1E293B] hover:text-slate-900 hover:bg-slate-100'
                                     }`}
                                   >
-                                    <span className="truncate">{child.name}</span>
+                                    {isStoreChild && (
+                                      <span
+                                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                          isChildActive
+                                            ? 'bg-white'
+                                            : isDark
+                                            ? 'bg-[#2BA5B5]/70'
+                                            : 'bg-slate-400'
+                                        }`}
+                                      />
+                                    )}
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="truncate leading-tight">{child.name}</span>
+                                      {isStoreChild && child.nameBangla && (
+                                        <span
+                                          className={`text-[10px] font-bangla truncate leading-snug ${
+                                            isChildActive ? 'text-white/85' : 'opacity-70'
+                                          }`}
+                                        >
+                                          {child.nameBangla}
+                                        </span>
+                                      )}
+                                    </div>
                                   </NavLink>
                                 );
                               })}

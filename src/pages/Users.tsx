@@ -280,6 +280,7 @@ export const Users: React.FC = () => {
     'merchandiser',
     'production_manager',
     'store_keeper',
+    'store_manager',
     'accounts',
     'hr',
     'commercial',

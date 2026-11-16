@@ -176,6 +176,38 @@ The **Planning & Production** module provides a 30-day rolling line plan with re
 
 ---
 
+## Store & Inventory Module (Part 1)
+The **Store & Inventory** module manages factory raw materials, item master records, stock valuation, and Goods Received Notes (GRN) with Bangladeshi currency (`৳` lakh/crore grouping) and Hind Siliguri Bangla sub-labels.
+
+1. **Role-Based Access Control (`/store/*`)**:
+   - Access checks `profiles.role` and `profiles.is_active` directly (not the module permissions array).
+   - **Allowed Roles**: `admin`, `store_keeper`, `store_manager`, `production_manager`, `accounts`. Unauthorized users are redirected to `/dashboard`.
+   - **Capabilities**:
+     - `admin`: Full access (Dashboard, Item Master add/edit, GRN create/edit/submit, GRN Approve/Reject).
+     - `store_manager`: Dashboard, Item Master view, GRN create/edit/submit, GRN Approve/Reject.
+     - `store_keeper`: Dashboard, Item Master view, GRN create/edit/submit.
+     - `production_manager` & `accounts`: Read-only access to Store Dashboard, Item Master, and GRN records.
+
+2. **Routes**:
+   - `/store/dashboard` — **Overview (`ওভারভিউ`)**: Hero valuation card, 2×2 KPIs + Today GRN/Issue cards, monthly Recharts `ComposedChart`, Stock Status & Category charts, Top Low Stock Items, and Recent Stock Activities (filtered dynamically by top unit selector `All` / `Knit` / `Woven`).
+   - `/store/items` — **Products (`পণ্য`)**: Searchable, paginated Item Master table with category/status filters, Excel & PDF exports (with Hind Siliguri Bangla font), and Admin-only Add/Edit drawer supporting dynamic `extra_fields` JSONB (`GSM`, `Width`, `Composition` for Fabric; `Count`, `Type`, `Lot` for Yarn).
+   - `/store/grn` — **Stock In (GRN) (`স্টক ইন`)**: Filterable GRN register, multi-line item receipt drawer with searchable item picker, BDT & USD (`exchange_rate`) calculation, Draft / Submit / Approve / Reject workflow, role-scoped Delete for `draft`/`rejected` documents (`admin`, `store_manager`, and creator `store_keeper` via `canDeleteStoreDocument` — same rule applies to `store_issues`, `store_transfers`, and `store_adjustments`), Excel & PDF exports, and A4 formatted Print document with signature boxes (*Prepared by*, *Store Manager*, *Accounts*).
+   - `/store/issue`, `/store/transfer`, `/store/adjustment`, `/store/ledger`, `/store/reports` — Coming in Part 2.
+
+3. **RPC Functions & Read-Only Views**:
+   - **RPCs**:
+     - `store_next_no({ p_kind: 'grn' })` — Generates sequential GRN document numbers on save.
+     - `store_submit({ p_kind: 'grn', p_id })` — Submits a draft or rejected GRN for approval.
+     - `store_approve_grn({ p_grn_id })` — Approves a submitted GRN (`admin` / `store_manager`) and updates inventory balances.
+     - `store_reject({ p_kind: 'grn', p_id })` — Rejects a submitted GRN (`admin` / `store_manager`) so it can be edited and resubmitted.
+   - **Read-Only Views**:
+     - `store_v_stock_status` — Per-item stock totals (`knit_qty`, `woven_qty`, `current_stock`, `stock_value`, `status`).
+     - `store_v_category_value` — Category-level item counts and stock valuation.
+     - `store_v_monthly_movement` — Monthly `qty_in`, `qty_out`, `value_in`, `value_out`, `net_value` by unit.
+     - `store_v_recent_activity` — Chronological feed of GRN, issue, transfer, and adjustment movements.
+
+---
+
 ## Automated GitHub Pages Deployment (GitHub Actions)
 This repository includes a pre-configured GitHub Actions workflow at `.github/workflows/deploy.yml`. 
 To publish your app live on GitHub Pages:
