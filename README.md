@@ -57,6 +57,17 @@ The **Sewing Hourly Production Report** (`/sewing/report`) includes production t
 
 ---
 
+## Line Dashboard: Enterprise Factory TV Boards (`/linedash/all`, `/linedash/:line`)
+Dedicated 16:9 zero-scroll floor TV displays governed by the `sewing` permission (also accessible to `admin`):
+
+1. **Routes & Access**:
+   - `/linedash/all` — **All Lines 2×2 Overview**: Live cards for Line 1–4 showing traffic-light status, Buyer/Style, Today Target, Done, Remaining, SVG progress ring, and 10 mini Q.C.P hour dots. Clicking any card opens that line's full TV board.
+   - `/linedash/:line` (`/linedash/1` – `/linedash/4`) — **Single-Line TV Board**: Deep navy gradient (`#071633` → `#0D2D63`) with light-blue enterprise cards, line-colored header accent (`blue`, `purple`, `orange`, `teal`), live Dhaka clock (`Asia/Dhaka`), Info Strip, 4 Bangla/English KPI cards (`আজকের লক্ষ্য`, `উৎপাদন হয়েছে`, `এখনো বাকি` / `লক্ষ্য পূরণ`, progress ring + `বাকি সময়`), 10-hour grid (`BACK`, `FRONT`, `A.S.M`, `Q.C.P`), Q.C.P Final Status, Efficiency %, Manpower, and Attention Required / On Track panels.
+   - **Kiosk & Fullscreen**: Press `F` or click Fullscreen (auto-hides after 3s idle) to hide Sidebar/TopBar, or open with `?kiosk=1` for unattended factory TV screens.
+   - **Realtime + Sound**: Subscribes to Supabase Realtime (`400ms` debounce) with `15s` polling fallback, 1.5s highlight flash on changed numbers, and optional Web Audio short-hour alert beep (muted by default).
+
+---
+
 ## Attendance Module: Mobile-First Selfie & GPS Punch
 The **Attendance Punch** module (`/attendance`) provides a tamper-proof, mobile-friendly punch clock for factory staff:
 

@@ -70,6 +70,17 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu }) => {
     if (location.pathname === '/sewing/reports') {
       return { title: 'Reports & Exports', bangla: 'রিপোর্ট ও এক্সপোর্ট', breadcrumb: 'Sewing' };
     }
+    if (location.pathname === '/linedash/all') {
+      return { title: 'Line Dashboard — All Lines', bangla: 'সব লাইন টিভি বোর্ড', breadcrumb: 'Line Dashboard' };
+    }
+    if (location.pathname.startsWith('/linedash/')) {
+      const seg = location.pathname.split('/')[2] || '';
+      return {
+        title: `Line Dashboard — Line ${seg.padStart(2, '0')}`,
+        bangla: `লাইন ${seg} টিভি বোর্ড`,
+        breadcrumb: 'Line Dashboard',
+      };
+    }
     return { title: 'Executive Overview', bangla: 'ফ্যাক্টরি ড্যাশবোর্ড ওভারভিউ', breadcrumb: 'Dashboard' };
   };
 

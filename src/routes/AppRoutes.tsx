@@ -22,6 +22,8 @@ import { StoreItemsPage } from '../pages/store/StoreItemsPage';
 import { StoreGrnPage } from '../pages/store/StoreGrnPage';
 import { StorePlaceholderPage } from '../pages/store/StorePlaceholderPage';
 import { StoreProtectedRoute } from '../components/store/StoreProtectedRoute';
+import { LineDashboardAll } from '../pages/linedash/LineDashboardAll';
+import { LineDashboardBoard } from '../pages/linedash/LineDashboardBoard';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
 
@@ -156,6 +158,31 @@ export const AppRoutes: React.FC = () => {
           element={
             <ProtectedRoute requiredModule="sewing">
               <SewingReports />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Line Dashboard Enterprise TV Boards (Protected by requiredModule="sewing") */}
+        <Route path="/linedash" element={<Navigate to="/linedash/all" replace />} />
+        <Route
+          path="/linedash/all"
+          element={
+            <ProtectedRoute
+              requiredModule="sewing"
+              deniedToastMessage="Access denied / আপনার এই পেইজে প্রবেশের অনুমতি নেই"
+            >
+              <LineDashboardAll />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/linedash/:line"
+          element={
+            <ProtectedRoute
+              requiredModule="sewing"
+              deniedToastMessage="Access denied / আপনার এই পেইজে প্রবেশের অনুমতি নেই"
+            >
+              <LineDashboardBoard />
             </ProtectedRoute>
           }
         />
