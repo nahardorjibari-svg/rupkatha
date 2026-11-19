@@ -6,10 +6,14 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
+  Calendar,
   CheckCircle2,
+  Clock,
+  Hourglass,
   Maximize2,
   Minimize2,
   Radio,
+  Target,
   Tv,
   Users,
   Volume2,
@@ -129,18 +133,18 @@ export const LineDashboardAll: React.FC = () => {
       ref={boardRef}
       onMouseMove={bumpControls}
       onTouchStart={bumpControls}
-      className={`flex flex-col justify-between overflow-hidden select-none text-white bg-gradient-to-br from-[#071633] via-[#0B224B] to-[#0D2D63] ${
+      className={`flex flex-col justify-between overflow-hidden select-none text-white bg-gradient-to-br from-[#030E24] via-[#071D47] to-[#0B2D6E] ${
         standaloneMode
-          ? 'fixed inset-0 z-[9999] w-screen h-screen p-[clamp(0.5rem,1vw,0.9rem)]'
-          : 'relative -m-4 sm:-m-6 lg:-m-8 h-[calc(100vh-5rem)] p-[clamp(0.45rem,0.9vw,0.85rem)]'
+          ? 'fixed inset-0 z-[9999] w-screen h-screen p-[clamp(0.45rem,0.95vw,0.85rem)]'
+          : 'relative -m-4 sm:-m-6 lg:-m-8 h-[calc(100vh-5rem)] p-[clamp(0.4rem,0.85vw,0.75rem)]'
       }`}
     >
-      {/* Subtle enterprise atmospheric glow */}
+      {/* Rich glowing neon-navy enterprise backdrop */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-35"
+        className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'radial-gradient(circle at 20% 15%, rgba(56, 189, 248, 0.22), transparent 45%), radial-gradient(circle at 80% 85%, rgba(37, 99, 235, 0.2), transparent 50%)',
+            'radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.24), transparent 44%), radial-gradient(circle at 82% 88%, rgba(37, 99, 235, 0.24), transparent 48%)',
         }}
       />
 
@@ -207,26 +211,26 @@ export const LineDashboardAll: React.FC = () => {
       {/* MAIN VERTICAL TV STACK */}
       <div className="relative z-10 flex flex-col justify-between h-full gap-[clamp(0.4rem,0.8vh,0.7rem)] min-h-0">
         {/* HEADER BAR */}
-        <header className="shrink-0 rounded-xl bg-[#081C3E]/95 border-t-4 border-b-2 border-sky-500 px-[clamp(0.75rem,1.4vw,1.5rem)] py-[clamp(0.35rem,0.7vh,0.6rem)] flex items-center justify-between gap-3 shadow-lg">
+        <header className="shrink-0 rounded-xl bg-gradient-to-r from-[#061A42]/95 via-[#0B2B68]/95 to-[#061A42]/95 border border-sky-400/45 border-t-4 border-t-sky-400 px-[clamp(0.75rem,1.4vw,1.5rem)] py-[clamp(0.35rem,0.68vh,0.58rem)] flex items-center justify-between gap-3 shadow-[0_0_24px_rgba(56,189,248,0.2)]">
           <div className="flex items-center gap-3 min-w-0 shrink-0">
-            <div className="p-1.5 rounded-lg bg-sky-500/20 border border-sky-400/40 text-sky-200 shrink-0">
+            <div className="p-1.5 rounded-xl bg-sky-400/15 border border-sky-300/35 text-white shrink-0 shadow-[0_0_12px_rgba(56,189,248,0.25)]">
               <Tv className="w-[clamp(1.2rem,1.9vw,1.8rem)] h-[clamp(1.2rem,1.9vw,1.8rem)]" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2.5">
                 <h1
-                  className="font-black tracking-wide !text-white leading-none truncate drop-shadow-xs"
+                  className="font-black tracking-wide !text-white leading-none truncate drop-shadow-sm"
                   style={{ fontSize: 'clamp(1.1rem, 1.85vw, 1.95rem)' }}
                 >
                   ALL LINES LIVE MONITOR
                 </h1>
-                <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 shrink-0">
-                  <Radio className="w-3 h-3 animate-pulse text-emerald-400" />
-                  <span className="text-[11px] font-extrabold tracking-wider uppercase">
+                <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 border border-emerald-300/75 text-white shrink-0 shadow-[0_0_14px_rgba(34,197,94,0.45)]">
+                  <Radio className="w-3 h-3 animate-pulse text-white" />
+                  <span className="text-[11px] font-black tracking-wider uppercase">
                     LIVE PRODUCTION
                   </span>
                 </div>
-                <span className="hidden sm:inline-flex px-2 py-0.5 rounded-md bg-sky-500/20 border border-sky-400/30 text-sky-200 text-[11px] font-bold uppercase tracking-wider">
+                <span className="hidden sm:inline-flex px-2 py-0.5 rounded-md bg-sky-500/25 border border-sky-300/45 text-sky-100 text-[11px] font-extrabold uppercase tracking-wider">
                   {effectiveUnit} UNIT
                 </span>
               </div>
@@ -238,25 +242,27 @@ export const LineDashboardAll: React.FC = () => {
 
           <div className="hidden xl:flex items-center justify-center min-w-0 px-2">
             <span
-              className="font-black tracking-[0.12em] uppercase !text-white text-center truncate"
+              className="font-black tracking-[0.12em] uppercase !text-white text-center truncate drop-shadow-[0_0_10px_rgba(56,189,248,0.35)]"
               style={{ fontSize: 'clamp(0.95rem, 1.45vw, 1.55rem)' }}
             >
               RUPKATHA APPARELS LTD.
             </span>
           </div>
 
-          <div className="flex items-center gap-[clamp(0.6rem,1.2vw,1.25rem)] shrink-0">
+          <div className="flex items-center gap-[clamp(0.6rem,1.1vw,1.2rem)] shrink-0">
             <div
-              className="hidden md:block font-bangla text-sky-100 font-semibold whitespace-nowrap"
+              className="hidden md:flex items-center gap-1.5 font-bangla text-sky-100 font-bold whitespace-nowrap"
               style={{ fontSize: 'clamp(0.82rem, 1.05vw, 1.05rem)' }}
             >
-              {clock.formattedDate}
+              <Calendar className="w-4 h-4 text-sky-300 shrink-0" />
+              <span>{clock.formattedDate}</span>
             </div>
             <div
-              className="px-3.5 py-1.5 rounded-xl bg-[#102E63] border border-sky-400/35 font-extrabold text-white tabular-nums whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#041436]/90 border border-sky-400/45 font-black text-white tabular-nums whitespace-nowrap shadow-[0_0_12px_rgba(56,189,248,0.2)]"
               style={{ fontSize: 'clamp(0.9rem, 1.25vw, 1.3rem)' }}
             >
-              {clock.formattedTime}
+              <Clock className="w-4 h-4 text-sky-300 shrink-0" />
+              <span>{clock.formattedTime}</span>
             </div>
           </div>
         </header>
@@ -304,13 +310,13 @@ export const LineDashboardAll: React.FC = () => {
                 key={ln}
                 type="button"
                 onClick={() => openLineBoard(ln)}
-                className={`group text-left rounded-2xl bg-[#F4F8FF] hover:bg-white text-[#0B1E40] border-2 border-sky-300 hover:border-sky-400 shadow-xl transition-all duration-200 flex flex-col justify-between overflow-hidden cursor-pointer focus-visible:ring-4 focus-visible:ring-sky-400 ${
+                className={`group text-left rounded-2xl bg-gradient-to-b from-[#0A2558] to-[#061638] hover:from-[#0C2D6B] hover:to-[#071A42] text-white border-2 border-sky-400/55 hover:border-sky-300 shadow-[0_0_24px_rgba(56,189,248,0.18)] transition-all duration-200 flex flex-col justify-between overflow-hidden cursor-pointer focus-visible:ring-4 focus-visible:ring-sky-400 ${
                   cardChanged ? 'ring-4 ring-amber-400' : ''
                 }`}
               >
                 {/* Card Header Strip (Line-colored top border) */}
                 <div
-                  className="shrink-0 bg-[#122D5E] text-white px-[clamp(0.75rem,1.2vw,1.2rem)] py-[clamp(0.4rem,0.7vh,0.6rem)] flex items-center justify-between gap-2"
+                  className="shrink-0 bg-[#06183D] text-white px-[clamp(0.75rem,1.2vw,1.2rem)] py-[clamp(0.38rem,0.68vh,0.58rem)] flex items-center justify-between gap-2 border-b border-sky-400/30"
                   style={{ borderTop: `4px solid ${theme.accentHex}` }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -354,44 +360,50 @@ export const LineDashboardAll: React.FC = () => {
                 {/* Card Body */}
                 {loading ? (
                   <div className="flex-1 p-4 animate-pulse flex items-center justify-center">
-                    <div className="w-full h-24 rounded-xl bg-sky-200/60" />
+                    <div className="w-full h-24 rounded-xl bg-white/10" />
                   </div>
                 ) : !m.hasReport ? (
                   <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-4 text-center">
                     <div
-                      className="font-bangla font-bold text-[#0B224B] leading-relaxed"
+                      className="font-bangla font-bold text-white leading-relaxed"
                       style={{ fontSize: 'clamp(1.15rem, 1.6vw, 1.6rem)' }}
                     >
                       আজকের রিপোর্ট শুরু হয়নি
                     </div>
-                    <div className="text-xs font-semibold text-slate-600 mt-1">
+                    <div className="text-xs font-semibold text-sky-200 mt-1">
                       Click to open Line {padded} TV board
                     </div>
                   </div>
                 ) : (
-                  <div className="flex-1 min-h-0 px-[clamp(0.75rem,1.2vw,1.2rem)] py-[clamp(0.45rem,0.8vh,0.75rem)] flex flex-col justify-between gap-2">
+                  <div className="flex-1 min-h-0 px-[clamp(0.75rem,1.2vw,1.2rem)] py-[clamp(0.45rem,0.8vh,0.72rem)] flex flex-col justify-between gap-2">
                     {/* Metrics + Progress Ring */}
                     <div className="flex items-center justify-between gap-3 flex-1 min-h-0">
-                      {/* 3 Numeric Boxes: Target / Done / Remaining */}
+                      {/* 3 Rich Gradient Numeric Boxes: Target / Done / Remaining */}
                       <div className="grid grid-cols-3 gap-2.5 flex-1 min-w-0">
-                        <div className="rounded-xl bg-[#E0EEFF] border border-[#93C5FD] px-3 py-2 flex flex-col justify-center">
-                          <span className="font-bangla text-xs font-bold text-[#1E3A8A] leading-normal">
-                            আজকের লক্ষ্য
-                          </span>
+                        <div className="rounded-xl bg-gradient-to-br from-[#0E4AB8] to-[#061F54] border border-sky-400/70 px-3 py-2 flex flex-col justify-center shadow-inner">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-bangla text-xs font-bold text-sky-100 leading-normal">
+                              আজকের লক্ষ্য
+                            </span>
+                            <Target className="w-3.5 h-3.5 text-sky-200 shrink-0" />
+                          </div>
                           <span
-                            className="font-black text-[#0B224B] tabular-nums leading-tight mt-0.5"
+                            className="font-black text-white tabular-nums leading-tight mt-0.5"
                             style={{ fontSize: 'clamp(1.2rem, 1.85vw, 1.95rem)' }}
                           >
                             {m.dayTarget !== null ? m.dayTarget.toLocaleString() : '-'}
                           </span>
                         </div>
 
-                        <div className="rounded-xl bg-[#DCFCE7] border border-[#86EFAC] px-3 py-2 flex flex-col justify-center">
-                          <span className="font-bangla text-xs font-bold text-[#14532D] leading-normal">
-                            উৎপাদন হয়েছে
-                          </span>
+                        <div className="rounded-xl bg-gradient-to-br from-[#107839] to-[#073B1B] border border-emerald-400/70 px-3 py-2 flex flex-col justify-center shadow-inner">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-bangla text-xs font-bold text-emerald-100 leading-normal">
+                              উৎপাদন হয়েছে
+                            </span>
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-200 shrink-0" />
+                          </div>
                           <span
-                            className="font-black text-[#064E3B] tabular-nums leading-tight mt-0.5"
+                            className="font-black text-[#6EE7B7] tabular-nums leading-tight mt-0.5"
                             style={{ fontSize: 'clamp(1.2rem, 1.85vw, 1.95rem)' }}
                           >
                             {m.done.toLocaleString()}
@@ -399,22 +411,29 @@ export const LineDashboardAll: React.FC = () => {
                         </div>
 
                         <div
-                          className={`rounded-xl border px-3 py-2 flex flex-col justify-center ${
+                          className={`rounded-xl border px-3 py-2 flex flex-col justify-center shadow-inner ${
                             m.isGoalMet
-                              ? 'bg-[#DCFCE7] border-[#86EFAC]'
-                              : 'bg-[#FEE2E2] border-[#FCA5A5]'
+                              ? 'bg-gradient-to-br from-[#107839] to-[#073B1B] border-emerald-400/70'
+                              : 'bg-gradient-to-br from-[#BE123C] to-[#570A21] border-rose-400/70'
                           }`}
                         >
-                          <span
-                            className={`font-bangla text-xs font-bold leading-normal ${
-                              m.isGoalMet ? 'text-[#14532D]' : 'text-[#991B1B]'
-                            }`}
-                          >
-                            {m.isGoalMet ? 'লক্ষ্য পূরণ' : 'এখনো বাকি'}
-                          </span>
+                          <div className="flex items-center justify-between gap-1">
+                            <span
+                              className={`font-bangla text-xs font-bold leading-normal ${
+                                m.isGoalMet ? 'text-emerald-100' : 'text-rose-100'
+                              }`}
+                            >
+                              {m.isGoalMet ? 'লক্ষ্য পূরণ' : 'এখনো বাকি'}
+                            </span>
+                            <Hourglass
+                              className={`w-3.5 h-3.5 shrink-0 ${
+                                m.isGoalMet ? 'text-emerald-200' : 'text-rose-200'
+                              }`}
+                            />
+                          </div>
                           <span
                             className={`font-black tabular-nums leading-tight mt-0.5 ${
-                              m.isGoalMet ? 'text-[#064E3B]' : 'text-[#7F1D1D]'
+                              m.isGoalMet ? 'text-[#6EE7B7]' : 'text-[#FDE047]'
                             }`}
                             style={{ fontSize: 'clamp(1.2rem, 1.85vw, 1.95rem)' }}
                           >
@@ -428,23 +447,23 @@ export const LineDashboardAll: React.FC = () => {
                       </div>
 
                       {/* Circular Progress Ring */}
-                      <div className="shrink-0 rounded-xl bg-[#0A1D42] text-white px-3 py-1.5 flex flex-col items-center justify-center">
+                      <div className="shrink-0 rounded-xl bg-[#041434] border border-sky-400/45 text-white px-3 py-1.5 flex flex-col items-center justify-center">
                         <div className="relative w-[clamp(3.6rem,5vw,5rem)] h-[clamp(3.6rem,5vw,5rem)]">
                           <svg viewBox="0 0 88 88" className="w-full h-full -rotate-90">
                             <circle
                               cx="44"
                               cy="44"
                               r={r}
-                              stroke="rgba(148, 163, 184, 0.25)"
-                              strokeWidth="7.5"
+                              stroke="rgba(148, 163, 184, 0.22)"
+                              strokeWidth="8"
                               fill="none"
                             />
                             <circle
                               cx="44"
                               cy="44"
                               r={r}
-                              stroke={m.isGoalMet ? '#22C55E' : '#38BDF8'}
-                              strokeWidth="7.5"
+                              stroke={m.isGoalMet ? '#4ADE80' : '#38BDF8'}
+                              strokeWidth="8"
                               strokeLinecap="round"
                               fill="none"
                               strokeDasharray={circ}
@@ -464,9 +483,9 @@ export const LineDashboardAll: React.FC = () => {
                     </div>
 
                     {/* Per-line Mini Hour Dots + Footer Strip */}
-                    <div className="shrink-0 flex items-center justify-between gap-2 pt-2 border-t border-sky-200">
+                    <div className="shrink-0 flex items-center justify-between gap-2 pt-2 border-t border-sky-400/25">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600 shrink-0">
+                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-sky-200 shrink-0">
                           Q.C.P H1-H{m.workingHours}
                         </span>
                         <div className={`flex items-center ${m.qcpDots.length > 10 ? 'gap-1' : 'gap-1.5'}`}>
@@ -483,7 +502,7 @@ export const LineDashboardAll: React.FC = () => {
                               <span
                                 className={`${m.qcpDots.length > 10 ? 'w-3 h-3' : 'w-3.5 h-3.5'} rounded-full ring-2 ${getDotClass(dotState)}`}
                               />
-                              <span className="text-[10px] font-bold text-slate-600 leading-none mt-0.5">
+                              <span className="text-[10px] font-bold text-sky-200 leading-none mt-0.5">
                                 {idx + 1}
                               </span>
                             </div>
@@ -491,18 +510,18 @@ export const LineDashboardAll: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 text-xs font-bold text-[#0B224B]">
-                        <span className="hidden xl:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-sky-100 text-sky-900">
+                      <div className="flex items-center gap-2 text-xs font-bold text-white">
+                        <span className="hidden xl:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-sky-500/25 border border-sky-400/35 text-sky-100">
                           <Users className="w-3.5 h-3.5" />
                           MP: {m.manpowerTotal ?? '-'}
                         </span>
                         {m.isLatestHourShort ? (
-                          <span className="inline-flex items-center gap-1 text-rose-600 font-extrabold">
-                            <AlertTriangle className="w-3.5 h-3.5" />
+                          <span className="inline-flex items-center gap-1 text-[#FB7185] font-extrabold">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
                             H{m.latestHourNo}: {m.latestProduced}/{m.latestTarget}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-emerald-700 font-extrabold">
+                          <span className="inline-flex items-center gap-1 text-[#4ADE80] font-extrabold">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             {m.remainingHours} Hr Left
                           </span>
@@ -517,14 +536,16 @@ export const LineDashboardAll: React.FC = () => {
         </section>
 
         {/* FOOTER BAR */}
-        <footer className="shrink-0 rounded-xl bg-[#071836]/95 border border-sky-400/25 px-[clamp(0.85rem,1.3vw,1.35rem)] py-[clamp(0.28rem,0.55vh,0.45rem)] flex items-center justify-between gap-3">
+        <footer className="shrink-0 rounded-xl bg-gradient-to-r from-[#061A42]/95 via-[#09245A]/95 to-[#061A42]/95 border border-sky-400/35 px-[clamp(0.85rem,1.3vw,1.35rem)] py-[clamp(0.26rem,0.52vh,0.44rem)] flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span className="w-4 h-4 rounded-full bg-emerald-500 text-white inline-flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            </span>
             <span
-              className="font-bold text-sky-100 truncate"
+              className="font-bold text-white truncate"
               style={{ fontSize: 'clamp(0.78rem, 0.98vw, 0.98rem)' }}
             >
-              Keep Production On Track | Achieve Today&apos;s Target
+              Keep Production On Track &nbsp;|&nbsp; Achieve Today&apos;s Target
             </span>
           </div>
 
@@ -533,7 +554,7 @@ export const LineDashboardAll: React.FC = () => {
               <span
                 className={`w-2.5 h-2.5 rounded-full ${
                   connectionState === 'connected'
-                    ? 'bg-emerald-400'
+                    ? 'bg-emerald-400 shadow-[0_0_8px_#4ade80]'
                     : 'bg-amber-400 animate-pulse'
                 }`}
               />
@@ -547,10 +568,10 @@ export const LineDashboardAll: React.FC = () => {
             </div>
 
             <span
-              className="hidden sm:inline italic font-semibold text-sky-200/90"
+              className="hidden sm:inline italic font-bold text-sky-100"
               style={{ fontSize: 'clamp(0.76rem, 0.95vw, 0.95rem)' }}
             >
-              Together for a Productive Factory
+              &ldquo;Together for a Productive Factory&rdquo;
             </span>
           </div>
         </footer>

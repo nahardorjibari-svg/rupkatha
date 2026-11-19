@@ -8,12 +8,13 @@ import {
   AlertTriangle,
   ArrowLeft,
   BarChart3,
+  Calendar,
   CheckCircle2,
+  Clock,
   Hourglass,
   Maximize2,
   Minimize2,
   Radio,
-  ShieldCheck,
   Star,
   Target,
   TrendingUp,
@@ -49,6 +50,18 @@ const SewingMachineIcon: React.FC<{ className?: string }> = ({ className = 'w-8 
     />
     <circle cx="26.5" cy="17.5" r="2.2" fill="currentColor" />
     <path d="M13 8H19" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+  </svg>
+);
+
+const TShirtIcon: React.FC<{ className?: string }> = ({ className = 'w-7 h-7' }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    aria-hidden="true"
+  >
+    <path d="M16.24 3.56 21 6.32l-1.9 3.92-2.6-1.15V20a1 1 0 0 1-1 1H8.5a1 1 0 0 1-1-1V9.09L4.9 10.24 3 6.32l4.76-2.76a1 1 0 0 1 .92-.05 3.6 3.6 0 0 0 6.64 0 1 1 0 0 1 .92.05Z" />
   </svg>
 );
 
@@ -188,18 +201,18 @@ export const LineDashboardBoard: React.FC = () => {
       ref={boardRef}
       onMouseMove={bumpControls}
       onTouchStart={bumpControls}
-      className={`flex flex-col justify-between overflow-hidden select-none text-white bg-gradient-to-br from-[#071633] via-[#0B224B] to-[#0D2D63] ${
+      className={`flex flex-col justify-between overflow-hidden select-none text-white bg-gradient-to-br from-[#030E24] via-[#071D47] to-[#0B2D6E] ${
         standaloneMode
-          ? 'fixed inset-0 z-[9999] w-screen h-screen p-[clamp(0.5rem,1vw,0.95rem)]'
-          : 'relative -m-4 sm:-m-6 lg:-m-8 h-[calc(100vh-5rem)] p-[clamp(0.45rem,0.85vw,0.85rem)]'
+          ? 'fixed inset-0 z-[9999] w-screen h-screen p-[clamp(0.45rem,0.95vw,0.85rem)]'
+          : 'relative -m-4 sm:-m-6 lg:-m-8 h-[calc(100vh-5rem)] p-[clamp(0.4rem,0.8vw,0.75rem)]'
       }`}
     >
-      {/* Subtle enterprise atmospheric glow */}
+      {/* Rich glowing neon-navy enterprise backdrop */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-35"
+        className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'radial-gradient(circle at 20% 15%, rgba(56, 189, 248, 0.22), transparent 45%), radial-gradient(circle at 80% 85%, rgba(37, 99, 235, 0.2), transparent 50%)',
+            'radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.24), transparent 44%), radial-gradient(circle at 82% 88%, rgba(37, 99, 235, 0.24), transparent 48%)',
         }}
       />
 
@@ -273,36 +286,36 @@ export const LineDashboardBoard: React.FC = () => {
       )}
 
       {/* MAIN VERTICAL TV STACK */}
-      <div className="relative z-10 flex flex-col justify-between h-full gap-[clamp(0.45rem,0.9vh,0.75rem)] min-h-0">
-        {/* 1. HEADER BAR (Accent color on header bar only) */}
+      <div className="relative z-10 flex flex-col justify-between h-full gap-[clamp(0.42rem,0.85vh,0.72rem)] min-h-0">
+        {/* 1. HEADER BAR */}
         <header
-          className="shrink-0 rounded-xl bg-[#081C3E]/95 px-[clamp(0.85rem,1.4vw,1.5rem)] py-[clamp(0.38rem,0.75vh,0.65rem)] flex items-center justify-between gap-3 shadow-lg"
+          className="shrink-0 rounded-xl bg-gradient-to-r from-[#061A42]/95 via-[#0B2B68]/95 to-[#061A42]/95 px-[clamp(0.85rem,1.4vw,1.5rem)] py-[clamp(0.36rem,0.72vh,0.62rem)] flex items-center justify-between gap-3 border border-sky-400/45 shadow-[0_0_24px_rgba(56,189,248,0.2)]"
           style={{
             borderTop: `4px solid ${theme.accentHex}`,
-            borderBottom: `2px solid ${theme.accentHex}`,
           }}
         >
-          <div className="flex items-center gap-[clamp(0.5rem,0.95vw,1rem)] shrink-0">
-            <div className="p-2 rounded-xl bg-white/10 border border-white/15 text-sky-200 shrink-0">
-              <SewingMachineIcon className="w-[clamp(1.35rem,2vw,2rem)] h-[clamp(1.35rem,2vw,2rem)]" />
+          <div className="flex items-center gap-[clamp(0.5rem,0.9vw,0.95rem)] shrink-0">
+            <div className="p-1.5 rounded-xl bg-sky-400/15 border border-sky-300/35 text-white shrink-0 shadow-[0_0_12px_rgba(56,189,248,0.25)]">
+              <SewingMachineIcon className="w-[clamp(1.4rem,2.1vw,2.1rem)] h-[clamp(1.4rem,2.1vw,2.1rem)]" />
             </div>
+            <div className="h-7 w-[2px] bg-sky-300/40 shrink-0 hidden sm:block" />
             <h1
-              className="font-black tracking-wide !text-white leading-none whitespace-nowrap drop-shadow-xs"
+              className="font-black tracking-wide !text-white leading-none whitespace-nowrap drop-shadow-sm"
               style={{ fontSize: 'clamp(1.4rem, 2.35vw, 2.5rem)' }}
             >
               LINE {lineNumberPadded}
             </h1>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 shrink-0">
-              <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 border border-emerald-300/75 text-white shrink-0 shadow-[0_0_16px_rgba(34,197,94,0.45)]">
+              <Radio className="w-3.5 h-3.5 animate-pulse text-white" />
               <span
-                className="font-extrabold tracking-wider uppercase leading-none"
-                style={{ fontSize: 'clamp(0.65rem, 0.82vw, 0.88rem)' }}
+                className="font-black tracking-wider uppercase leading-none"
+                style={{ fontSize: 'clamp(0.65rem, 0.85vw, 0.9rem)' }}
               >
                 LIVE PRODUCTION
               </span>
             </div>
             <span
-              className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-lg bg-sky-500/20 border border-sky-400/35 text-sky-100 font-bold uppercase tracking-wider leading-none shrink-0"
+              className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-lg bg-sky-500/25 border border-sky-300/45 text-sky-100 font-extrabold uppercase tracking-wider leading-none shrink-0"
               style={{ fontSize: 'clamp(0.65rem, 0.78vw, 0.84rem)' }}
             >
               {effectiveUnit} UNIT
@@ -312,25 +325,27 @@ export const LineDashboardBoard: React.FC = () => {
           {/* Center Company Title */}
           <div className="hidden md:flex items-center justify-center min-w-0 px-2">
             <span
-              className="font-black tracking-[0.12em] uppercase !text-white text-center truncate"
-              style={{ fontSize: 'clamp(0.95rem, 1.55vw, 1.7rem)' }}
+              className="font-black tracking-[0.12em] uppercase !text-white text-center truncate drop-shadow-[0_0_10px_rgba(56,189,248,0.35)]"
+              style={{ fontSize: 'clamp(0.95rem, 1.52vw, 1.68rem)' }}
             >
               RUPKATHA APPARELS LTD.
             </span>
           </div>
 
-          <div className="flex items-center gap-[clamp(0.6rem,1.1vw,1.25rem)] shrink-0 text-right">
+          <div className="flex items-center gap-[clamp(0.6rem,1.1vw,1.2rem)] shrink-0 text-right">
             <div
-              className="hidden md:block font-bangla text-sky-100 font-semibold tracking-wide whitespace-nowrap"
-              style={{ fontSize: 'clamp(0.82rem, 1.08vw, 1.12rem)' }}
+              className="hidden md:flex items-center gap-1.5 font-bangla text-sky-100 font-bold tracking-wide whitespace-nowrap"
+              style={{ fontSize: 'clamp(0.82rem, 1.06vw, 1.1rem)' }}
             >
-              {clock.formattedDate}
+              <Calendar className="w-4 h-4 text-sky-300 shrink-0" />
+              <span>{clock.formattedDate}</span>
             </div>
             <div
-              className="px-3.5 py-1.5 rounded-xl bg-[#102E63] border border-sky-400/35 font-extrabold text-white tabular-nums tracking-tight whitespace-nowrap"
-              style={{ fontSize: 'clamp(0.92rem, 1.3vw, 1.38rem)' }}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#041436]/90 border border-sky-400/45 font-black text-white tabular-nums tracking-tight whitespace-nowrap shadow-[0_0_12px_rgba(56,189,248,0.2)]"
+              style={{ fontSize: 'clamp(0.92rem, 1.28vw, 1.35rem)' }}
             >
-              {clock.formattedTime}
+              <Clock className="w-4 h-4 text-sky-300 shrink-0" />
+              <span>{clock.formattedTime}</span>
             </div>
           </div>
         </header>
@@ -338,43 +353,43 @@ export const LineDashboardBoard: React.FC = () => {
         {/* LOADING SKELETON */}
         {loading ? (
           <div className="flex-1 min-h-0 flex flex-col gap-3 animate-pulse">
-            <div className="h-12 rounded-xl bg-white/15" />
+            <div className="h-12 rounded-xl bg-white/10" />
             <div className="grid grid-cols-4 gap-3 h-32">
-              <div className="rounded-xl bg-white/15" />
-              <div className="rounded-xl bg-white/15" />
-              <div className="rounded-xl bg-white/15" />
-              <div className="rounded-xl bg-white/15" />
+              <div className="rounded-2xl bg-white/10" />
+              <div className="rounded-2xl bg-white/10" />
+              <div className="rounded-2xl bg-white/10" />
+              <div className="rounded-2xl bg-white/10" />
             </div>
-            <div className="flex-1 rounded-xl bg-white/15" />
+            <div className="flex-1 rounded-2xl bg-white/10" />
             <div className="grid grid-cols-4 gap-3 h-32">
-              <div className="rounded-xl bg-white/15" />
-              <div className="rounded-xl bg-white/15" />
-              <div className="rounded-xl bg-white/15" />
-              <div className="rounded-xl bg-white/15" />
+              <div className="rounded-2xl bg-white/10" />
+              <div className="rounded-2xl bg-white/10" />
+              <div className="rounded-2xl bg-white/10" />
+              <div className="rounded-2xl bg-white/10" />
             </div>
           </div>
         ) : !metrics.hasReport ? (
           /* NO REPORT TODAY STATE */
           <div className="flex-1 min-h-0 flex items-center justify-center">
-            <div className="max-w-2xl w-full rounded-2xl bg-[#F4F8FF] text-slate-900 border-2 border-sky-300 shadow-2xl p-8 sm:p-10 text-center">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0B224B] text-white font-extrabold text-sm tracking-wider uppercase mb-5">
+            <div className="max-w-2xl w-full rounded-2xl bg-gradient-to-br from-[#0A2760] to-[#06183D] text-white border-2 border-sky-400/60 shadow-[0_0_32px_rgba(56,189,248,0.25)] p-8 sm:p-10 text-center">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-500/25 border border-sky-300/45 text-sky-100 font-extrabold text-sm tracking-wider uppercase mb-5">
                 <SewingMachineIcon className="w-5 h-5" />
                 <span>LINE {lineNumberPadded} · {effectiveUnit.toUpperCase()}</span>
               </div>
               <h2
-                className="font-bangla font-bold !text-[#0B224B] leading-relaxed"
+                className="font-bangla font-bold !text-white leading-relaxed"
                 style={{ fontSize: 'clamp(1.75rem, 2.9vw, 2.85rem)' }}
               >
                 আজকের রিপোর্ট শুরু হয়নি
               </h2>
               <p
-                className="mt-2 text-slate-600 font-semibold"
+                className="mt-2 text-sky-200 font-semibold"
                 style={{ fontSize: 'clamp(0.9rem, 1.2vw, 1.15rem)' }}
               >
                 Waiting for today&apos;s sewing hourly production entry ({clock.formattedDate})
               </p>
-              <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-sky-100 text-sky-900 text-xs font-bold border border-sky-200">
-                <Radio className="w-4 h-4 text-emerald-600 animate-pulse" />
+              <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-200 text-xs font-bold border border-emerald-400/40">
+                <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
                 <span>Auto-updating live as soon as Sewing Entry is saved</span>
               </div>
             </div>
@@ -382,252 +397,244 @@ export const LineDashboardBoard: React.FC = () => {
         ) : (
           /* ACTIVE LINE DASHBOARD BODY */
           <>
-            {/* 2. INFO STRIP */}
-            <section className="shrink-0 rounded-xl bg-[#F8FAFF] text-[#0B1E40] border border-sky-200 shadow-md px-[clamp(0.75rem,1.3vw,1.35rem)] py-[clamp(0.38rem,0.7vh,0.58rem)] flex items-center justify-between gap-3 overflow-hidden">
-              <div className="flex items-center flex-1 min-w-0 divide-x divide-slate-300/90">
-                <div className="pr-3.5 min-w-0">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 leading-tight">
-                    Buyer
-                  </div>
-                  <div
-                    className="font-extrabold text-[#0B1E40] truncate leading-snug"
-                    style={{ fontSize: 'clamp(0.85rem, 1.15vw, 1.12rem)' }}
+            {/* 2. INFO STRIP (Dark Glowing Glass Ribbon) */}
+            <section className="shrink-0 rounded-xl bg-gradient-to-r from-[#072154]/95 via-[#0B2E73]/95 to-[#072154]/95 text-white border border-sky-400/50 shadow-[0_0_18px_rgba(56,189,248,0.18)] px-[clamp(0.75rem,1.25vw,1.3rem)] py-[clamp(0.36rem,0.68vh,0.55rem)] flex items-center justify-between gap-2 overflow-hidden">
+              <div className="flex items-center flex-1 min-w-0 divide-x divide-sky-300/35">
+                <div className="pr-3 min-w-0 flex items-baseline gap-1.5">
+                  <span className="text-[11px] font-bold text-sky-200 shrink-0">Buyer:</span>
+                  <span
+                    className="font-extrabold text-white truncate"
+                    style={{ fontSize: 'clamp(0.82rem, 1.06vw, 1.06rem)' }}
                     title={metrics.buyer}
                   >
                     {metrics.buyer}
-                  </div>
+                  </span>
                 </div>
 
-                <div className="px-3.5 min-w-0">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 leading-tight">
-                    Style
-                  </div>
-                  <div
-                    className="font-extrabold text-[#0B1E40] truncate leading-snug"
-                    style={{ fontSize: 'clamp(0.85rem, 1.15vw, 1.12rem)' }}
+                <div className="px-3 min-w-0 flex items-baseline gap-1.5">
+                  <span className="text-[11px] font-bold text-sky-200 shrink-0">Style:</span>
+                  <span
+                    className="font-extrabold text-white truncate"
+                    style={{ fontSize: 'clamp(0.82rem, 1.06vw, 1.06rem)' }}
                     title={metrics.style}
                   >
                     {metrics.style}
-                  </div>
+                  </span>
                 </div>
 
-                <div className="px-3.5 shrink-0 hidden sm:block">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 leading-tight">
-                    PO
-                  </div>
-                  <div
-                    className="font-bold text-slate-700 leading-snug"
-                    style={{ fontSize: 'clamp(0.85rem, 1.1vw, 1.05rem)' }}
+                <div className="px-3 shrink-0 hidden sm:flex items-baseline gap-1.5">
+                  <span className="text-[11px] font-bold text-sky-200">PO:</span>
+                  <span
+                    className="font-extrabold text-white"
+                    style={{ fontSize: 'clamp(0.82rem, 1.04vw, 1.04rem)' }}
                   >
                     {metrics.po}
-                  </div>
+                  </span>
                 </div>
 
-                <div className="px-3.5 shrink-0">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 leading-tight">
-                    Order Qty
-                  </div>
-                  <div
-                    className="font-extrabold text-[#0B1E40] tabular-nums leading-snug"
-                    style={{ fontSize: 'clamp(0.85rem, 1.15vw, 1.12rem)' }}
+                <div className="px-3 shrink-0 flex items-baseline gap-1.5">
+                  <span className="text-[11px] font-bold text-sky-200">Order Qty:</span>
+                  <span
+                    className="font-extrabold text-white tabular-nums"
+                    style={{ fontSize: 'clamp(0.82rem, 1.06vw, 1.06rem)' }}
                   >
                     {metrics.orderQty !== null ? metrics.orderQty.toLocaleString() : '-'}
-                  </div>
+                  </span>
                 </div>
 
-                <div className="px-3.5 shrink-0">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 leading-tight">
-                    Today Target
-                  </div>
-                  <div
-                    className="font-extrabold text-blue-700 tabular-nums leading-snug"
-                    style={{ fontSize: 'clamp(0.85rem, 1.15vw, 1.12rem)' }}
+                <div className="px-3 shrink-0 flex items-baseline gap-1.5">
+                  <span className="text-[11px] font-bold text-sky-200">Today Target:</span>
+                  <span
+                    className="font-black text-sky-300 tabular-nums"
+                    style={{ fontSize: 'clamp(0.82rem, 1.08vw, 1.08rem)' }}
                   >
                     {metrics.dayTarget !== null ? `${metrics.dayTarget.toLocaleString()} PCS` : '-'}
-                  </div>
+                  </span>
                 </div>
 
-                <div className="px-3.5 shrink-0 hidden lg:block">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 leading-tight">
-                    Working Hours
-                  </div>
-                  <div
-                    className="font-extrabold text-[#0B1E40] tabular-nums leading-snug"
-                    style={{ fontSize: 'clamp(0.85rem, 1.15vw, 1.12rem)' }}
+                <div className="px-3 shrink-0 hidden lg:flex items-baseline gap-1.5">
+                  <span className="text-[11px] font-bold text-sky-200">Working Hours:</span>
+                  <span
+                    className="font-extrabold text-white tabular-nums"
+                    style={{ fontSize: 'clamp(0.82rem, 1.06vw, 1.06rem)' }}
                   >
                     {metrics.workingHours} Hr
-                  </div>
+                  </span>
                 </div>
 
-                <div className="pl-3.5 shrink-0">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 leading-tight">
-                    Hourly Target
-                  </div>
-                  <div
-                    className="font-extrabold text-[#0B1E40] tabular-nums leading-snug"
-                    style={{ fontSize: 'clamp(0.85rem, 1.15vw, 1.12rem)' }}
+                <div className="pl-3 shrink-0 flex items-baseline gap-1.5">
+                  <span className="text-[11px] font-bold text-sky-200">Hourly Target:</span>
+                  <span
+                    className="font-extrabold text-amber-300 tabular-nums"
+                    style={{ fontSize: 'clamp(0.82rem, 1.06vw, 1.06rem)' }}
                   >
                     {metrics.hourlyTarget !== null ? `${metrics.hourlyTarget.toLocaleString()} PCS` : '-'}
-                  </div>
+                  </span>
                 </div>
               </div>
 
-              <div className="shrink-0 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0B224B] text-white font-bold shadow-xs">
-                <Users className="w-4 h-4 text-sky-300" />
-                <span style={{ fontSize: 'clamp(0.78rem, 1vw, 1rem)' }}>
+              <div className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/25 border border-sky-300/45 text-white font-extrabold shadow-xs">
+                <Users className="w-3.5 h-3.5 text-sky-200" />
+                <span style={{ fontSize: 'clamp(0.76rem, 0.96vw, 0.96rem)' }}>
                   Manpower: {metrics.manpowerTotal !== null ? metrics.manpowerTotal : '-'}
                 </span>
               </div>
             </section>
 
-            {/* 3. FOUR BIG KPI CARDS */}
+            {/* 3. FOUR BIG GRADIENT KPI CARDS */}
             <section className="shrink-0 grid grid-cols-4 gap-[clamp(0.55rem,1vw,0.95rem)]">
-              {/* (a) Today Target (Blue Card) */}
+              {/* (a) Today Target (Royal Blue Gradient Card) */}
               <div
-                className={`rounded-2xl bg-[#E0EEFF] border-2 border-[#60A5FA] text-[#0F2A5A] px-[clamp(0.8rem,1.3vw,1.3rem)] py-[clamp(0.55rem,1.05vh,0.9rem)] flex flex-col justify-between shadow-md transition-all duration-300 ${
+                className={`rounded-2xl bg-gradient-to-br from-[#0E4AB8] via-[#093280] to-[#061F54] border-2 border-sky-400/75 text-white px-[clamp(0.8rem,1.3vw,1.3rem)] py-[clamp(0.5rem,0.95vh,0.82rem)] flex items-center gap-3 shadow-[0_0_22px_rgba(59,130,246,0.32)] transition-all duration-300 ${
                   flashingKeys.has(`L${targetLine}:dayTarget`) ? 'ring-4 ring-amber-400 scale-[1.01]' : ''
                 }`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span
-                    className="font-bangla font-bold text-[#1E3A8A] leading-normal"
+                <div className="p-2.5 rounded-2xl bg-white/15 border border-white/25 text-white shrink-0 shadow-inner">
+                  <Target className="w-[clamp(1.65rem,2.5vw,2.6rem)] h-[clamp(1.65rem,2.5vw,2.6rem)]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div
+                    className="font-bangla font-bold text-sky-100 leading-normal"
                     style={{ fontSize: 'clamp(0.95rem, 1.3vw, 1.32rem)' }}
                   >
                     আজকের লক্ষ্য
-                  </span>
-                  <div className="p-2 rounded-xl bg-blue-600/15 text-blue-700 shrink-0">
-                    <Target className="w-[clamp(1.1rem,1.5vw,1.5rem)] h-[clamp(1.1rem,1.5vw,1.5rem)]" />
                   </div>
-                </div>
-                <div className="flex items-baseline gap-2 mt-1">
-                  <span
-                    className="font-black tabular-nums tracking-tight text-[#0B224B] leading-none"
-                    style={{ fontSize: 'clamp(1.7rem, 3vw, 3.25rem)' }}
-                  >
-                    {metrics.dayTarget !== null ? metrics.dayTarget.toLocaleString() : '-'}
-                  </span>
-                  <span
-                    className="font-extrabold text-blue-800"
-                    style={{ fontSize: 'clamp(0.8rem, 1.05vw, 1.05rem)' }}
-                  >
-                    PCS
-                  </span>
+                  <div className="flex items-baseline gap-1.5 mt-0.5">
+                    <span
+                      className="font-black tabular-nums tracking-tight text-white leading-none drop-shadow-sm"
+                      style={{ fontSize: 'clamp(1.7rem, 3.05vw, 3.3rem)' }}
+                    >
+                      {metrics.dayTarget !== null ? metrics.dayTarget.toLocaleString() : '-'}
+                    </span>
+                    <span
+                      className="font-extrabold text-sky-200"
+                      style={{ fontSize: 'clamp(0.8rem, 1.05vw, 1.05rem)' }}
+                    >
+                      PCS
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* (b) Done So Far (Green Card) */}
+              {/* (b) Done So Far (Rich Emerald Gradient Card) */}
               <div
-                className={`rounded-2xl bg-[#DCFCE7] border-2 border-[#4ADE80] text-[#064E3B] px-[clamp(0.8rem,1.3vw,1.3rem)] py-[clamp(0.55rem,1.05vh,0.9rem)] flex flex-col justify-between shadow-md transition-all duration-300 ${
+                className={`rounded-2xl bg-gradient-to-br from-[#107839] via-[#0B5929] to-[#073B1B] border-2 border-emerald-400/75 text-white px-[clamp(0.8rem,1.3vw,1.3rem)] py-[clamp(0.5rem,0.95vh,0.82rem)] flex items-center gap-3 shadow-[0_0_22px_rgba(34,197,94,0.3)] transition-all duration-300 ${
                   flashingKeys.has(`L${targetLine}:done`) ? 'ring-4 ring-amber-400 scale-[1.01]' : ''
                 }`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span
-                    className="font-bangla font-bold text-[#14532D] leading-normal"
+                <div className="p-2.5 rounded-2xl bg-white text-emerald-700 shrink-0 shadow-md">
+                  <CheckCircle2 className="w-[clamp(1.65rem,2.5vw,2.6rem)] h-[clamp(1.65rem,2.5vw,2.6rem)]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div
+                    className="font-bangla font-bold text-emerald-100 leading-normal"
                     style={{ fontSize: 'clamp(0.95rem, 1.3vw, 1.32rem)' }}
                   >
                     উৎপাদন হয়েছে
-                  </span>
-                  <div className="p-2 rounded-xl bg-emerald-600/15 text-emerald-700 shrink-0">
-                    <CheckCircle2 className="w-[clamp(1.1rem,1.5vw,1.5rem)] h-[clamp(1.1rem,1.5vw,1.5rem)]" />
                   </div>
-                </div>
-                <div className="flex items-baseline gap-2 mt-1">
-                  <span
-                    className="font-black tabular-nums tracking-tight text-[#064E3B] leading-none"
-                    style={{ fontSize: 'clamp(1.7rem, 3vw, 3.25rem)' }}
-                  >
-                    {metrics.done.toLocaleString()}
-                  </span>
-                  <span
-                    className="font-extrabold text-emerald-800"
-                    style={{ fontSize: 'clamp(0.8rem, 1.05vw, 1.05rem)' }}
-                  >
-                    PCS
-                  </span>
+                  <div className="flex items-baseline gap-1.5 mt-0.5">
+                    <span
+                      className="font-black tabular-nums tracking-tight text-[#6EE7B7] leading-none drop-shadow-sm"
+                      style={{ fontSize: 'clamp(1.7rem, 3.05vw, 3.3rem)' }}
+                    >
+                      {metrics.done.toLocaleString()}
+                    </span>
+                    <span
+                      className="font-extrabold text-white"
+                      style={{ fontSize: 'clamp(0.8rem, 1.05vw, 1.05rem)' }}
+                    >
+                      PCS
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* (c) Remaining (Red card; turns GREEN when remaining === 0 & dayTarget > 0) */}
+              {/* (c) Remaining (Rich Crimson Gradient; turns Emerald Green when goal met) */}
               <div
-                className={`rounded-2xl border-2 px-[clamp(0.8rem,1.3vw,1.3rem)] py-[clamp(0.55rem,1.05vh,0.9rem)] flex flex-col justify-between shadow-md transition-all duration-300 ${
+                className={`rounded-2xl border-2 px-[clamp(0.8rem,1.3vw,1.3rem)] py-[clamp(0.5rem,0.95vh,0.82rem)] flex items-center gap-3 text-white transition-all duration-300 ${
                   isGoalMet
-                    ? 'bg-[#DCFCE7] border-[#22C55E] text-[#064E3B]'
-                    : 'bg-[#FEE2E2] border-[#F87171] text-[#7F1D1D]'
+                    ? 'bg-gradient-to-br from-[#107839] via-[#0B5929] to-[#073B1B] border-emerald-400/75 shadow-[0_0_22px_rgba(34,197,94,0.3)]'
+                    : 'bg-gradient-to-br from-[#BE123C] via-[#881337] to-[#570A21] border-rose-400/75 shadow-[0_0_22px_rgba(244,63,94,0.32)]'
                 } ${
                   flashingKeys.has(`L${targetLine}:remaining`) ? 'ring-4 ring-amber-400 scale-[1.01]' : ''
                 }`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span
+                <div
+                  className={`p-2.5 rounded-2xl shrink-0 shadow-md ${
+                    isGoalMet
+                      ? 'bg-white/15 border border-white/25 text-amber-300'
+                      : 'bg-white/15 border border-white/25 text-white'
+                  }`}
+                >
+                  {isExceeded ? (
+                    <Star className="w-[clamp(1.65rem,2.5vw,2.6rem)] h-[clamp(1.65rem,2.5vw,2.6rem)] fill-amber-300 text-amber-300" />
+                  ) : isGoalMet ? (
+                    <CheckCircle2 className="w-[clamp(1.65rem,2.5vw,2.6rem)] h-[clamp(1.65rem,2.5vw,2.6rem)] text-emerald-300" />
+                  ) : (
+                    <Hourglass className="w-[clamp(1.65rem,2.5vw,2.6rem)] h-[clamp(1.65rem,2.5vw,2.6rem)]" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div
                     className={`font-bangla font-bold leading-normal ${
-                      isGoalMet ? 'text-[#14532D]' : 'text-[#991B1B]'
+                      isGoalMet ? 'text-emerald-100' : 'text-rose-100'
                     }`}
                     style={{ fontSize: 'clamp(0.95rem, 1.3vw, 1.32rem)' }}
                   >
                     {isGoalMet ? 'লক্ষ্য পূরণ' : 'এখনো বাকি'}
-                  </span>
-                  <div
-                    className={`p-2 rounded-xl shrink-0 ${
-                      isGoalMet
-                        ? 'bg-emerald-600/15 text-emerald-700'
-                        : 'bg-rose-600/15 text-rose-700'
-                    }`}
-                  >
-                    {isExceeded ? (
-                      <Star className="w-[clamp(1.1rem,1.5vw,1.5rem)] h-[clamp(1.1rem,1.5vw,1.5rem)] fill-amber-400 text-amber-500" />
-                    ) : isGoalMet ? (
-                      <CheckCircle2 className="w-[clamp(1.1rem,1.5vw,1.5rem)] h-[clamp(1.1rem,1.5vw,1.5rem)]" />
-                    ) : (
-                      <Hourglass className="w-[clamp(1.1rem,1.5vw,1.5rem)] h-[clamp(1.1rem,1.5vw,1.5rem)]" />
-                    )}
                   </div>
-                </div>
-                <div className="flex items-baseline gap-2 mt-1">
-                  <span
-                    className="font-black tabular-nums tracking-tight leading-none"
-                    style={{ fontSize: 'clamp(1.7rem, 3vw, 3.25rem)' }}
-                  >
-                    {isExceeded
-                      ? `+${metrics.exceededBy.toLocaleString()}`
-                      : metrics.remaining !== null
-                      ? metrics.remaining.toLocaleString()
-                      : '-'}
-                  </span>
-                  <span
-                    className={`font-extrabold ${
-                      isGoalMet ? 'text-emerald-800' : 'text-rose-800'
-                    }`}
-                    style={{ fontSize: 'clamp(0.8rem, 1.05vw, 1.05rem)' }}
-                  >
-                    PCS
-                  </span>
+                  <div className="flex items-baseline gap-1.5 mt-0.5">
+                    <span
+                      className={`font-black tabular-nums tracking-tight leading-none drop-shadow-sm ${
+                        isGoalMet ? 'text-[#6EE7B7]' : 'text-[#FDE047]'
+                      }`}
+                      style={{ fontSize: 'clamp(1.7rem, 3.05vw, 3.3rem)' }}
+                    >
+                      {isExceeded
+                        ? `+${metrics.exceededBy.toLocaleString()}`
+                        : metrics.remaining !== null
+                        ? metrics.remaining.toLocaleString()
+                        : '-'}
+                    </span>
+                    <span
+                      className="font-extrabold text-white"
+                      style={{ fontSize: 'clamp(0.8rem, 1.05vw, 1.05rem)' }}
+                    >
+                      PCS
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* (d) Navy Card: Circular Progress Ring + Remaining Time */}
+              {/* (d) Navy Card: Glowing Circular Progress Ring + Remaining Time */}
               <div
-                className={`rounded-2xl bg-[#0A1D42] border-2 border-[#3B82F6]/65 text-white px-[clamp(0.75rem,1.2vw,1.25rem)] py-[clamp(0.45rem,0.9vh,0.8rem)] flex items-center justify-between gap-2 shadow-md transition-all duration-300 ${
+                className={`rounded-2xl bg-gradient-to-br from-[#0A2558] via-[#071B42] to-[#041230] border-2 border-sky-400/70 text-white px-[clamp(0.75rem,1.2vw,1.25rem)] py-[clamp(0.45rem,0.9vh,0.78rem)] flex items-center justify-between gap-2 shadow-[0_0_22px_rgba(56,189,248,0.22)] transition-all duration-300 ${
                   flashingKeys.has(`L${targetLine}:progress`) ? 'ring-4 ring-amber-400' : ''
                 }`}
               >
                 <div className="flex items-center justify-center min-w-0">
-                  <div className="relative w-[clamp(4.1rem,5.9vw,5.6rem)] h-[clamp(4.1rem,5.9vw,5.6rem)] shrink-0">
+                  <div className="relative w-[clamp(4.2rem,6vw,5.7rem)] h-[clamp(4.2rem,6vw,5.7rem)] shrink-0">
                     <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                      <defs>
+                        <linearGradient id={`ringGrad-${targetLine}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor={isGoalMet ? '#4ADE80' : '#38BDF8'} />
+                          <stop offset="100%" stopColor={isGoalMet ? '#22C55E' : '#22C55E'} />
+                        </linearGradient>
+                      </defs>
                       <circle
                         cx="50"
                         cy="50"
                         r={circleRadius}
-                        stroke="rgba(148, 163, 184, 0.25)"
-                        strokeWidth="8.5"
+                        stroke="rgba(148, 163, 184, 0.22)"
+                        strokeWidth="9"
                         fill="none"
                       />
                       <circle
                         cx="50"
                         cy="50"
                         r={circleRadius}
-                        stroke={isGoalMet ? '#22C55E' : '#38BDF8'}
-                        strokeWidth="8.5"
+                        stroke={`url(#ringGrad-${targetLine})`}
+                        strokeWidth="9"
                         strokeLinecap="round"
                         fill="none"
                         strokeDasharray={circleCircumference}
@@ -649,7 +656,7 @@ export const LineDashboardBoard: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="h-14 w-px bg-sky-400/30 shrink-0" />
+                <div className="h-14 w-px bg-sky-400/35 shrink-0" />
 
                 <div className="flex flex-col items-end justify-center text-right min-w-0">
                   <span
@@ -660,7 +667,7 @@ export const LineDashboardBoard: React.FC = () => {
                   </span>
                   <div className="flex items-baseline gap-1.5">
                     <span
-                      className="font-black tabular-nums leading-none text-amber-300"
+                      className="font-black tabular-nums leading-none text-[#FDE047] drop-shadow-sm"
                       style={{ fontSize: 'clamp(1.55rem, 2.5vw, 2.65rem)' }}
                     >
                       {metrics.remainingHours}
@@ -676,12 +683,12 @@ export const LineDashboardBoard: React.FC = () => {
               </div>
             </section>
 
-            {/* 4. HOURLY PRODUCTION TABLE (Q.C.P ONLY — Clean, Crisp, High-Readability) */}
-            <section className="flex-1 min-h-0 rounded-2xl bg-[#F4F8FF] border-2 border-sky-300 text-[#0B1E40] shadow-lg flex flex-col overflow-hidden">
+            {/* 4. HOURLY PRODUCTION TABLE (Q.C.P + SHORT +/- on Dark Glowing Enterprise Card) */}
+            <section className="flex-1 min-h-0 rounded-2xl bg-gradient-to-b from-[#082252]/95 to-[#051638]/95 border-2 border-sky-400/60 text-white shadow-[0_0_26px_rgba(56,189,248,0.2)] flex flex-col overflow-hidden">
               {/* Title Bar */}
-              <div className="shrink-0 bg-[#122D5E] text-white px-[clamp(0.8rem,1.3vw,1.35rem)] py-[clamp(0.38rem,0.75vh,0.65rem)] flex items-center justify-between gap-3">
+              <div className="shrink-0 bg-gradient-to-r from-[#0A2963] via-[#0E3680] to-[#0A2963] border-b border-sky-400/40 text-white px-[clamp(0.8rem,1.3vw,1.35rem)] py-[clamp(0.35rem,0.7vh,0.6rem)] flex items-center justify-between gap-3">
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className="flex items-center gap-2 font-extrabold tracking-wide uppercase">
+                  <div className="flex items-center gap-2 font-black tracking-wide uppercase">
                     <BarChart3 className="w-5 h-5 text-sky-300" />
                     <span style={{ fontSize: 'clamp(0.88rem, 1.18vw, 1.2rem)' }}>
                       HOURLY PRODUCTION — Q.C.P
@@ -689,54 +696,57 @@ export const LineDashboardBoard: React.FC = () => {
                   </div>
 
                   {/* Legend */}
-                  <div className="hidden sm:flex items-center gap-3.5 text-xs font-semibold text-sky-100">
+                  <div className="hidden sm:flex items-center gap-3.5 text-xs font-bold text-sky-100">
                     <span className="inline-flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#4ade80] inline-block" />
                       Good
                     </span>
                     <span className="inline-flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_6px_#f43f5e] inline-block" />
                       Short
                     </span>
                     <span className="inline-flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-300 inline-block" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_#fbbf24] inline-block" />
                       Running
                     </span>
                     <span className="inline-flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-orange-400 inline-block" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-orange-400 shadow-[0_0_6px_#fb923c] inline-block" />
                       Entry Due
                     </span>
                   </div>
                 </div>
 
                 <div
-                  className="px-3.5 py-1 rounded-full bg-sky-500/25 border border-sky-300/45 font-extrabold text-sky-50 tabular-nums shrink-0"
+                  className="px-3.5 py-1 rounded-full bg-[#041434] border border-amber-400/80 font-extrabold text-white tabular-nums shrink-0 shadow-[0_0_12px_rgba(251,191,36,0.22)]"
                   style={{ fontSize: 'clamp(0.8rem, 1.05vw, 1.05rem)' }}
                 >
                   Target per Hour:{' '}
-                  {metrics.hourlyTarget !== null ? `${metrics.hourlyTarget.toLocaleString()} PCS` : '-'}
+                  <span className="text-[#FDE047] font-black">
+                    {metrics.hourlyTarget !== null ? metrics.hourlyTarget.toLocaleString() : '-'}
+                  </span>{' '}
+                  PCS
                 </div>
               </div>
 
-              {/* Spacious 2-Row Q.C.P Grid (Q.C.P Output + Variance +/-) with Strong Visible Borders */}
-              <div className="flex-1 min-h-0 flex flex-col p-1.5 bg-[#E6EFFC]">
-                <table className="w-full h-full border-collapse table-fixed border-2 border-[#1E3A8A]/45 bg-white">
+              {/* 2-Row Q.C.P Grid with Crisp Glowing Borders + Check/Warning Icons */}
+              <div className="flex-1 min-h-0 flex flex-col p-1.5 bg-[#041330]/90">
+                <table className="w-full h-full border-collapse table-fixed border-2 border-sky-400/45 bg-[#061A40]">
                   <thead>
-                    <tr className="bg-[#D2E4FC] text-[#0B224B]">
+                    <tr className="bg-[#0B2D6B] text-sky-100">
                       <th
-                        className="w-[12%] text-left px-3.5 py-2 font-black uppercase tracking-wider border-2 border-[#1E3A8A]/40"
-                        style={{ fontSize: 'clamp(0.85rem, 1.1vw, 1.12rem)' }}
+                        className="w-[13%] text-center px-3 py-1.5 font-black uppercase tracking-wider border-2 border-sky-400/40"
+                        style={{ fontSize: 'clamp(0.82rem, 1.08vw, 1.1rem)' }}
                       >
-                        Q.C.P
+                        PARTS
                       </th>
                       {Array.from({ length: metrics.workingHours }, (_, idx) => (
                         <th
                           key={idx + 1}
-                          className={`text-center py-2 font-black border-2 border-[#1E3A8A]/40 ${
+                          className={`text-center py-1.5 font-black border-2 border-sky-400/40 ${
                             metrics.currentRunningHour === idx + 1
                               ? metrics.isRunningHourEntryDue
-                                ? 'bg-orange-300 text-orange-950'
-                                : 'bg-amber-200 text-amber-950'
+                                ? 'bg-orange-500/85 text-white'
+                                : 'bg-amber-400/90 text-slate-950'
                               : ''
                           }`}
                           style={{
@@ -750,8 +760,8 @@ export const LineDashboardBoard: React.FC = () => {
                         </th>
                       ))}
                       <th
-                        className="w-[10%] text-center py-2 font-black uppercase tracking-wider bg-[#BDD6FA] border-2 border-[#1E3A8A]/40"
-                        style={{ fontSize: 'clamp(0.85rem, 1.1vw, 1.12rem)' }}
+                        className="w-[10%] text-center py-1.5 font-black uppercase tracking-wider bg-[#0F3882] text-white border-2 border-sky-400/40"
+                        style={{ fontSize: 'clamp(0.82rem, 1.08vw, 1.1rem)' }}
                       >
                         TOTAL
                       </th>
@@ -759,18 +769,18 @@ export const LineDashboardBoard: React.FC = () => {
                   </thead>
                   <tbody>
                     {/* Main Q.C.P Output Row */}
-                    <tr className="bg-white">
-                      <td className="px-3.5 border-2 border-[#1E3A8A]/40 bg-emerald-100/80 text-emerald-950">
-                        <div className="flex items-center gap-2">
-                          <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0" />
-                          <div className="flex flex-col">
+                    <tr>
+                      <td className="p-1.5 border-2 border-sky-400/40 bg-[#082252]">
+                        <div className="h-full w-full rounded-xl bg-gradient-to-r from-[#0E4EA8] to-[#0A3578] border border-sky-300/45 px-2.5 py-1.5 flex items-center justify-center gap-2 shadow-inner">
+                          <TShirtIcon className="w-[clamp(1.35rem,2vw,2rem)] h-[clamp(1.35rem,2vw,2rem)] text-sky-300 shrink-0" />
+                          <div className="flex flex-col leading-tight">
                             <span
-                              className="font-black tracking-wide leading-tight"
-                              style={{ fontSize: 'clamp(1.05rem, 1.38vw, 1.45rem)' }}
+                              className="font-black tracking-wide text-white leading-none"
+                              style={{ fontSize: 'clamp(1rem, 1.35vw, 1.42rem)' }}
                             >
                               Q.C.P
                             </span>
-                            <span className="font-bangla text-xs font-bold text-emerald-800 leading-normal">
+                            <span className="font-bangla text-[11px] font-bold text-sky-200 leading-tight mt-0.5">
                               উৎপাদন
                             </span>
                           </div>
@@ -781,70 +791,93 @@ export const LineDashboardBoard: React.FC = () => {
                         const cellFlash = flashingKeys.has(
                           `L${targetLine}:output:h${cell.hourNo}`
                         );
-                        let bgClass = 'bg-white';
-                        let textClass = 'text-slate-300 font-bold';
+                        let bgClass = 'bg-[#061A40]';
+                        let textClass = 'text-slate-400/70 font-bold';
 
                         if (cell.state === 'good') {
-                          bgClass = 'bg-emerald-50';
-                          textClass = 'text-emerald-700 font-black';
+                          bgClass = 'bg-emerald-500/12';
+                          textClass = 'text-[#4ADE80] font-black';
                         } else if (cell.state === 'short') {
-                          bgClass = 'bg-rose-50';
-                          textClass = 'text-rose-600 font-black';
+                          bgClass = 'bg-rose-500/15';
+                          textClass = 'text-[#FB7185] font-black';
                         } else if (cell.state === 'neutral') {
-                          bgClass = 'bg-slate-50';
-                          textClass = 'text-slate-800 font-black';
+                          bgClass = 'bg-sky-500/10';
+                          textClass = 'text-white font-black';
                         } else if (cell.state === 'running') {
-                          bgClass = 'bg-amber-100/90';
-                          textClass = 'text-amber-700 font-black animate-pulse';
+                          bgClass = 'bg-amber-400/18';
+                          textClass = 'text-amber-300 font-black animate-pulse';
                         } else if (cell.state === 'entry_due') {
-                          bgClass = 'bg-orange-100/95 ring-2 ring-inset ring-orange-500';
-                          textClass = 'text-orange-800 font-extrabold';
+                          bgClass = 'bg-orange-500/25 ring-2 ring-inset ring-orange-400';
+                          textClass = 'text-orange-200 font-extrabold';
                         }
 
                         return (
                           <td
                             key={cell.hourNo}
-                            className={`text-center border-2 border-[#1E3A8A]/40 tabular-nums transition-colors duration-300 ${bgClass} ${textClass} ${
-                              cellFlash ? 'ring-2 ring-inset ring-amber-400 bg-amber-100' : ''
+                            className={`text-center border-2 border-sky-400/40 tabular-nums transition-colors duration-300 ${bgClass} ${textClass} ${
+                              cellFlash ? 'ring-2 ring-inset ring-amber-300 bg-amber-400/25' : ''
                             }`}
-                            style={{
-                              fontSize:
-                                metrics.workingHours >= 11
-                                  ? 'clamp(1.12rem, 1.85vw, 2.05rem)'
-                                  : 'clamp(1.35rem, 2.25vw, 2.45rem)',
-                            }}
                           >
                             {cell.value !== null ? (
-                              cell.value.toLocaleString()
-                            ) : cell.state === 'entry_due' ? (
-                              <div className="flex flex-col items-center justify-center px-1 leading-tight">
+                              <div className="flex flex-col items-center justify-center gap-0.5">
                                 <span
-                                  className="font-bangla font-extrabold text-orange-800 leading-snug"
+                                  className="leading-none"
                                   style={{
                                     fontSize:
                                       metrics.workingHours >= 11
-                                        ? 'clamp(0.72rem, 1vw, 1.05rem)'
-                                        : 'clamp(0.82rem, 1.15vw, 1.2rem)',
+                                        ? 'clamp(1.1rem, 1.8vw, 2rem)'
+                                        : 'clamp(1.3rem, 2.2vw, 2.4rem)',
+                                  }}
+                                >
+                                  {cell.value.toLocaleString()}
+                                </span>
+                                {cell.state === 'good' && (
+                                  <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500 text-white shadow-xs">
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                  </span>
+                                )}
+                                {cell.state === 'short' && (
+                                  <AlertTriangle className="w-4 h-4 text-amber-400 fill-amber-400/20" />
+                                )}
+                              </div>
+                            ) : cell.state === 'entry_due' ? (
+                              <div className="flex flex-col items-center justify-center px-1 leading-tight">
+                                <span
+                                  className="font-bangla font-extrabold text-amber-200 leading-snug"
+                                  style={{
+                                    fontSize:
+                                      metrics.workingHours >= 11
+                                        ? 'clamp(0.7rem, 0.98vw, 1.02rem)'
+                                        : 'clamp(0.8rem, 1.12vw, 1.18rem)',
                                   }}
                                 >
                                   রিপোর্ট
                                 </span>
                                 <span
-                                  className="font-bangla font-extrabold text-orange-900 leading-snug"
+                                  className="font-bangla font-extrabold text-white leading-snug"
                                   style={{
                                     fontSize:
                                       metrics.workingHours >= 11
-                                        ? 'clamp(0.72rem, 1vw, 1.05rem)'
-                                        : 'clamp(0.82rem, 1.15vw, 1.2rem)',
+                                        ? 'clamp(0.7rem, 0.98vw, 1.02rem)'
+                                        : 'clamp(0.8rem, 1.12vw, 1.18rem)',
                                   }}
                                 >
                                   এন্ট্রি দিন
                                 </span>
                               </div>
                             ) : cell.state === 'running' ? (
-                              '...'
+                              <span
+                                style={{
+                                  fontSize:
+                                    metrics.workingHours >= 11
+                                      ? 'clamp(1.15rem, 1.85vw, 2rem)'
+                                      : 'clamp(1.35rem, 2.25vw, 2.45rem)',
+                                }}
+                              >
+                                ...
+                              </span>
                             ) : (
-                              '-'
+                              <span className="text-xl">-</span>
                             )}
                           </td>
                         );
@@ -852,15 +885,15 @@ export const LineDashboardBoard: React.FC = () => {
 
                       {/* Q.C.P TOTAL */}
                       <td
-                        className={`text-center border-2 border-[#1E3A8A]/45 tabular-nums font-black transition-colors duration-300 ${
+                        className={`text-center border-2 border-sky-400/50 tabular-nums font-black transition-colors duration-300 ${
                           qcpRow.total === null
-                            ? 'text-slate-400 bg-slate-50'
+                            ? 'text-slate-400 bg-[#071D47]'
                             : qcpRow.totalStatus === 'good'
-                            ? 'bg-emerald-100 text-emerald-800'
+                            ? 'bg-emerald-500/20 text-[#4ADE80]'
                             : qcpRow.totalStatus === 'short'
-                            ? 'bg-rose-100 text-rose-700'
-                            : 'bg-slate-100 text-slate-900'
-                        } ${flashingKeys.has(`L${targetLine}:output:total`) ? 'ring-2 ring-inset ring-amber-400' : ''}`}
+                            ? 'bg-rose-500/20 text-[#FB7185]'
+                            : 'bg-[#082252] text-white'
+                        } ${flashingKeys.has(`L${targetLine}:output:total`) ? 'ring-2 ring-inset ring-amber-300' : ''}`}
                         style={{ fontSize: 'clamp(1.4rem, 2.35vw, 2.55rem)' }}
                       >
                         {qcpRow.total !== null ? qcpRow.total.toLocaleString() : '-'}
@@ -868,13 +901,13 @@ export const LineDashboardBoard: React.FC = () => {
                     </tr>
 
                     {/* Variance / Short-Excess Row */}
-                    <tr className="bg-[#F8FAFF] h-[36%]">
-                      <td className="px-3.5 border-2 border-[#1E3A8A]/40 bg-slate-200/75 text-[#0B224B]">
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="w-4 h-4 text-blue-700 shrink-0" />
+                    <tr className="bg-[#041433] h-[34%]">
+                      <td className="px-3 border-2 border-sky-400/40 bg-[#071F4A] text-sky-100">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <TrendingUp className="w-4 h-4 text-sky-300 shrink-0" />
                           <span
                             className="font-black uppercase tracking-wide"
-                            style={{ fontSize: 'clamp(0.82rem, 1.08vw, 1.1rem)' }}
+                            style={{ fontSize: 'clamp(0.78rem, 1.02vw, 1.05rem)' }}
                           >
                             SHORT / +/-
                           </span>
@@ -888,32 +921,32 @@ export const LineDashboardBoard: React.FC = () => {
                             : null;
 
                         let label = '-';
-                        let cls = 'text-slate-400 font-semibold';
+                        let cls = 'text-slate-400/70 font-semibold';
 
                         if (cell.state === 'entry_due') {
                           label = 'Entry Due';
-                          cls = 'text-orange-700 font-extrabold bg-orange-50';
+                          cls = 'text-orange-300 font-extrabold bg-orange-500/15';
                         } else if (cell.state === 'running') {
                           label = 'Running';
-                          cls = 'text-amber-700 font-extrabold bg-amber-50';
+                          cls = 'text-amber-300 font-extrabold bg-amber-400/10';
                         } else if (diff !== null) {
                           if (diff > 0) {
                             label = `+${diff.toLocaleString()}`;
-                            cls = 'text-emerald-700 font-black bg-emerald-50/75';
+                            cls = 'text-[#4ADE80] font-black bg-emerald-500/10';
                           } else if (diff === 0) {
                             label = '✓ 0';
-                            cls = 'text-emerald-700 font-black bg-emerald-50/75';
+                            cls = 'text-[#4ADE80] font-black bg-emerald-500/10';
                           } else {
                             label = diff.toLocaleString();
-                            cls = 'text-rose-600 font-black bg-rose-50/75';
+                            cls = 'text-[#FB7185] font-black bg-rose-500/10';
                           }
                         }
 
                         return (
                           <td
                             key={cell.hourNo}
-                            className={`text-center border-2 border-[#1E3A8A]/40 tabular-nums ${cls}`}
-                            style={{ fontSize: 'clamp(0.95rem, 1.32vw, 1.38rem)' }}
+                            className={`text-center border-2 border-sky-400/40 tabular-nums ${cls}`}
+                            style={{ fontSize: 'clamp(0.9rem, 1.25vw, 1.32rem)' }}
                           >
                             {label}
                           </td>
@@ -921,14 +954,14 @@ export const LineDashboardBoard: React.FC = () => {
                       })}
 
                       <td
-                        className={`text-center border-2 border-[#1E3A8A]/45 tabular-nums font-black ${
+                        className={`text-center border-2 border-sky-400/50 tabular-nums font-black ${
                           totalDiff === null
                             ? 'text-slate-400'
                             : totalDiff >= 0
-                            ? 'text-emerald-700 bg-emerald-100/80'
-                            : 'text-rose-600 bg-rose-100/80'
+                            ? 'text-[#4ADE80] bg-emerald-500/15'
+                            : 'text-[#FB7185] bg-rose-500/15'
                         }`}
-                        style={{ fontSize: 'clamp(1rem, 1.4vw, 1.45rem)' }}
+                        style={{ fontSize: 'clamp(1rem, 1.38vw, 1.42rem)' }}
                       >
                         {totalDiff === null
                           ? '-'
@@ -947,65 +980,64 @@ export const LineDashboardBoard: React.FC = () => {
             {/* 5. BOTTOM FOUR PANELS */}
             <section className="shrink-0 grid grid-cols-4 gap-[clamp(0.55rem,1vw,0.95rem)]">
               {/* Panel 1: Q.C.P - Final Status */}
-              <div className="rounded-2xl bg-[#F4F8FF] border-2 border-sky-400 text-[#0B1E40] p-[clamp(0.55rem,0.95vw,0.85rem)] flex flex-col justify-between shadow-md">
-                <div className="flex items-center justify-between gap-1 mb-2">
-                  <span
-                    className="font-extrabold text-[#0B224B] truncate"
-                    style={{ fontSize: 'clamp(0.85rem, 1.08vw, 1.1rem)' }}
-                  >
-                    Q.C.P - Final Status
-                  </span>
+              <div className="rounded-2xl bg-gradient-to-b from-[#0A265C] to-[#06183D] border-2 border-sky-400/60 text-white p-[clamp(0.5rem,0.9vw,0.8rem)] flex flex-col justify-between shadow-[0_0_20px_rgba(56,189,248,0.18)]">
+                <div className="flex items-center justify-between gap-1 mb-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="w-5 h-5 rounded-full bg-emerald-500 text-white inline-flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    </span>
+                    <span
+                      className="font-extrabold text-white truncate"
+                      style={{ fontSize: 'clamp(0.84rem, 1.06vw, 1.08rem)' }}
+                    >
+                      Q.C.P - Final Status
+                    </span>
+                  </div>
                   {metrics.latestHourNo !== null && (
-                    <span className="px-2 py-0.5 rounded-md bg-sky-200 border border-sky-400 text-sky-950 text-xs font-extrabold">
+                    <span className="px-2 py-0.5 rounded-md bg-sky-500/30 border border-sky-300/45 text-sky-100 text-xs font-extrabold shrink-0">
                       H{metrics.latestHourNo}
                     </span>
                   )}
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-xl bg-white border-2 border-slate-300 py-1.5 px-1">
-                    <div className="text-[11px] font-bold text-slate-600 leading-tight">
+                <div className="grid grid-cols-3 gap-2 text-center divide-x divide-sky-400/25">
+                  <div className="py-1 px-1">
+                    <div className="text-[11px] font-bold text-sky-200 leading-tight">
                       Hour Target
                     </div>
                     <div
-                      className="font-black text-[#0B224B] tabular-nums leading-tight mt-0.5"
-                      style={{ fontSize: 'clamp(1rem, 1.38vw, 1.4rem)' }}
+                      className="font-black text-white tabular-nums leading-tight mt-0.5"
+                      style={{ fontSize: 'clamp(1.05rem, 1.45vw, 1.5rem)' }}
                     >
                       {metrics.latestTarget !== null ? metrics.latestTarget.toLocaleString() : '-'}
                     </div>
                   </div>
-                  <div className="rounded-xl bg-white border-2 border-blue-300 py-1.5 px-1">
-                    <div className="text-[11px] font-bold text-slate-600 leading-tight">
+                  <div className="py-1 px-1">
+                    <div className="text-[11px] font-bold text-sky-200 leading-tight">
                       Produced
                     </div>
                     <div
-                      className="font-black text-blue-700 tabular-nums leading-tight mt-0.5"
-                      style={{ fontSize: 'clamp(1rem, 1.38vw, 1.4rem)' }}
+                      className={`font-black tabular-nums leading-tight mt-0.5 ${
+                        metrics.isLatestHourShort ? 'text-[#FB7185]' : 'text-[#4ADE80]'
+                      }`}
+                      style={{ fontSize: 'clamp(1.05rem, 1.45vw, 1.5rem)' }}
                     >
                       {metrics.latestProduced !== null
                         ? metrics.latestProduced.toLocaleString()
                         : '-'}
                     </div>
                   </div>
-                  <div
-                    className={`rounded-xl bg-white border-2 py-1.5 px-1 ${
-                      metrics.isLatestHourShort
-                        ? 'border-rose-500 bg-rose-50/70'
-                        : metrics.latestShort !== null
-                        ? 'border-emerald-500 bg-emerald-50/60'
-                        : 'border-slate-300'
-                    }`}
-                  >
-                    <div className="text-[11px] font-bold text-slate-600 leading-tight">Short</div>
+                  <div className="py-1 px-1">
+                    <div className="text-[11px] font-bold text-sky-200 leading-tight">Short</div>
                     <div
                       className={`font-black tabular-nums leading-tight mt-0.5 ${
                         metrics.isLatestHourShort
-                          ? 'text-rose-600'
+                          ? 'text-[#FB7185]'
                           : metrics.latestShort !== null
-                          ? 'text-emerald-600'
+                          ? 'text-[#4ADE80]'
                           : 'text-slate-400'
                       }`}
-                      style={{ fontSize: 'clamp(1rem, 1.38vw, 1.4rem)' }}
+                      style={{ fontSize: 'clamp(1.05rem, 1.45vw, 1.5rem)' }}
                     >
                       {metrics.latestShort !== null
                         ? metrics.latestShort > 0
@@ -1017,135 +1049,142 @@ export const LineDashboardBoard: React.FC = () => {
                 </div>
 
                 <div
-                  className={`mt-2 rounded-xl px-2.5 py-1.5 text-center font-bangla font-bold leading-normal ${
+                  className={`mt-1.5 rounded-xl px-2.5 py-1.5 flex items-center justify-center gap-1.5 font-bangla font-bold leading-normal border ${
                     metrics.isLatestHourShort
-                      ? 'bg-rose-600 text-white'
-                      : 'bg-emerald-600 text-white'
+                      ? 'bg-gradient-to-r from-rose-600 to-red-700 border-rose-300/60 text-white shadow-[0_0_14px_rgba(244,63,94,0.35)]'
+                      : 'bg-gradient-to-r from-emerald-600 to-green-700 border-emerald-300/60 text-white shadow-[0_0_14px_rgba(34,197,94,0.3)]'
                   }`}
-                  style={{ fontSize: 'clamp(0.76rem, 0.95vw, 0.96rem)' }}
+                  style={{ fontSize: 'clamp(0.75rem, 0.94vw, 0.96rem)' }}
                 >
-                  {metrics.isLatestHourShort ? 'LINE CHIEF-এর নজর প্রয়োজন' : 'সব ঠিক আছে'}
+                  {metrics.isLatestHourShort ? (
+                    <AlertTriangle className="w-4 h-4 text-amber-300 shrink-0" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+                  )}
+                  <span>
+                    {metrics.isLatestHourShort ? 'LINE CHIEF-এর নজর প্রয়োজন' : 'সব ঠিক আছে'}
+                  </span>
                 </div>
               </div>
 
               {/* Panel 2: Line Performance */}
               <div
-                className={`rounded-2xl bg-[#F4F8FF] border-2 border-sky-300 text-[#0B1E40] p-[clamp(0.55rem,0.95vw,0.85rem)] flex flex-col justify-between shadow-md ${
+                className={`rounded-2xl bg-gradient-to-b from-[#0A265C] to-[#06183D] border-2 border-sky-400/60 text-white p-[clamp(0.5rem,0.9vw,0.8rem)] flex flex-col justify-between shadow-[0_0_20px_rgba(56,189,248,0.18)] ${
                   flashingKeys.has(`L${targetLine}:eff`) ? 'ring-2 ring-amber-400' : ''
                 }`}
               >
                 <div className="flex items-center justify-between gap-1">
-                  <span
-                    className="font-extrabold text-[#0B224B]"
-                    style={{ fontSize: 'clamp(0.82rem, 1.05vw, 1.08rem)' }}
-                  >
-                    Line Performance
-                  </span>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                    Efficiency
-                  </span>
-                </div>
-
-                <div className="flex items-baseline justify-between my-1.5">
-                  <span
-                    className={`font-black tabular-nums leading-none ${
-                      effPct === null
-                        ? 'text-slate-400'
-                        : effPct >= 100
-                        ? 'text-emerald-600'
-                        : effPct >= 80
-                        ? 'text-amber-600'
-                        : 'text-rose-600'
-                    }`}
-                    style={{ fontSize: 'clamp(1.65rem, 2.55vw, 2.65rem)' }}
-                  >
-                    {effPct !== null ? `${effPct.toFixed(1)}%` : '-'}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="w-4 h-4 text-sky-300 shrink-0" />
+                    <span
+                      className="font-extrabold text-white"
+                      style={{ fontSize: 'clamp(0.84rem, 1.06vw, 1.08rem)' }}
+                    >
+                      Line Performance
+                    </span>
+                  </div>
                   {metrics.targetSoFar !== null && (
-                    <span className="text-xs font-bold text-slate-600 tabular-nums">
+                    <span className="text-xs font-bold text-sky-200 tabular-nums">
                       {metrics.done.toLocaleString()} / {metrics.targetSoFar.toLocaleString()}
                     </span>
                   )}
                 </div>
 
+                <div className="flex items-center justify-center my-1">
+                  <span
+                    className={`font-black tabular-nums leading-none drop-shadow-sm ${
+                      effPct === null
+                        ? 'text-slate-400'
+                        : effPct >= 100
+                        ? 'text-[#4ADE80]'
+                        : effPct >= 80
+                        ? 'text-amber-300'
+                        : 'text-[#FB7185]'
+                    }`}
+                    style={{ fontSize: 'clamp(1.75rem, 2.7vw, 2.85rem)' }}
+                  >
+                    {effPct !== null ? `${effPct.toFixed(1)}%` : '-'}
+                  </span>
+                </div>
+
                 <div>
-                  <div className="w-full h-3.5 rounded-full bg-slate-200 overflow-hidden border border-slate-300">
+                  <div className="w-full h-3.5 rounded-full bg-[#04112B] overflow-hidden border border-sky-400/40">
                     <div
                       className={`h-full transition-all duration-500 ${effBarColor}`}
                       style={{ width: `${effBarWidth}%` }}
                     />
                   </div>
-                  <div className="flex justify-between text-[11px] font-bold text-slate-500 mt-1">
+                  <div className="flex justify-between text-[11px] font-bold text-sky-200/85 mt-1">
                     <span>0%</span>
-                    <span>80%</span>
+                    <span className="text-white font-extrabold">Efficiency</span>
                     <span>100%+</span>
                   </div>
                 </div>
               </div>
 
               {/* Panel 3: Manpower */}
-              <div className="rounded-2xl bg-[#F4F8FF] border-2 border-sky-300 text-[#0B1E40] p-[clamp(0.55rem,0.95vw,0.85rem)] flex flex-col justify-between shadow-md">
-                <div className="flex items-center justify-between gap-1 mb-2">
-                  <span
-                    className="font-extrabold text-[#0B224B]"
-                    style={{ fontSize: 'clamp(0.82rem, 1.05vw, 1.08rem)' }}
-                  >
-                    Manpower
-                  </span>
-                  <Users className="w-4 h-4 text-blue-700" />
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-xl bg-white border border-sky-200 py-1.5 px-1">
-                    <div className="text-[11px] font-bold text-slate-500 leading-tight">Total</div>
-                    <div
-                      className="font-black text-[#0B224B] tabular-nums leading-tight mt-0.5"
-                      style={{ fontSize: 'clamp(1rem, 1.35vw, 1.35rem)' }}
+              <div className="rounded-2xl bg-gradient-to-b from-[#0A265C] to-[#06183D] border-2 border-sky-400/60 text-white p-[clamp(0.5rem,0.9vw,0.8rem)] flex flex-col justify-between shadow-[0_0_20px_rgba(56,189,248,0.18)]">
+                <div className="flex items-center justify-between gap-1 mb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-sky-300 shrink-0" />
+                    <span
+                      className="font-extrabold text-white"
+                      style={{ fontSize: 'clamp(0.84rem, 1.06vw, 1.08rem)' }}
                     >
-                      {metrics.manpowerTotal !== null ? metrics.manpowerTotal : '-'}
-                    </div>
+                      Manpower
+                    </span>
                   </div>
-                  <div className="rounded-xl bg-white border border-sky-200 py-1.5 px-1">
-                    <div className="text-[11px] font-bold text-slate-500 leading-tight">
-                      Present
-                    </div>
-                    <div
-                      className="font-black text-slate-500 tabular-nums leading-tight mt-0.5"
-                      style={{ fontSize: 'clamp(1rem, 1.35vw, 1.35rem)' }}
-                    >
-                      -
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-white border border-sky-200 py-1.5 px-1">
-                    <div className="text-[11px] font-bold text-slate-500 leading-tight">
-                      Absent
-                    </div>
-                    <div
-                      className="font-black text-slate-500 tabular-nums leading-tight mt-0.5"
-                      style={{ fontSize: 'clamp(1rem, 1.35vw, 1.35rem)' }}
-                    >
-                      -
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-2 rounded-xl bg-sky-100 border border-sky-200 px-2.5 py-1.5 flex items-center justify-between text-xs font-bold text-[#0B224B]">
-                  <span>
-                    OP: {metrics.op ?? '-'} · HP: {metrics.hp ?? '-'} · IR: {metrics.ir ?? '-'}
-                  </span>
                   {metrics.lineChiefName !== '-' && (
-                    <span className="truncate max-w-[45%] text-blue-800">
+                    <span className="truncate max-w-[52%] text-[11px] font-bold text-sky-200">
                       LC: {metrics.lineChiefName}
                     </span>
                   )}
                 </div>
+
+                <div className="grid grid-cols-3 gap-2 text-center divide-x divide-sky-400/25">
+                  <div className="py-1 px-1">
+                    <div className="text-[11px] font-bold text-sky-200 leading-tight">Present</div>
+                    <div
+                      className="font-black text-[#4ADE80] tabular-nums leading-tight mt-0.5"
+                      style={{ fontSize: 'clamp(1.1rem, 1.55vw, 1.65rem)' }}
+                    >
+                      -
+                    </div>
+                  </div>
+                  <div className="py-1 px-1">
+                    <div className="text-[11px] font-bold text-sky-200 leading-tight">Absent</div>
+                    <div
+                      className="font-black text-[#FB7185] tabular-nums leading-tight mt-0.5"
+                      style={{ fontSize: 'clamp(1.1rem, 1.55vw, 1.65rem)' }}
+                    >
+                      -
+                    </div>
+                  </div>
+                  <div className="py-1 px-1">
+                    <div className="text-[11px] font-bold text-sky-200 leading-tight">Total</div>
+                    <div
+                      className="font-black text-white tabular-nums leading-tight mt-0.5"
+                      style={{ fontSize: 'clamp(1.1rem, 1.55vw, 1.65rem)' }}
+                    >
+                      {metrics.manpowerTotal !== null ? metrics.manpowerTotal : '-'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-1.5 rounded-xl bg-[#041434] border border-sky-400/35 px-3 py-1.5 flex items-center justify-around text-xs font-extrabold text-sky-100">
+                  <span>OP: <strong className="text-white">{metrics.op ?? '-'}</strong></span>
+                  <span className="text-sky-400/50">·</span>
+                  <span>HP: <strong className="text-white">{metrics.hp ?? '-'}</strong></span>
+                  <span className="text-sky-400/50">·</span>
+                  <span>IR: <strong className="text-white">{metrics.ir ?? '-'}</strong></span>
+                </div>
               </div>
 
-              {/* Panel 4: Attention Required (Red) OR On Track (Green) */}
+              {/* Panel 4: Attention Required (Red Header + Soft Rose Body) OR On Track (Green) */}
               {metrics.isLatestHourShort ? (
-                <div className="rounded-2xl bg-[#FEF2F2] border-2 border-rose-500 text-rose-950 p-[clamp(0.55rem,0.95vw,0.85rem)] flex flex-col justify-between shadow-md">
-                  <div className="flex items-center gap-1.5 bg-rose-600 text-white px-2.5 py-1.5 rounded-xl">
-                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                <div className="rounded-2xl bg-gradient-to-br from-[#FFF1F2] to-[#FFE4E6] border-2 border-rose-500 text-rose-950 overflow-hidden flex flex-col justify-between shadow-[0_0_22px_rgba(244,63,94,0.3)]">
+                  <div className="flex items-center gap-1.5 bg-gradient-to-r from-red-600 to-rose-600 text-white px-3 py-1.5">
+                    <AlertTriangle className="w-4 h-4 text-amber-300 shrink-0" />
                     <span
                       className="font-black uppercase tracking-wide truncate"
                       style={{ fontSize: 'clamp(0.72rem, 0.92vw, 0.95rem)' }}
@@ -1154,31 +1193,49 @@ export const LineDashboardBoard: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="mt-1.5 text-xs font-bold text-rose-900 flex items-center justify-between bg-white/90 rounded-xl px-2.5 py-1.5 border border-rose-200">
-                    <span>
-                      Target: <strong className="tabular-nums">{metrics.latestTarget ?? '-'}</strong>
-                    </span>
-                    <span>
-                      Actual: <strong className="tabular-nums">{metrics.latestProduced ?? '-'}</strong>
-                    </span>
-                    <span className="text-rose-700 font-black tabular-nums">
-                      Short: {metrics.latestShort}
-                    </span>
-                  </div>
-
-                  <div className="mt-1.5">
-                    <div className="text-[11px] font-extrabold uppercase tracking-wider text-rose-700">
-                      PM Follow-up
+                  <div className="grid grid-cols-2 gap-2 px-2.5 py-2 flex-1 items-center">
+                    <div className="flex flex-col gap-0.5 border-r border-rose-300/80 pr-2">
+                      <div className="text-[11px] font-black text-rose-950 leading-tight mb-0.5">
+                        Hourly Production Short
+                      </div>
+                      <div className="text-xs font-bold text-slate-800 flex justify-between">
+                        <span>Target:</span>
+                        <strong className="tabular-nums">{metrics.latestTarget ?? '-'} PCS</strong>
+                      </div>
+                      <div className="text-xs font-bold text-slate-800 flex justify-between">
+                        <span>Actual:</span>
+                        <strong className="tabular-nums">{metrics.latestProduced ?? '-'} PCS</strong>
+                      </div>
+                      <div className="text-xs font-black text-rose-600 flex justify-between">
+                        <span>Short:</span>
+                        <strong className="tabular-nums">{metrics.latestShort} PCS</strong>
+                      </div>
                     </div>
-                    <ul className="font-bangla font-bold text-xs text-rose-950 leading-relaxed">
-                      <li>• অপারেটরের কাজ দেখুন</li>
-                      <li>• মেশিন চেক করুন · প্রয়োজনে রি-অ্যালোকেশন</li>
-                    </ul>
+
+                    <div className="flex flex-col gap-0.5 pl-0.5">
+                      <div className="text-[11px] font-black text-slate-900 leading-tight mb-0.5">
+                        PM Follow-up
+                      </div>
+                      <ul className="font-bangla font-bold text-[11px] text-slate-900 space-y-0.5 leading-snug">
+                        <li className="flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span>অপারেটরের কাজ দেখুন</span>
+                        </li>
+                        <li className="flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span>মেশিন চেক করুন</span>
+                        </li>
+                        <li className="flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span>প্রয়োজনে রি-অ্যালোকেশন</span>
+                        </li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="rounded-2xl bg-[#ECFDF5] border-2 border-emerald-500 text-emerald-950 p-[clamp(0.55rem,0.95vw,0.85rem)] flex flex-col justify-between shadow-md">
-                  <div className="flex items-center gap-2 bg-emerald-600 text-white px-3 py-1.5 rounded-xl">
+                <div className="rounded-2xl bg-gradient-to-b from-[#0C3828] to-[#062419] border-2 border-emerald-400/75 text-white overflow-hidden flex flex-col justify-between shadow-[0_0_20px_rgba(34,197,94,0.25)]">
+                  <div className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white px-3 py-1.5">
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
                     <span
                       className="font-black uppercase tracking-wide"
@@ -1189,17 +1246,17 @@ export const LineDashboardBoard: React.FC = () => {
                   </div>
 
                   <div
-                    className="my-1.5 font-bangla font-bold text-emerald-900 text-center leading-normal"
-                    style={{ fontSize: 'clamp(0.9rem, 1.12vw, 1.15rem)' }}
+                    className="px-3 my-1.5 font-bangla font-bold text-emerald-100 text-center leading-normal"
+                    style={{ fontSize: 'clamp(0.88rem, 1.1vw, 1.12rem)' }}
                   >
                     {isGoalMet
                       ? 'আজকের লক্ষ্য সফলভাবে অর্জিত হয়েছে'
                       : 'উৎপাদন লক্ষ্যমাত্রা অনুযায়ী চলছে'}
                   </div>
 
-                  <div className="rounded-xl bg-white/90 border border-emerald-200 px-3 py-1.5 text-xs font-bold text-emerald-900 flex items-center justify-between">
+                  <div className="mx-2.5 mb-2 rounded-xl bg-black/25 border border-emerald-400/35 px-3 py-1.5 text-xs font-bold text-emerald-100 flex items-center justify-between">
                     <span>Line Chief:</span>
-                    <span className="truncate max-w-[60%]">{metrics.lineChiefName}</span>
+                    <span className="truncate max-w-[60%] text-white">{metrics.lineChiefName}</span>
                   </div>
                 </div>
               )}
@@ -1208,14 +1265,16 @@ export const LineDashboardBoard: React.FC = () => {
         )}
 
         {/* 6. FOOTER BAR */}
-        <footer className="shrink-0 rounded-xl bg-[#071836]/95 border border-sky-400/25 px-[clamp(0.85rem,1.3vw,1.35rem)] py-[clamp(0.28rem,0.55vh,0.45rem)] flex items-center justify-between gap-3">
+        <footer className="shrink-0 rounded-xl bg-gradient-to-r from-[#061A42]/95 via-[#09245A]/95 to-[#061A42]/95 border border-sky-400/35 px-[clamp(0.85rem,1.3vw,1.35rem)] py-[clamp(0.26rem,0.52vh,0.44rem)] flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span className="w-4 h-4 rounded-full bg-emerald-500 text-white inline-flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            </span>
             <span
-              className="font-bold text-sky-100 truncate"
+              className="font-bold text-white truncate"
               style={{ fontSize: 'clamp(0.78rem, 0.98vw, 0.98rem)' }}
             >
-              Keep Production On Track | Achieve Today&apos;s Target
+              Keep Production On Track &nbsp;|&nbsp; Achieve Today&apos;s Target
             </span>
           </div>
 
@@ -1224,7 +1283,7 @@ export const LineDashboardBoard: React.FC = () => {
               <span
                 className={`w-2.5 h-2.5 rounded-full ${
                   connectionState === 'connected'
-                    ? 'bg-emerald-400'
+                    ? 'bg-emerald-400 shadow-[0_0_8px_#4ade80]'
                     : 'bg-amber-400 animate-pulse'
                 }`}
               />
@@ -1238,10 +1297,10 @@ export const LineDashboardBoard: React.FC = () => {
             </div>
 
             <span
-              className="hidden sm:inline italic font-semibold text-sky-200/90"
+              className="hidden sm:inline italic font-bold text-sky-100"
               style={{ fontSize: 'clamp(0.76rem, 0.95vw, 0.95rem)' }}
             >
-              Together for a Productive Factory
+              &ldquo;Together for a Productive Factory&rdquo;
             </span>
           </div>
         </footer>
