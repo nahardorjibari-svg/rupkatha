@@ -97,7 +97,7 @@ export const SewingReportEntry: React.FC = () => {
     remarks: '',
     lineChiefName: '',
     lineChiefPhone: '',
-    hours: Array.from({ length: 10 }, (_, i) => ({
+    hours: Array.from({ length: 12 }, (_, i) => ({
       hourNo: i + 1,
       backQty: '',
       frontQty: '',
@@ -126,7 +126,7 @@ export const SewingReportEntry: React.FC = () => {
     remarks: '',
     lineChiefName: '',
     lineChiefPhone: '',
-    hours: Array.from({ length: 10 }, (_, i) => ({
+    hours: Array.from({ length: 12 }, (_, i) => ({
       hourNo: i + 1,
       backQty: '',
       frontQty: '',
@@ -178,7 +178,7 @@ export const SewingReportEntry: React.FC = () => {
         const loadedLines = [1, 2, 3, 4].map((lineNo) => {
           const existingLine = (matchedSewing.lines || []).find((l: any) => l.line_no === lineNo);
           if (existingLine) {
-            const hoursArr = Array.from({ length: 10 }, (_, i) => {
+            const hoursArr = Array.from({ length: 12 }, (_, i) => {
               const hrNo = i + 1;
               const foundHr = (existingLine.hours || []).find((h: any) => h.hour_no === hrNo);
               return {
@@ -186,7 +186,7 @@ export const SewingReportEntry: React.FC = () => {
                 backQty: foundHr && foundHr.back_qty !== null ? String(foundHr.back_qty) : '',
                 frontQty: foundHr && foundHr.front_qty !== null ? String(foundHr.front_qty) : '',
                 outputQty: foundHr && foundHr.output_qty !== null ? String(foundHr.output_qty) : '',
-                asm: foundHr && foundHr.asm ? String(foundHr.asm) : '',
+                asm: foundHr && foundHr.asm !== null && foundHr.asm !== undefined ? String(foundHr.asm) : '',
               };
             });
             return {
@@ -224,7 +224,7 @@ export const SewingReportEntry: React.FC = () => {
         setFinishingReportId(matchedFinishing.id);
         const fLine = (matchedFinishing.lines || []).find((l: any) => l.line_no === 1);
         if (fLine) {
-          const fHoursArr = Array.from({ length: 10 }, (_, i) => {
+          const fHoursArr = Array.from({ length: 12 }, (_, i) => {
             const hrNo = i + 1;
             const foundHr = (fLine.hours || []).find((h: any) => h.hour_no === hrNo);
             return {
@@ -232,7 +232,7 @@ export const SewingReportEntry: React.FC = () => {
               backQty: foundHr && foundHr.back_qty !== null ? String(foundHr.back_qty) : '',
               frontQty: foundHr && foundHr.front_qty !== null ? String(foundHr.front_qty) : '',
               outputQty: foundHr && foundHr.output_qty !== null ? String(foundHr.output_qty) : '',
-              asm: foundHr && foundHr.asm !== null ? String(foundHr.asm) : '',
+              asm: foundHr && foundHr.asm !== null && foundHr.asm !== undefined ? String(foundHr.asm) : '',
             };
           });
           setFinishingLine({
@@ -349,6 +349,21 @@ export const SewingReportEntry: React.FC = () => {
       return;
     }
 
+    if (field === 'workingHours') {
+      const nextHours = Number(value);
+      const currentLine = lines[lineIndex];
+      const blockingHour = (currentLine?.hours || []).find((h: any) => {
+        if (h.hourNo <= nextHours) return false;
+        return [h.backQty, h.frontQty, h.outputQty, h.asm].some(
+          (v) => v !== '' && v !== null && v !== undefined && String(v).trim() !== ''
+        );
+      });
+      if (blockingHour) {
+        toast.error(`Hour ${blockingHour.hourNo} has data. Clear it first.`);
+        return;
+      }
+    }
+
     setLines((prevLines) => {
       const updatedLines = [...prevLines];
       updatedLines[lineIndex] = { ...updatedLines[lineIndex], [field]: value };
@@ -424,8 +439,9 @@ export const SewingReportEntry: React.FC = () => {
       }
     } else if (e.key === 'ArrowRight') {
       const input = e.currentTarget;
+      const maxCol = Math.max(1, Math.min(12, Number(lines[lineIdx]?.workingHours) || 8));
       if (input.selectionStart === input.value.length && input.selectionEnd === input.value.length) {
-        for (let c = colIdx + 1; c <= 10; c++) {
+        for (let c = colIdx + 1; c <= maxCol; c++) {
           if (moveFocus(lineIdx, rowIdx, c)) {
             e.preventDefault();
             return;
@@ -474,6 +490,19 @@ export const SewingReportEntry: React.FC = () => {
       toast.error('Hours are already submitted. Line settings are locked for non-admins.');
       return;
     }
+    if (field === 'workingHours') {
+      const nextHours = Number(value);
+      const blockingHour = (finishingLine?.hours || []).find((h: any) => {
+        if (h.hourNo <= nextHours) return false;
+        return [h.backQty, h.frontQty, h.outputQty, h.asm].some(
+          (v) => v !== '' && v !== null && v !== undefined && String(v).trim() !== ''
+        );
+      });
+      if (blockingHour) {
+        toast.error(`Hour ${blockingHour.hourNo} has data. Clear it first.`);
+        return;
+      }
+    }
     setFinishingLine((prev: any) => {
       setIsDirty(true);
       return { ...prev, [field]: value };
@@ -495,10 +524,19 @@ export const SewingReportEntry: React.FC = () => {
   };
 
   const isHourFilled = (hourNo: number) => {
-    return lines.some((l) => {
+    const sewingFilled = lines.some((l) => {
+      const maxHr = Math.max(1, Math.min(12, Number(l.workingHours) || 8));
+      if (hourNo > maxHr) return false;
       const hr = l.hours.find((h: any) => h.hourNo === hourNo);
-      return hr && ((hr.backQty !== '' && hr.backQty !== null) || (hr.frontQty !== '' && hr.frontQty !== null) || (hr.outputQty !== '' && hr.outputQty !== null));
+      return hr && ((hr.backQty !== '' && hr.backQty !== null) || (hr.frontQty !== '' && hr.frontQty !== null) || (hr.outputQty !== '' && hr.outputQty !== null) || (hr.asm !== '' && hr.asm !== null));
     });
+    if (sewingFilled) return true;
+    const finMaxHr = Math.max(1, Math.min(12, Number(finishingLine.workingHours) || 8));
+    if (hourNo <= finMaxHr) {
+      const fHr = finishingLine.hours.find((h: any) => h.hourNo === hourNo);
+      return Boolean(fHr && ((fHr.backQty !== '' && fHr.backQty !== null) || (fHr.frontQty !== '' && fHr.frontQty !== null) || (fHr.outputQty !== '' && fHr.outputQty !== null) || (fHr.asm !== '' && fHr.asm !== null)));
+    }
+    return false;
   };
 
   const handleSubmitHour = async (hourNo: number) => {
@@ -542,7 +580,7 @@ export const SewingReportEntry: React.FC = () => {
 
   const handleSubmitAllFilled = async () => {
     const filledUnlockedHours = [];
-    for (let h = 1; h <= 10; h++) {
+    for (let h = 1; h <= 12; h++) {
       if (isHourFilled(h) && !hourLocks.some((l) => l.hour_no === h)) {
         filledUnlockedHours.push(h);
       }
@@ -596,8 +634,9 @@ export const SewingReportEntry: React.FC = () => {
     const poVal = Number(fl.polyMan) || 0;
     const paVal = Number(fl.packingMan) || 0;
     const totalManpower = opVal + hpVal + irVal + qVal + fVal + poVal + paVal;
+    const finWorkingHours = Math.max(1, Math.min(12, Number(fl.workingHours) || 8));
 
-    const { totalBack, totalFront, totalOutput, totalAsm } = calculateLineHourTotals(fl.hours);
+    const { totalBack, totalFront, totalOutput, totalAsm } = calculateLineHourTotals(fl.hours, finWorkingHours);
     const insideBreakdown = calculatePartHourlyBreakdown(fl, 'back'); // Inside -> back
     const ironBreakdown = calculatePartHourlyBreakdown(fl, 'front'); // Iron -> front
     const topSideBreakdown = calculatePartHourlyBreakdown(fl, 'output'); // Top Side -> output
@@ -622,8 +661,9 @@ export const SewingReportEntry: React.FC = () => {
       const hpVal = Number(line.hp) || 0;
       const irVal = Number(line.ir) || 0;
       const totalManpower = opVal + hpVal + irVal;
+      const lineWorkingHours = Math.max(1, Math.min(12, Number(line.workingHours) || 8));
 
-      const { totalBack, totalFront, totalOutput, totalAsm } = calculateLineHourTotals(line.hours);
+      const { totalBack, totalFront, totalOutput, totalAsm } = calculateLineHourTotals(line.hours, lineWorkingHours);
       const backBreakdown = calculatePartHourlyBreakdown(line, 'back');
       const frontBreakdown = calculatePartHourlyBreakdown(line, 'front');
       const outputBreakdown = calculatePartHourlyBreakdown(line, 'output');
@@ -631,7 +671,7 @@ export const SewingReportEntry: React.FC = () => {
 
       let lastEnteredHourNo = 0;
       line.hours.forEach((h: any) => {
-        if (h.outputQty !== '' && h.outputQty !== null && !isNaN(Number(h.outputQty))) {
+        if (h.hourNo <= lineWorkingHours && h.outputQty !== '' && h.outputQty !== null && !isNaN(Number(h.outputQty))) {
           if (h.hourNo > lastEnteredHourNo) lastEnteredHourNo = h.hourNo;
         }
       });
@@ -819,6 +859,7 @@ export const SewingReportEntry: React.FC = () => {
             const backMetrics = backBreakdown.metrics;
             const frontMetrics = frontBreakdown.metrics;
             const asmMetrics = asmBreakdown.metrics;
+            const lineWorkingHours = Math.max(1, Math.min(12, Number(line.workingHours) || 8));
 
             return (
               <div key={line.lineNo} className={`p-4 rounded-2xl border shadow-sm ${isDark ? 'bg-[#103A40] border-white/25 text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'}`}>
@@ -828,8 +869,9 @@ export const SewingReportEntry: React.FC = () => {
                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg border border-current/20 text-xs font-bold">
                       <Clock className="w-3.5 h-3.5 text-[#0F8B8D]" />
                       <span>Working Hours:</span>
-                      <select value={line.workingHours ?? 8} onChange={(e) => handleLineChange(lineIdx, 'workingHours', parseInt(e.target.value, 10))} className={`font-mono font-black rounded px-1.5 py-0.5 outline-none cursor-pointer ${isDark ? 'bg-[#0B2E33] text-white' : 'bg-slate-100 text-slate-800'}`}>
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((h) => <option key={h} value={h}>{h} hrs</option>)}
+                      <select value={lineWorkingHours} onChange={(e) => handleLineChange(lineIdx, 'workingHours', parseInt(e.target.value, 10))} className={`font-mono font-black rounded px-1.5 py-0.5 outline-none cursor-pointer ${isDark ? 'bg-[#0B2E33] text-white' : 'bg-slate-100 text-slate-800'}`}>
+                        {lineWorkingHours < 8 && <option value={lineWorkingHours}>{lineWorkingHours} hrs</option>}
+                        {[8, 9, 10, 11, 12].map((h) => <option key={h} value={h}>{h} hrs</option>)}
                       </select>
                     </div>
                     <button onClick={() => handleApplySameTarget(lineIdx)} className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-[#0F8B8D] dark:text-[#2BA5B5] border border-[#0F8B8D]/30 transition-colors cursor-pointer">
@@ -846,8 +888,8 @@ export const SewingReportEntry: React.FC = () => {
                       <col style={{ width: '8%' }} />
                       <col style={{ width: '6%' }} />
                       <col style={{ width: '6%' }} />
-                      {[...Array(10)].map((_, i) => (
-                        <col key={i} style={{ width: '5.2%' }} />
+                      {[...Array(lineWorkingHours)].map((_, i) => (
+                        <col key={i} style={{ width: `${(52 / lineWorkingHours).toFixed(4)}%` }} />
                       ))}
                       <col style={{ width: '8%' }} />
                       <col style={{ width: '10%' }} />
@@ -858,7 +900,7 @@ export const SewingReportEntry: React.FC = () => {
                         <th className="p-2 border border-[#1E293B] text-center">Parts</th>
                         <th className="p-2 border border-[#1E293B] text-center leading-tight">Hr<br/>Tgt</th>
                         <th className="p-2 border border-[#1E293B] text-center leading-tight">Tot<br/>Tgt</th>
-                        {Array.from({ length: 10 }).map((_, i) => {
+                        {Array.from({ length: lineWorkingHours }).map((_, i) => {
                           const hrNo = i + 1;
                           const isLocked = hourLocks.some((l) => l.hour_no === hrNo);
                           return (
@@ -978,7 +1020,7 @@ export const SewingReportEntry: React.FC = () => {
                             >
                               {pMetrics.totalTarget ?? '-'}
                             </td>
-                            {line.hours.map((hr: any, hrIdx: number) => {
+                            {line.hours.slice(0, lineWorkingHours).map((hr: any, hrIdx: number) => {
                               const isLocked = hourLocks.some((l) => l.hour_no === hr.hourNo);
                               const isDisabled = isLocked && !isAdmin;
                               const cellStyle = getCellStyling(hr[qtyField], pMetrics.hourTarget, isDisabled);
@@ -1041,7 +1083,7 @@ export const SewingReportEntry: React.FC = () => {
                       })}
 
                       {/* HOUR SHORT / EXCESS BLOCK */}
-                      <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={16} className="p-0 h-0" /></tr>
+                      <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={6 + lineWorkingHours} className="p-0 h-0" /></tr>
                       {['back', 'front', 'asm', 'output'].map((pKey, pIdx) => {
                         const bd = pKey === 'back' ? backBreakdown : pKey === 'front' ? frontBreakdown : pKey === 'asm' ? asmBreakdown : outputBreakdown;
                         const pLabel = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Q.C.P';
@@ -1063,7 +1105,7 @@ export const SewingReportEntry: React.FC = () => {
                       })}
 
                       {/* RUNNING SHORT / EXCESS BLOCK */}
-                      <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={16} className="p-0 h-0" /></tr>
+                      <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={6 + lineWorkingHours} className="p-0 h-0" /></tr>
                       {['back', 'front', 'asm', 'output'].map((pKey, pIdx) => {
                         const bd = pKey === 'back' ? backBreakdown : pKey === 'front' ? frontBreakdown : pKey === 'asm' ? asmBreakdown : outputBreakdown;
                         const pLabel = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Q.C.P';
@@ -1085,7 +1127,7 @@ export const SewingReportEntry: React.FC = () => {
                       })}
 
                       {/* REMAINING TARGET BLOCK */}
-                      <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={16} className="p-0 h-0" /></tr>
+                      <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={6 + lineWorkingHours} className="p-0 h-0" /></tr>
                       {['back', 'front', 'asm', 'output'].map((pKey, pIdx) => {
                         const bd = pKey === 'back' ? backBreakdown : pKey === 'front' ? frontBreakdown : pKey === 'asm' ? asmBreakdown : outputBreakdown;
                         const pLabel = pKey === 'back' ? 'Back' : pKey === 'front' ? 'Front' : pKey === 'asm' ? 'A.S.M' : 'Q.C.P';
@@ -1110,7 +1152,7 @@ export const SewingReportEntry: React.FC = () => {
                         <td className="border-r-[1.5px] bg-slate-200 dark:bg-black/20 p-1 text-center" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>
                           <span className="font-black uppercase leading-none block text-[10px]">Chief Info<br/><span className="text-[0.8em] font-bangla">লাইন চিফ</span></span>
                         </td>
-                        <td colSpan={13} className="border-r-[1.5px] p-0" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>
+                        <td colSpan={3 + lineWorkingHours} className="border-r-[1.5px] p-0" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>
                           <div className="flex h-full">
                             <div className="flex-1 border-r-[1.5px] p-1" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>
                                <input type="text" value={line.lineChiefName ?? ''} onChange={(e) => handleLineChange(lineIdx, 'lineChiefName', e.target.value)} className="w-full h-full bg-transparent outline-none font-bold text-xs" placeholder="Chief Name" />
@@ -1134,6 +1176,9 @@ export const SewingReportEntry: React.FC = () => {
           })}
 
           {/* FINISHING SECTION */}
+          {(() => {
+            const finWorkingHours = Math.max(1, Math.min(12, Number(finishingLine.workingHours) || 8));
+            return (
           <div className={`p-4 rounded-2xl border shadow-sm ${isDark ? 'bg-[#103A40] border-white/25 text-white' : 'bg-white border-[#1E293B] text-[#0F172A]'}`}>
             <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-3 px-1 gap-3">
               <div>
@@ -1144,8 +1189,9 @@ export const SewingReportEntry: React.FC = () => {
                 <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg border border-current/20 text-xs font-bold">
                   <Clock className="w-3.5 h-3.5 text-[#0F8B8D]" />
                   <span>Working Hours:</span>
-                  <select value={finishingLine.workingHours ?? 8} onChange={(e) => handleFinishingLineChange('workingHours', parseInt(e.target.value, 10))} className={`font-mono font-black rounded px-1.5 py-0.5 outline-none cursor-pointer ${isDark ? 'bg-[#0B2E33] text-white' : 'bg-slate-100 text-slate-800'}`}>
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((h) => <option key={h} value={h}>{h} hrs</option>)}
+                  <select value={finWorkingHours} onChange={(e) => handleFinishingLineChange('workingHours', parseInt(e.target.value, 10))} className={`font-mono font-black rounded px-1.5 py-0.5 outline-none cursor-pointer ${isDark ? 'bg-[#0B2E33] text-white' : 'bg-slate-100 text-slate-800'}`}>
+                    {finWorkingHours < 8 && <option value={finWorkingHours}>{finWorkingHours} hrs</option>}
+                    {[8, 9, 10, 11, 12].map((h) => <option key={h} value={h}>{h} hrs</option>)}
                   </select>
                 </div>
               </div>
@@ -1158,8 +1204,8 @@ export const SewingReportEntry: React.FC = () => {
                   <col style={{ width: '8%' }} />
                   <col style={{ width: '6%' }} />
                   <col style={{ width: '6%' }} />
-                  {[...Array(10)].map((_, i) => (
-                    <col key={i} style={{ width: '5.2%' }} />
+                  {[...Array(finWorkingHours)].map((_, i) => (
+                    <col key={i} style={{ width: `${(52 / finWorkingHours).toFixed(4)}%` }} />
                   ))}
                   <col style={{ width: '8%' }} />
                   <col style={{ width: '10%' }} />
@@ -1170,7 +1216,7 @@ export const SewingReportEntry: React.FC = () => {
                     <th className="p-2 border border-[#1E293B] text-center">Process</th>
                     <th className="p-2 border border-[#1E293B] text-center leading-tight">Hr<br/>Tgt</th>
                     <th className="p-2 border border-[#1E293B] text-center leading-tight">Tot<br/>Tgt</th>
-                    {Array.from({ length: 10 }).map((_, i) => {
+                    {Array.from({ length: finWorkingHours }).map((_, i) => {
                       const hrNo = i + 1;
                       const isLocked = hourLocks.some((l) => l.hour_no === hrNo);
                       return (
@@ -1239,7 +1285,7 @@ export const SewingReportEntry: React.FC = () => {
                           <input type="text" value={finishingLine[proc.targetField] ?? ''} onChange={(e) => handleFinishingLineChange(proc.targetField, e.target.value)} className="w-full h-8 bg-transparent text-center font-bold border border-current/20 rounded" />
                         </td>
                         <td className="border-r-[1.5px] p-1 text-center font-black text-xs" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>{pMetrics.totalTarget ?? '-'}</td>
-                        {finishingLine.hours.map((hr: any, hrIdx: number) => {
+                        {finishingLine.hours.slice(0, finWorkingHours).map((hr: any, hrIdx: number) => {
                           const isLocked = hourLocks.some((l) => l.hour_no === hr.hourNo);
                           const isDisabled = isLocked && !isAdmin;
                           const cellStyle = getCellStyling(hr[proc.qtyField], pMetrics.hourTarget, isDisabled);
@@ -1265,7 +1311,7 @@ export const SewingReportEntry: React.FC = () => {
                   })}
 
                   {/* HOUR SHORT / EXCESS BLOCK */}
-                  <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={16} className="p-0 h-0" /></tr>
+                  <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={6 + finWorkingHours} className="p-0 h-0" /></tr>
                   {[
                     { key: 'back', label: 'INSIDE', breakdown: finishingCalculations.insideBreakdown },
                     { key: 'front', label: 'IRON', breakdown: finishingCalculations.ironBreakdown },
@@ -1288,7 +1334,7 @@ export const SewingReportEntry: React.FC = () => {
                   ))}
 
                   {/* RUNNING SHORT / EXCESS BLOCK */}
-                  <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={16} className="p-0 h-0" /></tr>
+                  <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={6 + finWorkingHours} className="p-0 h-0" /></tr>
                   {[
                     { key: 'back', label: 'INSIDE', breakdown: finishingCalculations.insideBreakdown },
                     { key: 'front', label: 'IRON', breakdown: finishingCalculations.ironBreakdown },
@@ -1311,7 +1357,7 @@ export const SewingReportEntry: React.FC = () => {
                   ))}
 
                   {/* REMAINING TARGET BLOCK */}
-                  <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={16} className="p-0 h-0" /></tr>
+                  <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={6 + finWorkingHours} className="p-0 h-0" /></tr>
                   {[
                     { key: 'back', label: 'INSIDE', breakdown: finishingCalculations.insideBreakdown },
                     { key: 'front', label: 'IRON', breakdown: finishingCalculations.ironBreakdown },
@@ -1337,7 +1383,7 @@ export const SewingReportEntry: React.FC = () => {
                     <td className="border-r-[1.5px] bg-slate-200 dark:bg-black/20 p-1 text-center" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>
                       <span className="font-black uppercase leading-none block text-[10px]">Chief Info<br/><span className="text-[0.8em] font-bangla">লাইন চিফ</span></span>
                     </td>
-                    <td colSpan={13} className="border-r-[1.5px] p-0" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>
+                    <td colSpan={3 + finWorkingHours} className="border-r-[1.5px] p-0" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>
                       <div className="flex h-full">
                         <div className="flex-1 border-r-[1.5px] p-1" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>
                            <input type="text" value={finishingLine.lineChiefName ?? ''} onChange={(e) => handleFinishingLineChange('lineChiefName', e.target.value)} className="w-full h-full bg-transparent outline-none font-bold text-xs" placeholder="Chief Name" />
@@ -1357,6 +1403,8 @@ export const SewingReportEntry: React.FC = () => {
               </table>
             </div>
           </div>
+            );
+          })()}
         </div>
       </div>
 

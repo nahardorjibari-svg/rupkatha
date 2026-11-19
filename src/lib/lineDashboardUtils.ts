@@ -89,6 +89,16 @@ export interface DhakaClockInfo {
   minute: number;
 }
 
+const BANGLA_WEEKDAYS: Record<string, string> = {
+  Sun: 'রবিবার',
+  Mon: 'সোমবার',
+  Tue: 'মঙ্গলবার',
+  Wed: 'বুধবার',
+  Thu: 'বৃহস্পতিবার',
+  Fri: 'শুক্রবার',
+  Sat: 'শনিবার',
+};
+
 export function getDhakaClockInfo(now = new Date()): DhakaClockInfo {
   const dateStr = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Dhaka',
@@ -106,7 +116,12 @@ export function getDhakaClockInfo(now = new Date()): DhakaClockInfo {
   }).formatToParts(now);
 
   const getPart = (type: string) => parts.find((p) => p.type === type)?.value || '';
-  const formattedDate = `${getPart('day')} ${getPart('month')} ${getPart('year')}, ${getPart('weekday')}`;
+  const enWeekday = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Dhaka',
+    weekday: 'short',
+  }).format(now);
+  const banglaWeekday = BANGLA_WEEKDAYS[enWeekday] || getPart('weekday');
+  const formattedDate = `${getPart('day')} ${getPart('month')} ${getPart('year')}, ${banglaWeekday}`;
 
   const formattedTime = now.toLocaleTimeString('en-US', {
     timeZone: 'Asia/Dhaka',
@@ -149,7 +164,15 @@ export function getClockElapsedShiftHours(clock: DhakaClockInfo, workingHours: n
   return Math.max(0, Math.min(workingHours, Math.floor(elapsed)));
 }
 
-export type CellVisualState = 'good' | 'short' | 'running' | 'empty' | 'neutral';
+/**
+ * Returns the Dhaka 24h decimal end time of a shift hour (8:00 AM start, 13:00-14:00 lunch break).
+ * H1..H5 end at 9:00..13:00 (1:00 PM); H6..H12 end at 15:00..21:00.
+ */
+export function getShiftHourEndDecimal(hourNo: number): number {
+  return hourNo <= 5 ? 8 + hourNo : 9 + hourNo;
+}
+
+export type CellVisualState = 'good' | 'short' | 'running' | 'entry_due' | 'empty' | 'neutral';
 
 export interface PartRowCell {
   hourNo: number;
@@ -186,6 +209,7 @@ export interface LineBoardMetrics {
   enteredQcpHours: number;
   remainingHours: number;
   currentRunningHour: number | null;
+  isRunningHourEntryDue: boolean;
   // Latest Q.C.P hour
   latestHourNo: number | null;
   latestProduced: number | null;
@@ -232,6 +256,7 @@ export function computeLineBoardMetrics(
       enteredQcpHours: 0,
       remainingHours: 8,
       currentRunningHour: null,
+      isRunningHourEntryDue: false,
       latestHourNo: null,
       latestProduced: null,
       latestTarget: null,
@@ -251,34 +276,34 @@ export function computeLineBoardMetrics(
         enteredCount: 0,
         total: null,
         totalStatus: 'neutral',
-        cells: Array.from({ length: 10 }, (_, idx) => ({
+        cells: Array.from({ length: 8 }, (_, idx) => ({
           hourNo: idx + 1,
           value: null,
           state: 'empty' as CellVisualState,
         })),
       })),
-      qcpDots: Array.from({ length: 10 }, () => 'empty'),
+      qcpDots: Array.from({ length: 8 }, () => 'empty'),
     };
   }
 
   const hoursMap = new Map<number, any>();
   for (const h of lineData.hours || lineData.sewing_report_hours || []) {
     const hrNo = Number(h.hour_no ?? h.hourNo);
-    if (hrNo >= 1 && hrNo <= 10) {
+    if (hrNo >= 1 && hrNo <= 12) {
       hoursMap.set(hrNo, h);
     }
   }
 
   const rawWorkingHours = parseNullableNumber(lineData.working_hours ?? lineData.workingHours);
-  const workingHours = rawWorkingHours !== null ? Math.max(1, Math.min(10, Math.round(rawWorkingHours))) : 8;
+  const workingHours = rawWorkingHours !== null ? Math.max(1, Math.min(12, Math.round(rawWorkingHours))) : 8;
 
   const hourlyTarget = parseNullableNumber(lineData.output_hour_target ?? lineData.outputHourTarget);
   const dayTarget = hourlyTarget !== null ? hourlyTarget * workingHours : null;
 
-  // Determine highest hour with entered Q.C.P (output_qty) value
+  // Determine highest hour with entered Q.C.P (output_qty) value within workingHours
   let maxEnteredQcpHour = 0;
   let maxEnteredAnyHour = 0;
-  for (let hr = 1; hr <= 10; hr++) {
+  for (let hr = 1; hr <= workingHours; hr++) {
     const hObj = hoursMap.get(hr);
     if (!hObj) continue;
     if (parseNullableNumber(hObj.output_qty) !== null) {
@@ -299,7 +324,7 @@ export function computeLineBoardMetrics(
     }
   } else {
     const decimalHour = clock.hour24 + clock.minute / 60;
-    if (decimalHour >= 8 && decimalHour < 20) {
+    if (decimalHour >= 8 && decimalHour < 22) {
       const clockHr = getClockElapsedShiftHours(clock, workingHours) + 1;
       if (clockHr >= 1 && clockHr <= workingHours) {
         currentRunningHour = clockHr;
@@ -309,14 +334,18 @@ export function computeLineBoardMetrics(
     }
   }
 
-  // Build rows in exact order: BACK, FRONT, A.S.M, Q.C.P
+  const decimalHourNow = clock.hour24 + clock.minute / 60;
+  const isRunningHourEntryDue =
+    currentRunningHour !== null && decimalHourNow >= getShiftHourEndDecimal(currentRunningHour);
+
+  // Build rows in exact order: BACK, FRONT, A.S.M, Q.C.P (scoped to line's workingHours)
   const rows: PartRowSummary[] = LINE_PART_ROWS.map((part) => {
     const hourTarget = parseNullableNumber(lineData[part.targetField]);
     let enteredCount = 0;
     let totalSum = 0;
 
     const cells: PartRowCell[] = [];
-    for (let hr = 1; hr <= 10; hr++) {
+    for (let hr = 1; hr <= workingHours; hr++) {
       const hObj = hoursMap.get(hr);
       const val = hObj ? parseNullableNumber(hObj[part.qtyField]) : null;
 
@@ -330,7 +359,7 @@ export function computeLineBoardMetrics(
           state = 'neutral';
         }
       } else if (currentRunningHour === hr) {
-        state = 'running';
+        state = isRunningHourEntryDue ? 'entry_due' : 'running';
       } else {
         state = 'empty';
       }
@@ -376,7 +405,7 @@ export function computeLineBoardMetrics(
   // Latest entered Q.C.P hour
   let latestHourNo: number | null = null;
   let latestProduced: number | null = null;
-  for (let hr = 10; hr >= 1; hr--) {
+  for (let hr = workingHours; hr >= 1; hr--) {
     const cell = qcpRow.cells[hr - 1];
     if (cell && cell.value !== null) {
       latestHourNo = hr;
@@ -439,6 +468,7 @@ export function computeLineBoardMetrics(
     enteredQcpHours,
     remainingHours,
     currentRunningHour,
+    isRunningHourEntryDue,
     latestHourNo,
     latestProduced,
     latestTarget: hourlyTarget,

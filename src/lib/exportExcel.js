@@ -153,6 +153,12 @@ export function exportSewingReportsToExcel({ reports, finishingReports = [], edi
   XLSX.utils.book_append_sheet(wb, wsMgmt, 'Management Summary');
 
   // SHEET 2: SEWING DETAILED REGISTER
+  const maxSewingHours = Math.max(
+    8,
+    ...allLines.map((l) => Math.max(1, Math.min(12, parseInt(l.working_hours ?? l.workingHours ?? 8, 10) || 8)))
+  );
+  const sewingHourHeaders = Array.from({ length: maxSewingHours }, (_, i) => `H${String(i + 1).padStart(2, '0')}`);
+
   const detailRows = [
     ['RUPKATHA APPARELS LTD. - SEWING PRODUCTION REGISTER'],
     [`Date: ${date || 'All Dates'} | Factory Unit: ${unit?.toUpperCase() || 'All'}`],
@@ -163,13 +169,14 @@ export function exportSewingReportsToExcel({ reports, finishingReports = [], edi
       'Buyer',
       'Style No',
       'Order Qty',
+      'Working Hours',
       'OP',
       'HP',
       'IR%',
       'Parts',
       'Hour Target',
       'Total Target',
-      'H01', 'H02', 'H03', 'H04', 'H05', 'H06', 'H07', 'H08', 'H09', 'H10',
+      ...sewingHourHeaders,
       'Total',
       'Remarks',
     ],
@@ -181,24 +188,31 @@ export function exportSewingReportsToExcel({ reports, finishingReports = [], edi
     
     parts.forEach((p, pIdx) => {
       const bd = calculatePartHourlyBreakdown(l, p);
+      const hourValues = Array.from({ length: maxSewingHours }, (_, idx) => {
+        if (idx < bd.metrics.workingHours) {
+          return bd.hourly[idx]?.hourActual ?? '-';
+        }
+        return '';
+      });
       detailRows.push([
         pIdx === 0 ? `Line 0${l.line_no}` : '',
         pIdx === 0 ? l.buyer_name || '-' : '',
         pIdx === 0 ? l.style_no || '-' : '',
         pIdx === 0 ? l.order_qty || '-' : '',
+        pIdx === 0 ? `${bd.metrics.workingHours} hrs` : '',
         pIdx === 0 ? l.op ?? '-' : '',
         pIdx === 0 ? l.hp ?? '-' : '',
         pIdx === 0 ? l.ir ?? '-' : '',
         partLabels[pIdx],
         bd.metrics.hourTarget ?? '-',
         bd.metrics.totalTarget ?? '-',
-        ...bd.hourly.map((h) => h.hourActual ?? '-'),
+        ...hourValues,
         bd.metrics.totalActual ?? '-',
         pIdx === 0 ? l.remarks || '-' : '',
       ]);
     });
-    detailRows.push(['', '', '', '', '', '', '', 'Line Chief:', l.line_chief_name || '-']);
-    detailRows.push(['', '', '', '', '', '', '', 'Mobile:', l.line_chief_phone || '-']);
+    detailRows.push(['', '', '', '', '', '', '', '', 'Line Chief:', l.line_chief_name || '-']);
+    detailRows.push(['', '', '', '', '', '', '', '', 'Mobile:', l.line_chief_phone || '-']);
     detailRows.push([]);
   });
 
@@ -207,6 +221,12 @@ export function exportSewingReportsToExcel({ reports, finishingReports = [], edi
 
   // SHEET 3: FINISHING DETAILED REGISTER
   if (allFinishingLines.length > 0) {
+    const maxFinHours = Math.max(
+      8,
+      ...allFinishingLines.map((l) => Math.max(1, Math.min(12, parseInt(l.working_hours ?? l.workingHours ?? 8, 10) || 8)))
+    );
+    const finHourHeaders = Array.from({ length: maxFinHours }, (_, i) => `H${String(i + 1).padStart(2, '0')}`);
+
     const finRows = [
       ['RUPKATHA APPARELS LTD. - FINISHING PRODUCTION REGISTER'],
       [`Date: ${date || 'All Dates'} | Factory Unit: ${unit?.toUpperCase() || 'All'}`],
@@ -216,11 +236,12 @@ export function exportSewingReportsToExcel({ reports, finishingReports = [], edi
         'Buyer',
         'Style No',
         'Order Qty',
+        'Working Hours',
         'Quality', 'Folding', 'Poly', 'Packing',
         'Process',
         'Hour Target',
         'Total Target',
-        'H01', 'H02', 'H03', 'H04', 'H05', 'H06', 'H07', 'H08', 'H09', 'H10',
+        ...finHourHeaders,
         'Total',
         'Remarks',
       ],
@@ -232,11 +253,18 @@ export function exportSewingReportsToExcel({ reports, finishingReports = [], edi
       
       processes.forEach((p, pIdx) => {
         const bd = calculatePartHourlyBreakdown(l, p);
+        const hourValues = Array.from({ length: maxFinHours }, (_, idx) => {
+          if (idx < bd.metrics.workingHours) {
+            return bd.hourly[idx]?.hourActual ?? '-';
+          }
+          return '';
+        });
         finRows.push([
           pIdx === 0 ? 'Finishing' : '',
           pIdx === 0 ? l.buyer_name || '-' : '',
           pIdx === 0 ? l.style_no || '-' : '',
           pIdx === 0 ? l.order_qty || '-' : '',
+          pIdx === 0 ? `${bd.metrics.workingHours} hrs` : '',
           pIdx === 0 ? l.quality_man ?? '-' : '',
           pIdx === 0 ? l.folding_man ?? '-' : '',
           pIdx === 0 ? l.poly_man ?? '-' : '',
@@ -244,13 +272,13 @@ export function exportSewingReportsToExcel({ reports, finishingReports = [], edi
           procLabels[pIdx],
           bd.metrics.hourTarget ?? '-',
           bd.metrics.totalTarget ?? '-',
-          ...bd.hourly.map((h) => h.hourActual ?? '-'),
+          ...hourValues,
           bd.metrics.totalActual ?? '-',
           pIdx === 0 ? l.remarks || '-' : '',
         ]);
       });
-      finRows.push(['', '', '', '', '', '', '', '', 'Section Chief:', l.line_chief_name || '-']);
-      finRows.push(['', '', '', '', '', '', '', '', 'Mobile:', l.line_chief_phone || '-']);
+      finRows.push(['', '', '', '', '', '', '', '', '', 'Section Chief:', l.line_chief_name || '-']);
+      finRows.push(['', '', '', '', '', '', '', '', '', 'Mobile:', l.line_chief_phone || '-']);
       finRows.push([]);
     });
 

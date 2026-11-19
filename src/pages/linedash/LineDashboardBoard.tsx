@@ -276,49 +276,59 @@ export const LineDashboardBoard: React.FC = () => {
       <div className="relative z-10 flex flex-col justify-between h-full gap-[clamp(0.45rem,0.9vh,0.75rem)] min-h-0">
         {/* 1. HEADER BAR (Accent color on header bar only) */}
         <header
-          className="shrink-0 rounded-xl bg-[#081C3E]/95 px-[clamp(0.85rem,1.5vw,1.6rem)] py-[clamp(0.38rem,0.75vh,0.65rem)] flex items-center justify-between shadow-lg"
+          className="shrink-0 rounded-xl bg-[#081C3E]/95 px-[clamp(0.85rem,1.4vw,1.5rem)] py-[clamp(0.38rem,0.75vh,0.65rem)] flex items-center justify-between gap-3 shadow-lg"
           style={{
             borderTop: `4px solid ${theme.accentHex}`,
             borderBottom: `2px solid ${theme.accentHex}`,
           }}
         >
-          <div className="flex items-center gap-[clamp(0.6rem,1.1vw,1.1rem)] min-w-0">
+          <div className="flex items-center gap-[clamp(0.5rem,0.95vw,1rem)] shrink-0">
             <div className="p-2 rounded-xl bg-white/10 border border-white/15 text-sky-200 shrink-0">
-              <SewingMachineIcon className="w-[clamp(1.45rem,2.1vw,2.1rem)] h-[clamp(1.45rem,2.1vw,2.1rem)]" />
+              <SewingMachineIcon className="w-[clamp(1.35rem,2vw,2rem)] h-[clamp(1.35rem,2vw,2rem)]" />
             </div>
             <h1
-              className="font-black tracking-wide text-white leading-none"
-              style={{ fontSize: 'clamp(1.45rem, 2.5vw, 2.65rem)' }}
+              className="font-black tracking-wide !text-white leading-none whitespace-nowrap drop-shadow-xs"
+              style={{ fontSize: 'clamp(1.4rem, 2.35vw, 2.5rem)' }}
             >
               LINE {lineNumberPadded}
             </h1>
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 shrink-0">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 shrink-0">
               <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
               <span
                 className="font-extrabold tracking-wider uppercase leading-none"
-                style={{ fontSize: 'clamp(0.68rem, 0.85vw, 0.9rem)' }}
+                style={{ fontSize: 'clamp(0.65rem, 0.82vw, 0.88rem)' }}
               >
                 LIVE PRODUCTION
               </span>
             </div>
             <span
-              className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-lg bg-sky-500/20 border border-sky-400/35 text-sky-100 font-bold uppercase tracking-wider leading-none"
-              style={{ fontSize: 'clamp(0.68rem, 0.8vw, 0.85rem)' }}
+              className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-lg bg-sky-500/20 border border-sky-400/35 text-sky-100 font-bold uppercase tracking-wider leading-none shrink-0"
+              style={{ fontSize: 'clamp(0.65rem, 0.78vw, 0.84rem)' }}
             >
               {effectiveUnit} UNIT
             </span>
           </div>
 
-          <div className="flex items-center gap-[clamp(0.7rem,1.3vw,1.35rem)] shrink-0 text-right">
+          {/* Center Company Title */}
+          <div className="hidden md:flex items-center justify-center min-w-0 px-2">
+            <span
+              className="font-black tracking-[0.12em] uppercase !text-white text-center truncate"
+              style={{ fontSize: 'clamp(0.95rem, 1.55vw, 1.7rem)' }}
+            >
+              RUPKATHA APPARELS LTD.
+            </span>
+          </div>
+
+          <div className="flex items-center gap-[clamp(0.6rem,1.1vw,1.25rem)] shrink-0 text-right">
             <div
-              className="hidden md:block text-sky-100 font-semibold tracking-wide"
-              style={{ fontSize: 'clamp(0.82rem, 1.1vw, 1.12rem)' }}
+              className="hidden md:block font-bangla text-sky-100 font-semibold tracking-wide whitespace-nowrap"
+              style={{ fontSize: 'clamp(0.82rem, 1.08vw, 1.12rem)' }}
             >
               {clock.formattedDate}
             </div>
             <div
-              className="px-3.5 py-1.5 rounded-xl bg-[#102E63] border border-sky-400/35 font-extrabold text-white tabular-nums tracking-tight"
-              style={{ fontSize: 'clamp(0.95rem, 1.35vw, 1.4rem)' }}
+              className="px-3.5 py-1.5 rounded-xl bg-[#102E63] border border-sky-400/35 font-extrabold text-white tabular-nums tracking-tight whitespace-nowrap"
+              style={{ fontSize: 'clamp(0.92rem, 1.3vw, 1.38rem)' }}
             >
               {clock.formattedTime}
             </div>
@@ -352,7 +362,7 @@ export const LineDashboardBoard: React.FC = () => {
                 <span>LINE {lineNumberPadded} · {effectiveUnit.toUpperCase()}</span>
               </div>
               <h2
-                className="font-bangla font-bold text-[#0B224B] leading-relaxed"
+                className="font-bangla font-bold !text-[#0B224B] leading-relaxed"
                 style={{ fontSize: 'clamp(1.75rem, 2.9vw, 2.85rem)' }}
               >
                 আজকের রিপোর্ট শুরু হয়নি
@@ -692,6 +702,10 @@ export const LineDashboardBoard: React.FC = () => {
                       <span className="w-2.5 h-2.5 rounded-full bg-amber-300 inline-block" />
                       Running
                     </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-orange-400 inline-block" />
+                      Entry Due
+                    </span>
                   </div>
                 </div>
 
@@ -710,26 +724,33 @@ export const LineDashboardBoard: React.FC = () => {
                   <thead>
                     <tr className="bg-[#D2E4FC] text-[#0B224B]">
                       <th
-                        className="w-[12.5%] text-left px-3.5 py-2 font-black uppercase tracking-wider border-2 border-[#1E3A8A]/40"
+                        className="w-[12%] text-left px-3.5 py-2 font-black uppercase tracking-wider border-2 border-[#1E3A8A]/40"
                         style={{ fontSize: 'clamp(0.85rem, 1.1vw, 1.12rem)' }}
                       >
                         Q.C.P
                       </th>
-                      {Array.from({ length: 10 }, (_, idx) => (
+                      {Array.from({ length: metrics.workingHours }, (_, idx) => (
                         <th
                           key={idx + 1}
                           className={`text-center py-2 font-black border-2 border-[#1E3A8A]/40 ${
                             metrics.currentRunningHour === idx + 1
-                              ? 'bg-amber-200 text-amber-950'
+                              ? metrics.isRunningHourEntryDue
+                                ? 'bg-orange-300 text-orange-950'
+                                : 'bg-amber-200 text-amber-950'
                               : ''
                           }`}
-                          style={{ fontSize: 'clamp(0.9rem, 1.18vw, 1.2rem)' }}
+                          style={{
+                            fontSize:
+                              metrics.workingHours >= 11
+                                ? 'clamp(0.78rem, 1.02vw, 1.08rem)'
+                                : 'clamp(0.9rem, 1.18vw, 1.2rem)',
+                          }}
                         >
                           H{idx + 1}
                         </th>
                       ))}
                       <th
-                        className="w-[10.5%] text-center py-2 font-black uppercase tracking-wider bg-[#BDD6FA] border-2 border-[#1E3A8A]/40"
+                        className="w-[10%] text-center py-2 font-black uppercase tracking-wider bg-[#BDD6FA] border-2 border-[#1E3A8A]/40"
                         style={{ fontSize: 'clamp(0.85rem, 1.1vw, 1.12rem)' }}
                       >
                         TOTAL
@@ -775,6 +796,9 @@ export const LineDashboardBoard: React.FC = () => {
                         } else if (cell.state === 'running') {
                           bgClass = 'bg-amber-100/90';
                           textClass = 'text-amber-700 font-black animate-pulse';
+                        } else if (cell.state === 'entry_due') {
+                          bgClass = 'bg-orange-100/95 ring-2 ring-inset ring-orange-500';
+                          textClass = 'text-orange-800 font-extrabold';
                         }
 
                         return (
@@ -783,13 +807,45 @@ export const LineDashboardBoard: React.FC = () => {
                             className={`text-center border-2 border-[#1E3A8A]/40 tabular-nums transition-colors duration-300 ${bgClass} ${textClass} ${
                               cellFlash ? 'ring-2 ring-inset ring-amber-400 bg-amber-100' : ''
                             }`}
-                            style={{ fontSize: 'clamp(1.35rem, 2.25vw, 2.45rem)' }}
+                            style={{
+                              fontSize:
+                                metrics.workingHours >= 11
+                                  ? 'clamp(1.12rem, 1.85vw, 2.05rem)'
+                                  : 'clamp(1.35rem, 2.25vw, 2.45rem)',
+                            }}
                           >
-                            {cell.value !== null
-                              ? cell.value.toLocaleString()
-                              : cell.state === 'running'
-                              ? '...'
-                              : '-'}
+                            {cell.value !== null ? (
+                              cell.value.toLocaleString()
+                            ) : cell.state === 'entry_due' ? (
+                              <div className="flex flex-col items-center justify-center px-1 leading-tight">
+                                <span
+                                  className="font-bangla font-extrabold text-orange-800 leading-snug"
+                                  style={{
+                                    fontSize:
+                                      metrics.workingHours >= 11
+                                        ? 'clamp(0.72rem, 1vw, 1.05rem)'
+                                        : 'clamp(0.82rem, 1.15vw, 1.2rem)',
+                                  }}
+                                >
+                                  রিপোর্ট
+                                </span>
+                                <span
+                                  className="font-bangla font-extrabold text-orange-900 leading-snug"
+                                  style={{
+                                    fontSize:
+                                      metrics.workingHours >= 11
+                                        ? 'clamp(0.72rem, 1vw, 1.05rem)'
+                                        : 'clamp(0.82rem, 1.15vw, 1.2rem)',
+                                  }}
+                                >
+                                  এন্ট্রি দিন
+                                </span>
+                              </div>
+                            ) : cell.state === 'running' ? (
+                              '...'
+                            ) : (
+                              '-'
+                            )}
                           </td>
                         );
                       })}
@@ -834,7 +890,10 @@ export const LineDashboardBoard: React.FC = () => {
                         let label = '-';
                         let cls = 'text-slate-400 font-semibold';
 
-                        if (cell.state === 'running') {
+                        if (cell.state === 'entry_due') {
+                          label = 'Entry Due';
+                          cls = 'text-orange-700 font-extrabold bg-orange-50';
+                        } else if (cell.state === 'running') {
                           label = 'Running';
                           cls = 'text-amber-700 font-extrabold bg-amber-50';
                         } else if (diff !== null) {

@@ -20,15 +20,20 @@ export function safeSum(...values) {
 }
 
 /**
- * Calculates line totals across 10 hours for back, front, output, and asm.
+ * Calculates line totals across visible hours (1..workingHours) for back, front, output, and asm.
  */
-export function calculateLineHourTotals(hoursList = []) {
+export function calculateLineHourTotals(hoursList = [], workingHours = 12) {
   let totalBack = null;
   let totalFront = null;
   let totalOutput = null;
   let totalAsm = null;
 
+  const maxHour = Math.max(1, Math.min(12, Number(workingHours) || 12));
+
   for (const h of hoursList) {
+    const hrNo = Number(h.hourNo ?? h.hour_no);
+    if (hrNo && (hrNo < 1 || hrNo > maxHour)) continue;
+
     const b = h.backQty !== undefined ? h.backQty : h.back_qty;
     const f = h.frontQty !== undefined ? h.frontQty : h.front_qty;
     const o = h.outputQty !== undefined ? h.outputQty : h.output_qty;
@@ -113,18 +118,21 @@ export function calculatePartMetrics(line, part = 'output') {
 
   const rawWorkingHours = line.workingHours ?? line.working_hours;
   const workingHours = (rawWorkingHours !== null && rawWorkingHours !== undefined && rawWorkingHours !== '' && !isNaN(Number(rawWorkingHours)))
-    ? Math.max(1, Math.min(10, parseInt(rawWorkingHours, 10)))
+    ? Math.max(1, Math.min(12, parseInt(rawWorkingHours, 10)))
     : 8;
 
   const totalTarget = hourTarget !== null ? hourTarget * workingHours : null;
 
-  // Calculate total actual and sum of per-hour differences for entered hours
+  // Calculate total actual and sum of per-hour differences for entered hours within workingHours
   let totalActual = null;
   let enteredHoursCount = 0;
   let sumHourDiff = null;
 
   const hoursList = line.hours || [];
   for (const h of hoursList) {
+    const hrNo = Number(h.hourNo ?? h.hour_no);
+    if (hrNo && (hrNo < 1 || hrNo > workingHours)) continue;
+
     const val = h[qtyKey] !== undefined ? h[qtyKey] : h[altQtyKey];
     if (val !== null && val !== undefined && val !== '' && !isNaN(Number(val))) {
       const num = Number(val);
@@ -183,7 +191,7 @@ export function calculatePartMetrics(line, part = 'output') {
 }
 
 /**
- * Calculates hourly Short/Excess and Remaining Target across hours 1 to 10 for a part.
+ * Calculates hourly Short/Excess and Remaining Target across hours 1 to workingHours for a part.
  */
 export function calculatePartHourlyBreakdown(line, part = 'output') {
   const metrics = calculatePartMetrics(line, part);
@@ -197,7 +205,7 @@ export function calculatePartHourlyBreakdown(line, part = 'output') {
   let sumHourDiff = null;
   let enteredHoursCount = 0;
 
-  for (let hr = 1; hr <= 10; hr++) {
+  for (let hr = 1; hr <= workingHours; hr++) {
     const hObj = (line.hours || []).find((h) => (h.hourNo ?? h.hour_no) === hr) || {};
     const val = hObj[qtyKey] !== undefined ? hObj[qtyKey] : hObj[altQtyKey];
 

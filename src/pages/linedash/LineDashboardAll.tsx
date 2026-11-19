@@ -118,6 +118,7 @@ export const LineDashboardAll: React.FC = () => {
   const getDotClass = (state: CellVisualState) => {
     if (state === 'good') return 'bg-emerald-500 ring-emerald-200';
     if (state === 'short') return 'bg-rose-500 ring-rose-200';
+    if (state === 'entry_due') return 'bg-orange-500 ring-orange-300 animate-pulse';
     if (state === 'running') return 'bg-amber-400 ring-amber-200 animate-pulse';
     if (state === 'neutral') return 'bg-sky-500 ring-sky-200';
     return 'bg-slate-300 ring-slate-100';
@@ -206,16 +207,16 @@ export const LineDashboardAll: React.FC = () => {
       {/* MAIN VERTICAL TV STACK */}
       <div className="relative z-10 flex flex-col justify-between h-full gap-[clamp(0.4rem,0.8vh,0.7rem)] min-h-0">
         {/* HEADER BAR */}
-        <header className="shrink-0 rounded-xl bg-[#081C3E]/95 border-t-4 border-b-2 border-sky-500 px-[clamp(0.75rem,1.4vw,1.5rem)] py-[clamp(0.35rem,0.7vh,0.6rem)] flex items-center justify-between shadow-lg">
-          <div className="flex items-center gap-3 min-w-0">
+        <header className="shrink-0 rounded-xl bg-[#081C3E]/95 border-t-4 border-b-2 border-sky-500 px-[clamp(0.75rem,1.4vw,1.5rem)] py-[clamp(0.35rem,0.7vh,0.6rem)] flex items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-center gap-3 min-w-0 shrink-0">
             <div className="p-1.5 rounded-lg bg-sky-500/20 border border-sky-400/40 text-sky-200 shrink-0">
               <Tv className="w-[clamp(1.2rem,1.9vw,1.8rem)] h-[clamp(1.2rem,1.9vw,1.8rem)]" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2.5">
                 <h1
-                  className="font-black tracking-wide text-white leading-none truncate"
-                  style={{ fontSize: 'clamp(1.15rem, 2vw, 2.1rem)' }}
+                  className="font-black tracking-wide !text-white leading-none truncate drop-shadow-xs"
+                  style={{ fontSize: 'clamp(1.1rem, 1.85vw, 1.95rem)' }}
                 >
                   ALL LINES LIVE MONITOR
                 </h1>
@@ -235,15 +236,24 @@ export const LineDashboardAll: React.FC = () => {
             </div>
           </div>
 
+          <div className="hidden xl:flex items-center justify-center min-w-0 px-2">
+            <span
+              className="font-black tracking-[0.12em] uppercase !text-white text-center truncate"
+              style={{ fontSize: 'clamp(0.95rem, 1.45vw, 1.55rem)' }}
+            >
+              RUPKATHA APPARELS LTD.
+            </span>
+          </div>
+
           <div className="flex items-center gap-[clamp(0.6rem,1.2vw,1.25rem)] shrink-0">
             <div
-              className="hidden md:block text-sky-100 font-semibold"
+              className="hidden md:block font-bangla text-sky-100 font-semibold whitespace-nowrap"
               style={{ fontSize: 'clamp(0.82rem, 1.05vw, 1.05rem)' }}
             >
               {clock.formattedDate}
             </div>
             <div
-              className="px-3.5 py-1.5 rounded-xl bg-[#102E63] border border-sky-400/35 font-extrabold text-white tabular-nums"
+              className="px-3.5 py-1.5 rounded-xl bg-[#102E63] border border-sky-400/35 font-extrabold text-white tabular-nums whitespace-nowrap"
               style={{ fontSize: 'clamp(0.9rem, 1.25vw, 1.3rem)' }}
             >
               {clock.formattedTime}
@@ -453,21 +463,25 @@ export const LineDashboardAll: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* 10 Mini Hour Dots + Footer Strip */}
+                    {/* Per-line Mini Hour Dots + Footer Strip */}
                     <div className="shrink-0 flex items-center justify-between gap-2 pt-2 border-t border-sky-200">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
-                          Q.C.P H1-H10
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600 shrink-0">
+                          Q.C.P H1-H{m.workingHours}
                         </span>
-                        <div className="flex items-center gap-1.5">
+                        <div className={`flex items-center ${m.qcpDots.length > 10 ? 'gap-1' : 'gap-1.5'}`}>
                           {m.qcpDots.map((dotState, idx) => (
                             <div
                               key={idx + 1}
                               className="flex flex-col items-center"
-                              title={`H${idx + 1}: ${dotState}`}
+                              title={
+                                dotState === 'entry_due'
+                                  ? `H${idx + 1}: রিপোর্ট এন্ট্রি দিন (Entry Due)`
+                                  : `H${idx + 1}: ${dotState}`
+                              }
                             >
                               <span
-                                className={`w-3.5 h-3.5 rounded-full ring-2 ${getDotClass(dotState)}`}
+                                className={`${m.qcpDots.length > 10 ? 'w-3 h-3' : 'w-3.5 h-3.5'} rounded-full ring-2 ${getDotClass(dotState)}`}
                               />
                               <span className="text-[10px] font-bold text-slate-600 leading-none mt-0.5">
                                 {idx + 1}

@@ -171,6 +171,7 @@ export const SewingReports: React.FC = () => {
     front_hour_target: 'Front hour target',
     output_hour_target: 'Q.C.P hour target',
     asm_hour_target: 'A.S.M hour target',
+    working_hours: 'Working hours',
     back_qty: 'Back Qty / Inside',
     front_qty: 'Front Qty / Iron',
     output_qty: 'Q.C.P / Top Side',
@@ -345,6 +346,7 @@ export const SewingReports: React.FC = () => {
                   ];
                   const breakdowns = parts.map(p => calculatePartHourlyBreakdown(line, p.id));
                   const totalManpower = Number(line.op || 0) + Number(line.hp || 0) + Number(line.ir || 0);
+                  const lineWorkingHours = Math.max(1, Math.min(12, parseInt(line.working_hours ?? line.workingHours ?? 8, 10) || 8));
 
                   return (
                     <div key={idx} className={`p-4 rounded-2xl border shadow-sm ${isDark ? 'bg-[#103A40] border-white/20' : 'bg-white border-[#1E293B]'}`}>
@@ -353,7 +355,7 @@ export const SewingReports: React.FC = () => {
                            <h3 className="font-extrabold text-sm text-[#0F8B8D]">Line 0{line.line_no} (Sewing)</h3>
                            <span className="text-xs text-slate-500">{line.report_date} · {line.factory_unit?.toUpperCase()} · {line.buyer_name} · {line.style_no}</span>
                         </div>
-                        <div className="text-xs font-mono font-bold">Working: {line.working_hours} hrs</div>
+                        <div className="text-xs font-mono font-bold">Working: {lineWorkingHours} hrs</div>
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full border-collapse text-xs font-mono" style={{ tableLayout: 'fixed', minWidth: '1300px', border: `1.5px solid ${isDark ? 'rgba(255,255,255,0.45)' : '#1E293B'}` }}>
@@ -362,8 +364,8 @@ export const SewingReports: React.FC = () => {
                             <col style={{ width: '8%' }} />
                             <col style={{ width: '6%' }} />
                             <col style={{ width: '6%' }} />
-                            {[...Array(10)].map((_, i) => (
-                              <col key={i} style={{ width: '5.2%' }} />
+                            {[...Array(lineWorkingHours)].map((_, i) => (
+                              <col key={i} style={{ width: `${(52 / lineWorkingHours).toFixed(4)}%` }} />
                             ))}
                             <col style={{ width: '8%' }} />
                             <col style={{ width: '10%' }} />
@@ -374,7 +376,7 @@ export const SewingReports: React.FC = () => {
                               <th className="p-2 border border-[#1E293B] text-center">Parts</th>
                               <th className="p-2 border border-[#1E293B] text-center leading-tight">Hr<br/>Tgt</th>
                               <th className="p-2 border border-[#1E293B] text-center leading-tight">Tot<br/>Tgt</th>
-                              {Array.from({ length: 10 }).map((_, i) => <th key={i} className="p-1 border border-[#1E293B] text-center">H{String(i + 1).padStart(2, '0')}</th>)}
+                              {Array.from({ length: lineWorkingHours }).map((_, i) => <th key={i} className="p-1 border border-[#1E293B] text-center">H{String(i + 1).padStart(2, '0')}</th>)}
                               <th className="p-2 border border-[#1E293B] text-center">Total</th>
                               <th className="p-2 border border-[#1E293B] text-center">Remarks</th>
                             </tr>
@@ -481,7 +483,7 @@ export const SewingReports: React.FC = () => {
                             })}
 
                             {/* REMAINING BLOCK */}
-                            <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={16} className="p-0 h-0" /></tr>
+                            <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={6 + lineWorkingHours} className="p-0 h-0" /></tr>
                             {breakdowns.map((bd, bIdx) => (
                               <tr key={`rem-${bIdx}`} className="border-b-[1.5px] bg-blue-500/[0.03]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>
                                 {bIdx === 0 && <td rowSpan={4} className="p-2 border-r-[1.5px] border-[#1E293B] font-black text-center text-blue-600 bg-blue-500/5 text-[10px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>REMAINING TARGET</td>}
@@ -521,6 +523,7 @@ export const SewingReports: React.FC = () => {
                   const totMan = Number(line.op || 0) + Number(line.hp || 0) + Number(line.ir || 0) + 
                                 Number(line.quality_man || 0) + Number(line.folding_man || 0) + 
                                 Number(line.poly_man || 0) + Number(line.packing_man || 0);
+                  const finWorkingHours = Math.max(1, Math.min(12, parseInt(line.working_hours ?? line.workingHours ?? 8, 10) || 8));
 
                   return (
                     <div key={`fin-${idx}`} className={`p-4 rounded-2xl border shadow-sm ${isDark ? 'bg-[#103A40] border-white/20' : 'bg-white border-[#D97706]'}`}>
@@ -531,7 +534,7 @@ export const SewingReports: React.FC = () => {
                         </div>
                         <div className="text-xs font-mono font-bold flex gap-4">
                           <span>M.P: {totMan}</span>
-                          <span>Working: {line.working_hours} hrs</span>
+                          <span>Working: {finWorkingHours} hrs</span>
                         </div>
                       </div>
                       <div className="overflow-x-auto">
@@ -541,8 +544,8 @@ export const SewingReports: React.FC = () => {
                             <col style={{ width: '8%' }} />
                             <col style={{ width: '6%' }} />
                             <col style={{ width: '6%' }} />
-                            {[...Array(10)].map((_, i) => (
-                              <col key={i} style={{ width: '5.2%' }} />
+                            {[...Array(finWorkingHours)].map((_, i) => (
+                              <col key={i} style={{ width: `${(52 / finWorkingHours).toFixed(4)}%` }} />
                             ))}
                             <col style={{ width: '8%' }} />
                             <col style={{ width: '10%' }} />
@@ -553,7 +556,7 @@ export const SewingReports: React.FC = () => {
                               <th className="p-2 border border-[#1E293B] text-center">Process</th>
                               <th className="p-2 border border-[#1E293B] text-center leading-tight">Hr<br/>Tgt</th>
                               <th className="p-2 border border-[#1E293B] text-center leading-tight">Tot<br/>Tgt</th>
-                              {Array.from({ length: 10 }).map((_, i) => {
+                              {Array.from({ length: finWorkingHours }).map((_, i) => {
                                 const hrNo = i + 1;
                                 const isLocked = hourLocks.some(l => l.report_id === line.report_id && l.hour_no === hrNo);
                                 return (
@@ -597,7 +600,7 @@ export const SewingReports: React.FC = () => {
                               </tr>
                             ))}
                             {/* REMAINING TARGETS */}
-                            <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={16} className="p-0 h-0" /></tr>
+                            <tr className="border-t-[2.5px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}><td colSpan={6 + finWorkingHours} className="p-0 h-0" /></tr>
                             {breakdowns.map((bd, bIdx) => (
                               <tr key={`rem-${bIdx}`} className="border-b-[1.5px] bg-blue-500/[0.03]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>
                                 {bIdx === 0 && <td rowSpan={4} className="p-2 border-r-[1.5px] border-[#1E293B] font-black text-center text-blue-600 bg-blue-500/5 text-[10px]" style={{ borderColor: isDark ? 'rgba(255,255,255,0.45)' : '#1E293B' }}>REMAINING TARGET</td>}
@@ -640,6 +643,7 @@ export const SewingReports: React.FC = () => {
                   <th className="p-2 border border-current/10 text-left">Unit</th>
                   <th className="p-2 border border-current/10 text-left">Line/Module</th>
                   <th className="p-2 border border-current/10 text-left">Buyer & Style</th>
+                  <th className="p-2 border border-current/10 text-center">Hrs</th>
                   <th className="p-2 border border-current/10 text-center">Sewing Q.C.P (Ach%)</th>
                   <th className="p-2 border border-current/10 text-center">Inside (Ach%)</th>
                   <th className="p-2 border border-current/10 text-center">Iron (Ach%)</th>
@@ -663,6 +667,7 @@ export const SewingReports: React.FC = () => {
                       <td className="p-2 border border-current/5 uppercase font-bold">{l.factory_unit}</td>
                       <td className="p-2 border border-current/5 font-bold">Line 0{l.line_no}</td>
                       <td className="p-2 border border-current/5 text-[10px]"><div className="font-bold">{l.buyer_name}</div><div>{l.style_no}</div></td>
+                      <td className="p-2 border border-current/5 text-center font-mono">{outM.workingHours}h</td>
                       <td className="p-2 border border-current/5 text-center font-bold text-[#0F8B8D]">{outM.totalActual ?? '-'} ({outM.achievement}%)</td>
                       <td className="p-2 border border-current/5 text-center">{inM ? `${inM.totalActual ?? '-'} (${inM.achievement}%)` : '-'}</td>
                       <td className="p-2 border border-current/5 text-center">{irM ? `${irM.totalActual ?? '-'} (${irM.achievement}%)` : '-'}</td>

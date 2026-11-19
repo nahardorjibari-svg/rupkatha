@@ -227,8 +227,12 @@ export const SewingDashboard: React.FC = () => {
     const hours: any[] = [];
     const allVisibleLines: any[] = [];
     unitsToShow.forEach(u => allVisibleLines.push(...unitData[u].lines));
+    const maxHours = Math.max(
+      8,
+      ...allVisibleLines.map(l => Math.max(1, Math.min(12, parseInt(l.working_hours ?? l.workingHours ?? 8, 10) || 8)))
+    );
 
-    for (let h = 1; h <= 10; h++) {
+    for (let h = 1; h <= maxHours; h++) {
       let hTarget = 0;
       let hActual = 0;
       let count = 0;
@@ -258,8 +262,12 @@ export const SewingDashboard: React.FC = () => {
     const hours: any[] = [];
     const allVisibleFinLines: any[] = [];
     unitsToShow.forEach(u => allVisibleFinLines.push(...unitData[u].finishing));
+    const maxHours = Math.max(
+      8,
+      ...allVisibleFinLines.map(l => Math.max(1, Math.min(12, parseInt(l.working_hours ?? l.workingHours ?? 8, 10) || 8)))
+    );
 
-    for (let h = 1; h <= 10; h++) {
+    for (let h = 1; h <= maxHours; h++) {
       let hTarget = 0;
       let hActual = 0;
       let count = 0;
@@ -315,6 +323,7 @@ export const SewingDashboard: React.FC = () => {
     const totalManpower = Number(line.op || 0) + Number(line.hp || 0) + Number(line.ir || 0) + 
                           Number(line.quality_man || 0) + Number(line.folding_man || 0) + 
                           Number(line.poly_man || 0) + Number(line.packing_man || 0);
+    const workingHours = Math.max(1, Math.min(12, parseInt(line.working_hours ?? line.workingHours ?? 8, 10) || 8));
 
     return (
       <div className="relative pt-6 col-span-1 min-[1100px]:col-span-2" style={{ containerType: 'inline-size' } as any}>
@@ -322,7 +331,7 @@ export const SewingDashboard: React.FC = () => {
           className="absolute top-0 left-6 z-10 px-6 py-1 text-sm font-black text-white rounded-t-xl shadow-lg"
           style={{ backgroundColor: lineColor, fontSize: `calc(14px * ${fsScale})` }}
         >
-          FINISHING PROCESS-WISE REPORT ({line.unit?.toUpperCase()})
+          FINISHING PROCESS-WISE REPORT ({line.unit?.toUpperCase()}) · {workingHours}h
         </div>
 
         <div 
@@ -335,8 +344,8 @@ export const SewingDashboard: React.FC = () => {
               <col style={{ width: '9%' }} />
               <col style={{ width: '6%' }} />
               <col style={{ width: '6%' }} />
-              {[...Array(10)].map((_, i) => (
-                <col key={i} style={{ width: '5.2%' }} />
+              {[...Array(workingHours)].map((_, i) => (
+                <col key={i} style={{ width: `${(52 / workingHours).toFixed(4)}%` }} />
               ))}
               <col style={{ width: '9%' }} />
               <col style={{ width: '8%' }} />
@@ -350,7 +359,7 @@ export const SewingDashboard: React.FC = () => {
                 <th className="border-r-[1.5px] px-1 text-center uppercase tracking-widest" style={{ borderColor: cellBorderColor, fontSize: labelFs }}>Process</th>
                 <th className="border-r-[1.5px] px-1 text-center uppercase leading-none" style={{ borderColor: cellBorderColor, fontSize: `calc(${labelFs} * 0.8)` }}>Hr.<br/>Tgt</th>
                 <th className="border-r-[1.5px] px-1 text-center uppercase leading-none" style={{ borderColor: cellBorderColor, fontSize: `calc(${labelFs} * 0.8)` }}>Tot.<br/>Tgt</th>
-                {[...Array(10)].map((_, i) => {
+                {[...Array(workingHours)].map((_, i) => {
                   const hrNo = i + 1;
                   const isLocked = hourLocks.some((l) => l.hour_no === hrNo);
                   return (
@@ -435,8 +444,7 @@ export const SewingDashboard: React.FC = () => {
                     <td className="border-r-[1.5px] p-1 text-center bg-slate-50/50 dark:bg-black/20" style={{ borderColor: cellBorderColor }}>
                        <span className="font-black text-[#D97706] block leading-none" style={{ fontSize: `clamp(12px, 1.6cqw, ${18 * fsScale}px)` }}>{bd.metrics.totalTarget ?? '-'}</span>
                     </td>
-                    {[...Array(10)].map((_, i) => {
-                      const hr = bd.hourly[i];
+                    {bd.hourly.map((hr: any, i: number) => {
                       let cellColor = isDark ? 'text-white' : 'text-slate-900';
                       if (hr.hourDiff !== null) {
                         if (hr.hourDiff < 0) cellColor = 'text-[#DC2626]';
@@ -491,7 +499,7 @@ export const SewingDashboard: React.FC = () => {
 
               {/* BOTTOM STRIP */}
               <tr className="border-t-[2.5px]" style={{ borderColor: cellBorderColor, height: `calc(42px * ${fsScale})` }}>
-                <td colSpan={9} className="border-r-[1.5px] p-2 text-left bg-slate-50/50 dark:bg-black/10" style={{ borderColor: cellBorderColor }}>
+                <td colSpan={Math.max(1, workingHours - 1)} className="border-r-[1.5px] p-2 text-left bg-slate-50/50 dark:bg-black/10" style={{ borderColor: cellBorderColor }}>
                   <div className="flex items-center gap-2">
                     <div className="shrink-0 text-center pr-2 border-r-[1.5px]" style={{ borderColor: cellBorderColor }}>
                       <span className="font-black uppercase leading-none block text-slate-500" style={{ fontSize: smallFs }}>
@@ -568,6 +576,7 @@ export const SewingDashboard: React.FC = () => {
     const smallFs = `clamp(8px, 1cqw, ${12 * fsScale}px)`;
 
     const totalManpower = Number(line.op || 0) + Number(line.hp || 0) + Number(line.ir || 0);
+    const workingHours = Math.max(1, Math.min(12, parseInt(line.working_hours ?? line.workingHours ?? 8, 10) || 8));
 
     return (
       <div className="relative pt-6" style={{ containerType: 'inline-size' } as any}>
@@ -575,7 +584,7 @@ export const SewingDashboard: React.FC = () => {
           className="absolute top-0 left-6 z-10 px-6 py-1 text-sm font-black text-white rounded-t-xl shadow-lg"
           style={{ backgroundColor: lineColor, fontSize: `calc(14px * ${fsScale})` }}
         >
-          LINE 0{line.line_no}
+          LINE 0{line.line_no} · {workingHours}h
         </div>
 
         <div 
@@ -588,8 +597,8 @@ export const SewingDashboard: React.FC = () => {
               <col style={{ width: '9%' }} />
               <col style={{ width: '6%' }} />
               <col style={{ width: '6%' }} />
-              {[...Array(10)].map((_, i) => (
-                <col key={i} style={{ width: '5.2%' }} />
+              {[...Array(workingHours)].map((_, i) => (
+                <col key={i} style={{ width: `${(52 / workingHours).toFixed(4)}%` }} />
               ))}
               <col style={{ width: '9%' }} />
               <col style={{ width: '8%' }} />
@@ -603,7 +612,7 @@ export const SewingDashboard: React.FC = () => {
                 <th className="border-r-[1.5px] px-1 text-center uppercase tracking-widest" style={{ borderColor: cellBorderColor, fontSize: labelFs }}>Parts</th>
                 <th className="border-r-[1.5px] px-1 text-center uppercase leading-none" style={{ borderColor: cellBorderColor, fontSize: `calc(${labelFs} * 0.8)` }}>Hr.<br/>Tgt</th>
                 <th className="border-r-[1.5px] px-1 text-center uppercase leading-none" style={{ borderColor: cellBorderColor, fontSize: `calc(${labelFs} * 0.8)` }}>Tot.<br/>Tgt</th>
-                {[...Array(10)].map((_, i) => (
+                {[...Array(workingHours)].map((_, i) => (
                   <th key={i} className="border-r-[1.5px] px-1 text-center" style={{ borderColor: cellBorderColor, fontSize: labelFs }}>H{i + 1}</th>
                 ))}
                 <th className="border-r-[1.5px] px-1 text-center uppercase tracking-widest" style={{ borderColor: cellBorderColor, fontSize: labelFs }}>Total</th>
@@ -734,8 +743,7 @@ export const SewingDashboard: React.FC = () => {
                          {bd.metrics.totalTarget ?? '-'}
                        </span>
                     </td>
-                    {[...Array(10)].map((_, i) => {
-                      const hr = bd.hourly[i];
+                    {bd.hourly.map((hr: any, i: number) => {
                       let cellColor = isDark ? 'text-white' : 'text-slate-900';
                       let cellBg = '';
                       if (hr.hourDiff !== null) {
@@ -867,7 +875,7 @@ export const SewingDashboard: React.FC = () => {
 
               {/* BOTTOM STRIP */}
               <tr className="border-t-[2.5px]" style={{ borderColor: cellBorderColor, height: `calc(42px * ${fsScale})` }}>
-                <td colSpan={9} className="border-r-[1.5px] p-2 text-left bg-slate-50/50 dark:bg-black/10" style={{ borderColor: cellBorderColor }}>
+                <td colSpan={Math.max(1, workingHours - 1)} className="border-r-[1.5px] p-2 text-left bg-slate-50/50 dark:bg-black/10" style={{ borderColor: cellBorderColor }}>
                   <div className="flex items-center gap-2">
                     <div className="shrink-0 text-center pr-2 border-r-[1.5px]" style={{ borderColor: cellBorderColor }}>
                       <span className="font-black uppercase leading-none block text-slate-500" style={{ fontSize: smallFs }}>

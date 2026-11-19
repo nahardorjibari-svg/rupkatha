@@ -16,7 +16,7 @@ The **Sewing Hourly Production Report** (`/sewing/report`) includes production t
 
 1. **Per-Part Targets (Hour & Total Targets)**:
    - Separate Hour Target (`back_hour_target`, `front_hour_target`, `output_hour_target`, `asm_hour_target`) and Total Target (`hour_target x working_hours`) for Back, Front, A.S.M, and Q.C.P rows.
-   - Configurable **Working Hours** selector (1 to 10 hours, default 8).
+   - Configurable **per-line Working Hours** selector (`8`, `9`, `10`, `11`, `12`; default `8`) on every Sewing Line (`01–04`) and the Finishing table, dynamically rendering `H01..H{working_hours}` columns (with data-clear guard before lowering hours).
    - "Apply Back Target to All" helper button copies Back hour target to Front, A.S.M, and Q.C.P (with confirmation).
 
 2. **Real-time Color Coding**:
@@ -48,10 +48,10 @@ The **Sewing Hourly Production Report** (`/sewing/report`) includes production t
    - **Unified Entry Page**: `/sewing/report` displays both Sewing Line 01-04 and the Finishing section (Process: Inside, Iron, Top Side, Poly).
    - **Shared Permissions**: Access is governed by the `sewing` permission key; no separate finishing key is required.
    - **Unified Reporting**: Finishing performance cards and register data are integrated into the Dashboard, Reports grid, Excel, and PDF exports.
-   - **Lock Synchronization**: Submitting a specific hour (H01-H10) for a Sewing report automatically locks the corresponding hour for the Finishing section to ensure data integrity.
+   - **Lock Synchronization**: Submitting a specific hour (`H01–H12`) for a Sewing report automatically locks the corresponding hour for the Finishing section to ensure data integrity.
 
 7. **Granular Per-Hour Lock Model & Audit**:
-   - Each hour column (01 to 10) can be independently submitted and locked (`sewing_hour_locks` and `finishing_hour_locks` are kept in sync).
+   - Each hour column (`01` to `12`, shown up to each line's `working_hours`) can be independently submitted and locked (`sewing_hour_locks` and `finishing_hour_locks` are kept in sync).
    - Edit history logs draft edits vs. after-submit edits with human-readable labels.
    - Manual save only via "Save All Changes" with unsaved-changes indicators.
 
@@ -61,8 +61,8 @@ The **Sewing Hourly Production Report** (`/sewing/report`) includes production t
 Dedicated 16:9 zero-scroll floor TV displays governed by the `sewing` permission (also accessible to `admin`):
 
 1. **Routes & Access**:
-   - `/linedash/all` — **All Lines 2×2 Overview**: Live cards for Line 1–4 showing traffic-light status, Buyer/Style, Today Target, Done, Remaining, SVG progress ring, and 10 mini Q.C.P hour dots. Clicking any card opens that line's full TV board.
-   - `/linedash/:line` (`/linedash/1` – `/linedash/4`) — **Single-Line TV Board**: Deep navy gradient (`#071633` → `#0D2D63`) with light-blue enterprise cards, line-colored header accent (`blue`, `purple`, `orange`, `teal`), live Dhaka clock (`Asia/Dhaka`), Info Strip, 4 Bangla/English KPI cards (`আজকের লক্ষ্য`, `উৎপাদন হয়েছে`, `এখনো বাকি` / `লক্ষ্য পূরণ`, progress ring + `বাকি সময়`), 10-hour grid (`BACK`, `FRONT`, `A.S.M`, `Q.C.P`), Q.C.P Final Status, Efficiency %, Manpower, and Attention Required / On Track panels.
+   - `/linedash/all` — **All Lines 2×2 Overview**: Live cards for Line 1–4 showing traffic-light status, Buyer/Style, Today Target, Done, Remaining, SVG progress ring, and per-line mini Q.C.P hour dots (`H1–H{working_hours}`). Clicking any card opens that line's full TV board.
+   - `/linedash/:line` (`/linedash/1` – `/linedash/4`) — **Single-Line TV Board**: Deep navy gradient (`#071633` → `#0D2D63`) with light-blue enterprise cards, line-colored header accent (`blue`, `purple`, `orange`, `teal`), live Dhaka clock (`Asia/Dhaka`), Info Strip, 4 Bangla/English KPI cards (`আজকের লক্ষ্য`, `উৎপাদন হয়েছে`, `এখনো বাকি` / `লক্ষ্য পূরণ`, progress ring + `বাকি সময়`), per-line Q.C.P hourly production & `SHORT / +/-` grid (`H1–H{working_hours}`), Q.C.P Final Status, Efficiency %, Manpower, and Attention Required / On Track panels.
    - **Kiosk & Fullscreen**: Press `F` or click Fullscreen (auto-hides after 3s idle) to hide Sidebar/TopBar, or open with `?kiosk=1` for unattended factory TV screens.
    - **Realtime + Sound**: Subscribes to Supabase Realtime (`400ms` debounce) with `15s` polling fallback, 1.5s highlight flash on changed numbers, and optional Web Audio short-hour alert beep (muted by default).
 
