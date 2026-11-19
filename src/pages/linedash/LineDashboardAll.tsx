@@ -27,6 +27,7 @@ export const LineDashboardAll: React.FC = () => {
   const isKiosk = searchParams.get('kiosk') === '1';
 
   const [soundEnabled, setSoundEnabled] = useState<boolean>(false);
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(Boolean(document.fullscreenElement));
   const [controlsVisible, setControlsVisible] = useState<boolean>(true);
   const boardRef = useRef<HTMLDivElement>(null);
@@ -45,26 +46,38 @@ export const LineDashboardAll: React.FC = () => {
 
   useEffect(() => {
     const onFsChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
+      const fsActive = Boolean(document.fullscreenElement);
+      setIsFullscreen(fsActive);
+      if (!fsActive) {
+        setIsExpanded(false);
+      }
     };
     document.addEventListener('fullscreenchange', onFsChange);
     return () => document.removeEventListener('fullscreenchange', onFsChange);
   }, []);
 
   const toggleFullscreen = useCallback(async () => {
-    try {
-      if (!document.fullscreenElement) {
-        const target = boardRef.current || document.documentElement;
-        if (target.requestFullscreen) {
-          await target.requestFullscreen();
+    const currentlyFull = Boolean(document.fullscreenElement) || isExpanded;
+    if (!currentlyFull) {
+      setIsExpanded(true);
+      try {
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
         }
-      } else if (document.exitFullscreen) {
-        await document.exitFullscreen();
+      } catch {
+        // Fallback to in-app full-viewport mode when iframe/browser blocks native fullscreen
       }
-    } catch {
-      // Ignore fullscreen denial errors
+    } else {
+      setIsExpanded(false);
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      } catch {
+        // Ignore fullscreen exit errors
+      }
     }
-  }, []);
+  }, [isExpanded]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -73,11 +86,13 @@ export const LineDashboardAll: React.FC = () => {
       if (e.key === 'f' || e.key === 'F') {
         e.preventDefault();
         toggleFullscreen();
+      } else if (e.key === 'Escape' && isExpanded && !document.fullscreenElement) {
+        setIsExpanded(false);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [toggleFullscreen]);
+  }, [toggleFullscreen, isExpanded]);
 
   const bumpControls = useCallback(() => {
     setControlsVisible(true);
@@ -94,7 +109,7 @@ export const LineDashboardAll: React.FC = () => {
     };
   }, [bumpControls]);
 
-  const standaloneMode = isKiosk || isFullscreen;
+  const standaloneMode = isKiosk || isFullscreen || isExpanded;
 
   const openLineBoard = (ln: number) => {
     navigate(isKiosk ? `/linedash/${ln}?kiosk=1` : `/linedash/${ln}`);
@@ -113,10 +128,10 @@ export const LineDashboardAll: React.FC = () => {
       ref={boardRef}
       onMouseMove={bumpControls}
       onTouchStart={bumpControls}
-      className={`relative flex flex-col justify-between overflow-hidden select-none text-white bg-gradient-to-br from-[#071633] via-[#0B224B] to-[#0D2D63] ${
+      className={`flex flex-col justify-between overflow-hidden select-none text-white bg-gradient-to-br from-[#071633] via-[#0B224B] to-[#0D2D63] ${
         standaloneMode
-          ? 'w-screen h-screen p-[clamp(0.5rem,1vw,0.9rem)]'
-          : '-m-4 sm:-m-6 lg:-m-8 h-[calc(100vh-5rem)] p-[clamp(0.45rem,0.9vw,0.85rem)]'
+          ? 'fixed inset-0 z-[9999] w-screen h-screen p-[clamp(0.5rem,1vw,0.9rem)]'
+          : 'relative -m-4 sm:-m-6 lg:-m-8 h-[calc(100vh-5rem)] p-[clamp(0.45rem,0.9vw,0.85rem)]'
       }`}
     >
       {/* Subtle enterprise atmospheric glow */}
@@ -131,7 +146,7 @@ export const LineDashboardAll: React.FC = () => {
       {/* Floating TV Controls (hidden in kiosk=1, auto-hides after 3s idle) */}
       {!isKiosk && (
         <div
-          className={`fixed z-50 flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#071633]/92 border border-sky-400/30 shadow-2xl backdrop-blur-md transition-opacity duration-300 ${
+          className={`fixed z-[10000] flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#071633]/92 border border-sky-400/35 shadow-2xl backdrop-blur-md transition-opacity duration-300 ${
             standaloneMode ? 'top-3 right-3' : 'bottom-4 right-4'
           } ${controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         >
@@ -182,8 +197,8 @@ export const LineDashboardAll: React.FC = () => {
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold transition-colors cursor-pointer"
             title="Toggle Fullscreen (F)"
           >
-            {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
+            {standaloneMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">{standaloneMode ? 'Exit' : 'Fullscreen'}</span>
           </button>
         </div>
       )}
@@ -529,7 +544,7 @@ export const LineDashboardAll: React.FC = () => {
     </div>
   );
 
-  if (standaloneMode) {
+  if (isKiosk) {
     return boardContent;
   }
 
