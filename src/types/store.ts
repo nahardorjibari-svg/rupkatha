@@ -34,6 +34,7 @@ export interface StoreWarehouse {
 }
 
 export interface StoreItemExtraFields {
+  unit?: 'knit' | 'woven' | 'both' | string | null;
   gsm?: string | number | null;
   width?: string | null;
   composition?: string | null;
@@ -57,6 +58,9 @@ export interface StoreItem {
   default_currency: StoreCurrency | string;
   extra_fields?: StoreItemExtraFields | null;
   is_active: boolean;
+  created_by?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export interface StoreGrn {
@@ -68,6 +72,7 @@ export interface StoreGrn {
   supplier_name: string;
   challan_no?: string | null;
   po_reference?: string | null;
+  booking_id?: string | null;
   currency: StoreCurrency;
   exchange_rate: number;
   remarks?: string | null;
@@ -84,11 +89,52 @@ export interface StoreGrnItem {
   id?: string;
   grn_id?: string;
   item_id: string;
+  booking_item_id?: string | null;
   qty: number;
+  accepted_qty?: number | null;
+  rejected_qty?: number | null;
   unit_price: number;
   batch_no?: string | null;
   remarks?: string | null;
 }
+
+export interface StoreIssueItem {
+  id?: string;
+  issue_id?: string;
+  item_id: string;
+  qty: number;
+  remarks?: string | null;
+}
+
+export interface StoreIssueOrderRef {
+  id: string;
+  order_no: string;
+  po_no?: string | null;
+  style_no: string;
+  item_name: string;
+  unit?: string | null;
+  buyers?: { name?: string | null; code?: string | null } | null;
+}
+
+export interface StoreIssue {
+  id: string;
+  issue_no: string;
+  issue_date: string;
+  warehouse_id?: string | null;
+  unit: StoreUnit;
+  department: string;
+  purpose?: string | null;
+  order_id?: string | null;
+  remarks?: string | null;
+  status: StoreGrnStatus | string;
+  approved_by?: string | null;
+  approved_by_name?: string | null;
+  approved_at?: string | null;
+  created_at?: string | null;
+  store_issue_items?: StoreIssueItem[];
+  orders?: StoreIssueOrderRef | null;
+}
+
 
 // Read-only Database Views
 

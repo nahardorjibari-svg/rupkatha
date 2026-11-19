@@ -17,9 +17,22 @@ import { StaffInfo } from '../pages/hr/StaffInfo';
 import { MonthlyAttendanceReport } from '../pages/hr/MonthlyAttendanceReport';
 import { StaffMonthSheet } from '../pages/hr/StaffMonthSheet';
 import { LinePlanPage } from '../pages/planning/LinePlanPage';
+import { OrdersPage } from '../pages/merchandising/OrdersPage';
+import { CostingPage } from '../pages/merchandising/CostingPage';
+import { MaterialBookingPage } from '../pages/merchandising/MaterialBookingPage';
+import { CuttingPage } from '../pages/production/CuttingPage';
+import { QcPage } from '../pages/production/QcPage';
+import { OutsideProcessPage } from '../pages/production/OutsideProcessPage';
+import { AccountsPage } from '../pages/accounts/AccountsPage';
+import { CommercialPage } from '../pages/commercial/CommercialPage';
+import { ShipmentInvoicePage } from '../pages/commercial/ShipmentInvoicePage';
+import { MerchandisingReportsPage } from '../pages/reports/MerchandisingReportsPage';
+import { ManagementPnlPage } from '../pages/reports/ManagementPnlPage';
 import { StoreDashboard } from '../pages/store/StoreDashboard';
 import { StoreItemsPage } from '../pages/store/StoreItemsPage';
 import { StoreGrnPage } from '../pages/store/StoreGrnPage';
+import { StoreIssuePage } from '../pages/store/StoreIssuePage';
+import { StoreLedgerPage } from '../pages/store/StoreLedgerPage';
 import { StorePlaceholderPage } from '../pages/store/StorePlaceholderPage';
 import { StoreProtectedRoute } from '../components/store/StoreProtectedRoute';
 import { LineDashboardAll } from '../pages/linedash/LineDashboardAll';
@@ -92,7 +105,41 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
-        {/* Planning & Production Module Routes (Protected by requiredModule="merchandising") */}
+        {/* Merchandising & Planning Module Routes (Protected by requiredModule="merchandising") */}
+        <Route path="/merchandising" element={<Navigate to="/merchandising/orders" replace />} />
+        <Route
+          path="/merchandising/orders"
+          element={
+            <ProtectedRoute
+              requiredModule="merchandising"
+              deniedToastMessage="Access denied / আপনার এই পেইজে প্রবেশের অনুমতি নেই"
+            >
+              <OrdersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/merchandising/costing"
+          element={
+            <ProtectedRoute
+              requiredModule="merchandising"
+              deniedToastMessage="Access denied / আপনার এই পেইজে প্রবেশের অনুমতি নেই"
+            >
+              <CostingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/merchandising/bookings"
+          element={
+            <ProtectedRoute
+              requiredModule="merchandising"
+              deniedToastMessage="Access denied / আপনার এই পেইজে প্রবেশের অনুমতি নেই"
+            >
+              <MaterialBookingPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/planning" element={<Navigate to="/planning/lineplan" replace />} />
         <Route path="/admin/planning" element={<Navigate to="/planning/lineplan" replace />} />
         <Route path="/admin/planning/lineplan" element={<Navigate to="/planning/lineplan" replace />} />
@@ -104,6 +151,111 @@ export const AppRoutes: React.FC = () => {
               deniedToastMessage="Access denied / আপনার এই পেইজে প্রবেশের অনুমতি নেই"
             >
               <LinePlanPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Cutting Production Module Route (Protected by requiredModule="cutting") */}
+        <Route path="/admin/cutting" element={<Navigate to="/production/cutting" replace />} />
+        <Route
+          path="/production/cutting"
+          element={
+            <ProtectedRoute
+              requiredModule="cutting"
+              deniedToastMessage="Access denied / আপনার এই পেইজে প্রবেশের অনুমতি নেই"
+            >
+              <CuttingPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Quality Control (QC) Module Route (Protected by requiredModule="qc") */}
+        <Route path="/admin/qc" element={<Navigate to="/production/qc" replace />} />
+        <Route
+          path="/production/qc"
+          element={
+            <ProtectedRoute
+              requiredModule="qc"
+              deniedToastMessage="Access denied / আপনার এই পেইজে প্রবেশের অনুমতি নেই"
+            >
+              <QcPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Outside Process (Washing, Printing, Embroidery) Module Route */}
+        <Route path="/admin/washing" element={<Navigate to="/production/outside-process" replace />} />
+        <Route
+          path="/production/outside-process"
+          element={
+            <ProtectedRoute
+              requiredModule="washing_print_emb"
+              deniedToastMessage="Access denied / আপনার এই পেইজে প্রবেশের অনুমতি নেই"
+            >
+              <OutsideProcessPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Accounts & Actual Costing Module Route (Protected by requiredModule="accounts") */}
+        <Route path="/admin/accounts" element={<Navigate to="/accounts" replace />} />
+        <Route
+          path="/accounts"
+          element={
+            <ProtectedRoute
+              requiredModule="accounts"
+              deniedToastMessage="Access denied / আপনার এই পেইজে প্রবেশের অনুমতি নেই"
+            >
+              <AccountsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Commercial & LC Module Route (Protected by requiredModule="commercial") */}
+        <Route path="/admin/commercial" element={<Navigate to="/commercial" replace />} />
+        <Route
+          path="/commercial"
+          element={
+            <ProtectedRoute
+              requiredModule="commercial"
+              deniedToastMessage="Access denied / আপনার এই পেইজে প্রবেশের অনুমতি নেই"
+            >
+              <CommercialPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/commercial/shipments"
+          element={
+            <ProtectedRoute
+              requiredModule="commercial"
+              deniedToastMessage="Access denied / আপনার এই পেইজে প্রবেশের অনুমতি নেই"
+            >
+              <ShipmentInvoicePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Reports & Analytics Routes */}
+        <Route
+          path="/reports/merchandising"
+          element={
+            <ProtectedRoute
+              requiredModule="merchandising_reports"
+              deniedToastMessage="Access denied / আপনার এই পেইজে প্রবেশের অনুমতি নেই"
+            >
+              <MerchandisingReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports/pnl"
+          element={
+            <ProtectedRoute
+              requiredModule="management_pnl"
+              deniedToastMessage="Access denied / আপনার এই পেইজে প্রবেশের অনুমতি নেই"
+            >
+              <ManagementPnlPage />
             </ProtectedRoute>
           }
         />
@@ -284,12 +436,15 @@ export const AppRoutes: React.FC = () => {
           path="/store/issue"
           element={
             <StoreProtectedRoute>
-              <StorePlaceholderPage
-                title="Stock Out (Material Issue)"
-                titleBn="স্টক আউট (মালামাল ইস্যু)"
-                description="Departmental requisition, fabric & trims issue to cutting/sewing floors will be available in Part 2."
-                descriptionBn="কাটিং ও সুইং ফ্লোরে মালামাল ইস্যু ও রিকুইজিশন মডিউল পরবর্তী ধাপে যুক্ত হবে।"
-              />
+              <StoreIssuePage />
+            </StoreProtectedRoute>
+          }
+        />
+        <Route
+          path="/store/issues"
+          element={
+            <StoreProtectedRoute>
+              <StoreIssuePage />
             </StoreProtectedRoute>
           }
         />
@@ -323,12 +478,7 @@ export const AppRoutes: React.FC = () => {
           path="/store/ledger"
           element={
             <StoreProtectedRoute>
-              <StorePlaceholderPage
-                title="Stock Ledger"
-                titleBn="স্টক খতিয়ান"
-                description="Item-wise chronological stock movement ledger and bin card history will be available in Part 2."
-                descriptionBn="পণ্যভিত্তিক পূর্ণাঙ্গ স্টক খতিয়ান ও বিন কার্ড ইতিহাস পরবর্তী ধাপে যুক্ত হবে।"
-              />
+              <StoreLedgerPage />
             </StoreProtectedRoute>
           }
         />

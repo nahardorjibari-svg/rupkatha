@@ -108,7 +108,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
   // Check required module permission if specified
   if (requiredModule && !isAdmin) {
     const permissions = profile?.permissions || [];
-    if (!permissions.includes(requiredModule)) {
+    const hasRoleFallback =
+      (requiredModule === 'merchandising' && profile?.role === 'merchandiser') ||
+      (requiredModule === 'accounts' && profile?.role === 'accounts') ||
+      (requiredModule === 'commercial' && profile?.role === 'commercial');
+    if (!permissions.includes(requiredModule) && !hasRoleFallback) {
       toast.error(
         deniedToastMessage || `You do not have access to the ${requiredModule} module.`
       );

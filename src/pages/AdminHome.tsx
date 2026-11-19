@@ -48,6 +48,7 @@ import { supabase } from '../lib/supabaseClient';
 import { ROLE_LABELS, UNIT_LABELS } from '../lib/constants';
 import type { UserProfile, UserRole } from '../lib/constants';
 import { ERP_MODULES } from '../config/modules';
+import { ExecutiveMetricsSection } from '../components/dashboard/ExecutiveMetricsSection';
 
 // Palette tokens
 const ACCENT_TEAL = '#2BA5B5';
@@ -231,6 +232,9 @@ export const AdminHome: React.FC = () => {
   return (
     <AdminLayout>
       <div className="space-y-6 sm:space-y-8">
+        {/* LIVE EXECUTIVE QUICK ACTIONS & FACTORY KPI CARDS */}
+        <ExecutiveMetricsSection />
+
         {/* TOP ROW: Hero Banner (Left) + Interactive Month Calendar (Right) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Top-Left Hero Banner with Garment Motif SVG */}
@@ -956,49 +960,75 @@ export const AdminHome: React.FC = () => {
           <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
             <div>
               <h3 className="font-bold text-base tracking-tight">Apparel Production &amp; Commercial Modules</h3>
-              <p className="text-xs text-slate-400 font-bangla">গার্মেন্টস অপারেশনাল মডিউলসমূহ (আসন্ন)</p>
+              <p className="text-xs text-slate-400 font-bangla">গার্মেন্টস অপারেশনাল মডিউলসমূহ</p>
             </div>
             <span
               className="text-[11px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider"
               style={{
-                backgroundColor: 'rgba(230, 216, 58, 0.15)',
-                color: CHART_YELLOW,
-                border: '1px solid rgba(230, 216, 58, 0.3)',
+                backgroundColor: 'rgba(43, 165, 181, 0.15)',
+                color: ACCENT_TEAL,
+                border: '1px solid rgba(43, 165, 181, 0.3)',
               }}
             >
-              Step 3 Modules
+              ERP Suite
             </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {ERP_MODULES[1]?.items.map((mod) => (
-              <div
-                key={mod.id}
-                className={`p-3 rounded-2xl border text-center flex flex-col items-center justify-center space-y-1.5 transition-all opacity-80 hover:opacity-100 ${
-                  isDark ? 'bg-white/5 border-white/5 hover:bg-white/10' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
-                }`}
-              >
+            {[...(ERP_MODULES[1]?.items || []), ...(ERP_MODULES[2]?.items || [])].map((mod) => {
+              const isActiveMod = mod.status === 'active';
+              const inner = (
+                <>
+                  <div
+                    className="w-8 h-8 rounded-xl flex items-center justify-center text-xs"
+                    style={{
+                      backgroundColor: isActiveMod ? 'rgba(47, 158, 68, 0.15)' : 'rgba(43, 165, 181, 0.15)',
+                      color: isActiveMod ? CHART_GREEN : ACCENT_TEAL,
+                    }}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold leading-tight truncate w-full">{mod.name}</span>
+                  <span className="text-[10px] text-slate-400 font-bangla leading-normal truncate w-full">
+                    {mod.nameBangla}
+                  </span>
+                  <span
+                    className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                    style={{
+                      backgroundColor: isActiveMod
+                        ? 'rgba(47, 158, 68, 0.15)'
+                        : 'rgba(230, 216, 58, 0.15)',
+                      color: isActiveMod ? CHART_GREEN : CHART_YELLOW,
+                    }}
+                  >
+                    {isActiveMod ? 'Active' : 'Soon'}
+                  </span>
+                </>
+              );
+
+              return isActiveMod ? (
+                <Link
+                  key={mod.id}
+                  to={mod.path}
+                  className={`p-3 rounded-2xl border text-center flex flex-col items-center justify-center space-y-1.5 transition-all hover:-translate-y-0.5 ${
+                    isDark
+                      ? 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-[#2BA5B5]/40'
+                      : 'bg-slate-50 border-slate-200 hover:bg-white hover:border-[#0F8B8D]/40'
+                  }`}
+                >
+                  {inner}
+                </Link>
+              ) : (
                 <div
-                  className="w-8 h-8 rounded-xl flex items-center justify-center text-xs"
-                  style={{ backgroundColor: 'rgba(43, 165, 181, 0.15)', color: ACCENT_TEAL }}
+                  key={mod.id}
+                  className={`p-3 rounded-2xl border text-center flex flex-col items-center justify-center space-y-1.5 transition-all opacity-75 ${
+                    isDark ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-200'
+                  }`}
                 >
-                  <Sparkles className="w-4 h-4" />
+                  {inner}
                 </div>
-                <span className="text-xs font-bold leading-tight truncate w-full">{mod.name}</span>
-                <span className="text-[10px] text-slate-400 font-bangla leading-normal truncate w-full">
-                  {mod.nameBangla}
-                </span>
-                <span
-                  className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                  style={{
-                    backgroundColor: 'rgba(230, 216, 58, 0.15)',
-                    color: CHART_YELLOW,
-                  }}
-                >
-                  Soon
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

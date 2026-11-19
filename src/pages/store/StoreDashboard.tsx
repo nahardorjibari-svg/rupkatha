@@ -46,12 +46,20 @@ import {
   formatStoreDateTime,
 } from '../../lib/storeFormat';
 import {
+  computeLiveStoreData,
+  normalizeItemOperationUnit,
+} from '../../lib/storeStockCalc';
+import {
   canEditGrn,
-  type StoreCategoryValueRow,
+  type StoreCategory,
+  type StoreGrn,
+  type StoreIssue,
+  type StoreItem,
   type StoreMonthlyMovementRow,
   type StoreRecentActivityRow,
   type StoreStockStatusRow,
   type StoreStockStatusType,
+  type StoreUom,
 } from '../../types/store';
 
 const STATUS_COLORS: Record<StoreStockStatusType, { label: string; labelBn: string; color: string }> = {
@@ -79,10 +87,12 @@ export const StoreDashboard: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [monthsRange, setMonthsRange] = useState<6 | 12>(6);
 
+  const [rawItems, setRawItems] = useState<StoreItem[]>([]);
+  const [rawGrns, setRawGrns] = useState<StoreGrn[]>([]);
   const [stockRows, setStockRows] = useState<StoreStockStatusRow[]>([]);
-  const [categoryRows, setCategoryRows] = useState<StoreCategoryValueRow[]>([]);
   const [monthlyRows, setMonthlyRows] = useState<StoreMonthlyMovementRow[]>([]);
   const [recentRows, setRecentRows] = useState<StoreRecentActivityRow[]>([]);
+  const [pendingGrnCount, setPendingGrnCount] = useState(0);
 
   const unitScope: 'all' | 'knit' | 'woven' =
     activeUnit === 'knit' ? 'knit' : activeUnit === 'woven' ? 'woven' : 'all';
@@ -94,26 +104,51 @@ export const StoreDashboard: React.FC = () => {
     else setLoading(true);
 
     try {
-      const [stockRes, catRes, monthRes, activityRes] = await Promise.all([
-        supabase.from('store_v_stock_status').select('*'),
-        supabase.from('store_v_category_value').select('*'),
-        supabase.from('store_v_monthly_movement').select('*').order('month', { ascending: true }),
+      const [itemsRes, catRes, uomRes, grnRes, issueRes, viewRes] = await Promise.all([
+        supabase.from('store_items').select('*').order('sku', { ascending: true }),
+        supabase.from('store_categories').select('*'),
+        supabase.from('store_uoms').select('*'),
         supabase
-          .from('store_v_recent_activity')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(40),
+          .from('store_grn')
+          .select('*, store_grn_items(*)')
+          .order('grn_date', { ascending: false })
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('store_issues')
+          .select('*, store_issue_items(*)')
+          .order('issue_date', { ascending: false }),
+        supabase.from('store_v_stock_status').select('*'),
       ]);
 
-      if (stockRes.error) throw stockRes.error;
+      if (itemsRes.error) throw itemsRes.error;
       if (catRes.error) throw catRes.error;
-      if (monthRes.error) throw monthRes.error;
-      if (activityRes.error) throw activityRes.error;
+      if (uomRes.error) throw uomRes.error;
+      if (grnRes.error) throw grnRes.error;
 
-      setStockRows((stockRes.data || []) as StoreStockStatusRow[]);
-      setCategoryRows((catRes.data || []) as StoreCategoryValueRow[]);
-      setMonthlyRows((monthRes.data || []) as StoreMonthlyMovementRow[]);
-      setRecentRows((activityRes.data || []) as StoreRecentActivityRow[]);
+      const items = (itemsRes.data || []) as StoreItem[];
+      const categories = (catRes.data || []) as StoreCategory[];
+      const uoms = (uomRes.data || []) as StoreUom[];
+      const grns = (grnRes.data || []) as StoreGrn[];
+      const issues = issueRes.error ? [] : ((issueRes.data || []) as unknown as StoreIssue[]);
+      const fallbackViewRows = viewRes.error
+        ? []
+        : ((viewRes.data || []) as StoreStockStatusRow[]);
+
+      const computed = computeLiveStoreData({
+        items,
+        categories,
+        uoms,
+        grns,
+        issues,
+        fallbackViewRows,
+      });
+
+      setRawItems(items);
+      setRawGrns(grns);
+      setStockRows(computed.statusRows);
+      setMonthlyRows(computed.monthlyRows);
+      setRecentRows(computed.recentActivities);
+      setPendingGrnCount(computed.pendingGrnCount);
     } catch (err: any) {
       toast.error(err?.message || 'Failed to load store dashboard data.');
     } finally {
@@ -126,43 +161,57 @@ export const StoreDashboard: React.FC = () => {
     loadDashboard();
   }, [loadDashboard]);
 
+  const itemOpUnitMap = useMemo(() => {
+    const map = new Map<string, 'knit' | 'woven' | 'both'>();
+    rawItems.forEach((it) => map.set(it.id, normalizeItemOperationUnit(it.extra_fields?.unit)));
+    return map;
+  }, [rawItems]);
+
   // Unit-aware stock computation
   const computedStock: ComputedStockRow[] = useMemo(() => {
-    return stockRows.map((row) => {
-      const totalQty = Number(row.current_stock || 0);
-      const totalVal = Number(row.stock_value || 0);
-      const minStock = Number(row.minimum_stock || 0);
+    return stockRows
+      .filter((row) => {
+        if (unitScope === 'all') return true;
+        const opUnit = itemOpUnitMap.get(row.item_id) || 'both';
+        const unitQty = unitScope === 'knit' ? Number(row.knit_qty || 0) : Number(row.woven_qty || 0);
+        return opUnit === 'both' || opUnit === unitScope || unitQty > 0;
+      })
+      .map((row) => {
+        const totalQty = Number(row.current_stock || 0);
+        const totalVal = Number(row.stock_value || 0);
+        const minStock = Number(row.minimum_stock || 0);
 
-      if (unitScope === 'all') {
+        if (unitScope === 'all') {
+          return {
+            ...row,
+            unitQty: totalQty,
+            unitValue: totalVal,
+            unitStatus: row.status,
+          };
+        }
+
+        const unitQty = unitScope === 'knit' ? Number(row.knit_qty || 0) : Number(row.woven_qty || 0);
+        const unitValue = totalQty > 0 ? totalVal * (unitQty / totalQty) : 0;
+        let unitStatus: StoreStockStatusType = row.status;
+        if (row.status !== 'inactive') {
+          if (unitQty <= 0) unitStatus = 'out';
+          else if (minStock > 0 && unitQty <= minStock) unitStatus = 'low';
+          else unitStatus = 'in_stock';
+        }
+
         return {
           ...row,
-          unitQty: totalQty,
-          unitValue: totalVal,
-          unitStatus: row.status,
+          unitQty,
+          unitValue,
+          unitStatus,
         };
-      }
-
-      const unitQty = unitScope === 'knit' ? Number(row.knit_qty || 0) : Number(row.woven_qty || 0);
-      const unitValue = totalQty > 0 ? totalVal * (unitQty / totalQty) : 0;
-      let unitStatus: StoreStockStatusType = row.status;
-      if (row.status !== 'inactive') {
-        if (unitQty <= 0) unitStatus = 'out';
-        else if (minStock > 0 && unitQty <= minStock) unitStatus = 'low';
-        else unitStatus = 'in_stock';
-      }
-
-      return {
-        ...row,
-        unitQty,
-        unitValue,
-        unitStatus,
-      };
-    });
-  }, [stockRows, unitScope]);
+      });
+  }, [stockRows, unitScope, itemOpUnitMap]);
 
   // KPI metrics
   const kpis = useMemo(() => {
     const totalValue = computedStock.reduce((acc, r) => acc + r.unitValue, 0);
+    const totalQty = computedStock.reduce((acc, r) => acc + r.unitQty, 0);
     const totalItems = computedStock.length;
     const lowStock = computedStock.filter((r) => r.unitStatus === 'low').length;
     const outOfStock = computedStock.filter((r) => r.unitStatus === 'out').length;
@@ -180,26 +229,39 @@ export const StoreDashboard: React.FC = () => {
       .filter((m) => String(m.month || '').startsWith(currentMonthPrefix))
       .reduce((acc, m) => acc + Number(m.value_in || 0), 0);
 
+    let todayGrnQty = 0;
+    rawGrns
+      .filter((g) => g.status === 'approved')
+      .filter((g) => (unitScope === 'all' ? true : String(g.unit || '').toLowerCase() === unitScope))
+      .forEach((g) => {
+        const grnDay =
+          g.grn_date ||
+          (g.approved_at ? getDhakaDateString(new Date(g.approved_at)) : '') ||
+          (g.created_at ? getDhakaDateString(new Date(g.created_at)) : '');
+        if (grnDay !== todayDhaka) return;
+        (g.store_grn_items || []).forEach((line) => {
+          todayGrnQty += Math.max(0, Number(line.accepted_qty ?? line.qty ?? 0));
+        });
+      });
+
     const filteredActivities = recentRows.filter((a) =>
       unitScope === 'all' ? true : String(a.unit || '').toLowerCase() === unitScope
     );
 
-    let todayGrnQty = 0;
     let todayIssueQty = 0;
     filteredActivities.forEach((act) => {
       if (!act.created_at) return;
       const actDate = getDhakaDateString(new Date(act.created_at));
       if (actDate !== todayDhaka) return;
       const mType = String(act.movement_type || '').toLowerCase();
-      if (mType === 'grn') {
-        todayGrnQty += Math.abs(Number(act.qty_delta || 0));
-      } else if (mType === 'issue') {
+      if (mType === 'issue') {
         todayIssueQty += Math.abs(Number(act.qty_delta || 0));
       }
     });
 
     return {
       totalValue,
+      totalQty,
       totalItems,
       lowStock,
       outOfStock,
@@ -209,7 +271,7 @@ export const StoreDashboard: React.FC = () => {
       todayGrnQty,
       todayIssueQty,
     };
-  }, [computedStock, monthlyRows, recentRows, unitScope]);
+  }, [computedStock, monthlyRows, recentRows, rawGrns, unitScope]);
 
   // Chart data: Monthly movement aggregated across units (or selected unit)
   const monthlyChartData = useMemo(() => {
@@ -259,19 +321,8 @@ export const StoreDashboard: React.FC = () => {
     }));
   }, [kpis]);
 
-  // Category Stock Chart Data (respects active unit)
+  // Category Stock Chart Data (computed directly from live item balances)
   const categoryChartData = useMemo(() => {
-    if (unitScope === 'all' && categoryRows.length > 0) {
-      return categoryRows
-        .map((c) => ({
-          name: c.category_name || 'Uncategorized',
-          itemCount: Number(c.item_count || 0),
-          value: Number(c.stock_value || 0),
-        }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 7);
-    }
-
     const catMap = new Map<string, { name: string; itemCount: number; value: number }>();
     computedStock.forEach((row) => {
       const cat = row.category_name || 'Uncategorized';
@@ -283,7 +334,7 @@ export const StoreDashboard: React.FC = () => {
     return Array.from(catMap.values())
       .sort((a, b) => b.value - a.value)
       .slice(0, 7);
-  }, [unitScope, categoryRows, computedStock]);
+  }, [computedStock]);
 
   // Top Low / Out Stock Items
   const topLowStockItems = useMemo(() => {
@@ -475,6 +526,19 @@ export const StoreDashboard: React.FC = () => {
                   <p className="text-3xl sm:text-4xl font-extrabold tracking-tight mt-1 text-slate-900 dark:text-white">
                     {formatBDT(kpis.totalValue)}
                   </p>
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs">
+                    <span className="px-2.5 py-0.5 rounded-lg bg-[#2BA5B5]/15 text-[#0F8B8D] dark:text-[#2BA5B5] font-bold">
+                      Total Qty: {formatNumberBD(kpis.totalQty, 2)}
+                    </span>
+                    {pendingGrnCount > 0 && (
+                      <Link
+                        to="/store/grn"
+                        className="px-2.5 py-0.5 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30 font-bold hover:underline"
+                      >
+                        {pendingGrnCount} Pending GRN{pendingGrnCount > 1 ? 's' : ''}
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
 

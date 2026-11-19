@@ -440,3 +440,107 @@ export async function exportStoreGrnPdf(rows: GrnExportRow[], filenameDate: stri
 
   doc.save(`Store_GRN_${filenameDate}.pdf`);
 }
+
+export interface LedgerExportRow {
+  sku: string;
+  item_name: string;
+  category_name: string;
+  unit_label: string;
+  uom: string;
+  opening_stock: number;
+  total_in: number;
+  total_out: number;
+  current_balance: number;
+}
+
+export async function exportStoreLedgerExcel(rows: LedgerExportRow[], filenameDate: string) {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Stock Ledger');
+
+  sheet.mergeCells('A1:I1');
+  sheet.getCell('A1').value = 'RUPKATHA APPARELS LTD.';
+  sheet.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FF0F172A' } };
+  sheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+
+  sheet.mergeCells('A2:I2');
+  sheet.getCell('A2').value = `Live Store Stock Ledger Summary | Generated: ${filenameDate}`;
+  sheet.getCell('A2').font = { size: 10, color: { argb: 'FF475569' } };
+  sheet.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle' };
+
+  sheet.addRow([]);
+
+  const headerRow = sheet.addRow([
+    'SKU',
+    'Item Name',
+    'Category',
+    'Unit',
+    'UOM',
+    'Opening Stock',
+    'Total Received (GRN In)',
+    'Total Issued (Out)',
+    'Current Live Balance',
+  ]);
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F8B8D' } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      right: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+    };
+  });
+
+  rows.forEach((row) => {
+    const r = sheet.addRow([
+      row.sku,
+      row.item_name,
+      row.category_name,
+      row.unit_label,
+      row.uom,
+      Number(row.opening_stock || 0),
+      Number(row.total_in || 0),
+      Number(row.total_out || 0),
+      Number(row.current_balance || 0),
+    ]);
+    r.eachCell((cell, colNumber) => {
+      cell.font = { size: 9.5 };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+      };
+      if (colNumber >= 6) {
+        cell.alignment = { horizontal: 'right', vertical: 'middle' };
+        cell.numFmt = '#,##0.##';
+        if (colNumber === 9) {
+          cell.font = { bold: true, size: 9.5 };
+        }
+      } else {
+        cell.alignment = { vertical: 'middle' };
+      }
+    });
+  });
+
+  sheet.columns = [
+    { width: 16 },
+    { width: 30 },
+    { width: 20 },
+    { width: 15 },
+    { width: 10 },
+    { width: 16 },
+    { width: 22 },
+    { width: 18 },
+    { width: 22 },
+  ];
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  downloadBlob(
+    new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    }),
+    `Store_Stock_Ledger_${filenameDate}.xlsx`
+  );
+}

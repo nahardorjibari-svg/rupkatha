@@ -32,6 +32,8 @@ import {
   Clock,
   CalendarDays,
   Tv,
+  ClipboardList,
+  Truck,
 } from 'lucide-react';
 import { useCompany } from '../../context/CompanyContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -62,7 +64,9 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   CalendarDays,
   Factory,
   Tv,
-};
+  ClipboardList,
+  Truck,
+} as Record<string, React.ComponentType<{ className?: string }>>;
 
 interface TooltipData {
   label: string;
@@ -325,6 +329,31 @@ export const Sidebar: React.FC = () => {
                   storeAllowedRoles.includes(profile?.role || '')
                 );
               }
+              if (
+                item.id === 'merchandising_orders' ||
+                item.id === 'merchandising_costing' ||
+                item.id === 'merchandising_bookings'
+              ) {
+                return (
+                  isAdmin ||
+                  userPermissions.includes('merchandising') ||
+                  profile?.role === 'merchandiser'
+                );
+              }
+              if (item.id === 'accounts') {
+                return (
+                  isAdmin ||
+                  userPermissions.includes('accounts') ||
+                  profile?.role === 'accounts'
+                );
+              }
+              if (item.id === 'commercial') {
+                return (
+                  isAdmin ||
+                  userPermissions.includes('commercial') ||
+                  profile?.role === 'commercial'
+                );
+              }
               if (item.id === 'line_dashboard') {
                 return isAdmin || userPermissions.includes('sewing');
               }
@@ -367,7 +396,13 @@ export const Sidebar: React.FC = () => {
                   {group.items.map((item) => {
                     const isComingSoon = item.status === 'coming_soon';
                     const hasChildren = item.children && item.children.length > 0;
-                    const isChildActive = hasChildren && item.children?.some((c: any) => location.pathname === c.path);
+                    const isChildActive =
+                      hasChildren &&
+                      item.children?.some(
+                        (c: any) =>
+                          location.pathname === c.path ||
+                          (c.id === 'store_issue' && location.pathname === '/store/issues')
+                      );
                     const isParentActive = item.path && location.pathname === item.path;
                     const isActive = isParentActive || isChildActive;
                     const isExpanded = expandedMenus[item.id] !== false; // default true
@@ -462,7 +497,10 @@ export const Sidebar: React.FC = () => {
                           {(!isMini || mobileOpen) && isExpanded && item.children && (
                             <div className="pl-6 space-y-1 border-l border-white/10 ml-4 my-1">
                               {item.children.map((child) => {
-                                const isChildActive = location.pathname === child.path;
+                                const isChildActive =
+                                  location.pathname === child.path ||
+                                  (child.id === 'store_issue' &&
+                                    location.pathname === '/store/issues');
                                 const isStoreChild = item.id === 'store_inventory';
                                 const isLineDashChild = item.id === 'line_dashboard';
                                 const lineDotColor =
@@ -538,6 +576,12 @@ export const Sidebar: React.FC = () => {
                       );
                     }
 
+                    const isMerchItem =
+                      item.id === 'merchandising_orders' ||
+                      item.id === 'merchandising_costing' ||
+                      item.id === 'merchandising_bookings' ||
+                      item.id === 'commercial';
+
                     return (
                       <NavLink
                         key={item.id}
@@ -553,7 +597,9 @@ export const Sidebar: React.FC = () => {
                           )
                         }
                         onMouseLeave={clearTooltip}
-                        className={`h-10 min-h-[40px] px-3 flex items-center gap-3 rounded-2xl text-sm font-medium transition-all group relative ${
+                        className={`${
+                          isMerchItem ? 'py-1.5 min-h-[42px]' : 'h-10 min-h-[40px]'
+                        } px-3 flex items-center gap-3 rounded-2xl text-sm font-medium transition-all group relative ${
                           isActive
                             ? 'bg-[#2BA5B5] text-white shadow-md shadow-[#2BA5B5]/25 font-semibold'
                             : isDark
@@ -572,7 +618,20 @@ export const Sidebar: React.FC = () => {
                         </span>
 
                         {(!isMini || mobileOpen) && (
-                          <span className="truncate text-sm">{item.name}</span>
+                          isMerchItem && item.nameBangla ? (
+                            <div className="flex flex-col min-w-0">
+                              <span className="truncate text-sm leading-tight">{item.name}</span>
+                              <span
+                                className={`text-[10px] font-bangla truncate leading-snug ${
+                                  isActive ? 'text-white/85' : 'opacity-70'
+                                }`}
+                              >
+                                {item.nameBangla}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="truncate text-sm">{item.name}</span>
+                          )
                         )}
                       </NavLink>
                     );

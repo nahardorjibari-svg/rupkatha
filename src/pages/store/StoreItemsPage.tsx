@@ -16,6 +16,7 @@ import toast from 'react-hot-toast';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useUnit } from '../../context/UnitContext';
 import { supabase } from '../../lib/supabaseClient';
 import { getDhakaDateString } from '../../lib/dhakaTime';
 import {
@@ -25,8 +26,14 @@ import {
   formatStoreCurrency,
 } from '../../lib/storeFormat';
 import {
+  computeLiveStoreData,
+  normalizeItemOperationUnit,
+} from '../../lib/storeStockCalc';
+import {
   canEditItems,
   type StoreCategory,
+  type StoreGrn,
+  type StoreIssue,
   type StoreItem,
   type StoreItemExtraFields,
   type StoreStockStatusRow,
@@ -70,8 +77,10 @@ function suggestItemTypeFromCategory(categoryName?: string | null): StoreItemTyp
 
 export const StoreItemsPage: React.FC = () => {
   const { isDark } = useTheme();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
+  const { activeUnit } = useUnit();
   const isAdminEditor = canEditItems(profile?.role, profile?.is_active);
+  const currentUserId = user?.id || profile?.id || null;
 
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<'excel' | 'pdf' | null>(null);
@@ -84,6 +93,7 @@ export const StoreItemsPage: React.FC = () => {
   // Filters & pagination
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [unitFilter, setUnitFilter] = useState<'all' | 'woven' | 'knit'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | StoreStockStatusType>('all');
   const [page, setPage] = useState(1);
 
@@ -99,6 +109,7 @@ export const StoreItemsPage: React.FC = () => {
   const [categoryId, setCategoryId] = useState('');
   const [uomId, setUomId] = useState('');
   const [itemType, setItemType] = useState<StoreItemTypeValue>('other');
+  const [operationUnit, setOperationUnit] = useState<'both' | 'woven' | 'knit'>('both');
   const [minimumStock, setMinimumStock] = useState('0');
   const [defaultUnitCost, setDefaultUnitCost] = useState('0');
   const [defaultCurrency, setDefaultCurrency] = useState<'BDT' | 'USD'>('BDT');
@@ -113,25 +124,57 @@ export const StoreItemsPage: React.FC = () => {
   const [yarnType, setYarnType] = useState('');
   const [yarnLot, setYarnLot] = useState('');
 
+  useEffect(() => {
+    if (activeUnit === 'woven' || activeUnit === 'knit') {
+      setUnitFilter(activeUnit);
+    } else {
+      setUnitFilter('all');
+    }
+  }, [activeUnit]);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [statusRes, itemsRes, catRes, uomRes] = await Promise.all([
-        supabase.from('store_v_stock_status').select('*').order('sku', { ascending: true }),
+      const [itemsRes, catRes, uomRes, grnRes, issueRes, viewRes] = await Promise.all([
         supabase.from('store_items').select('*').order('sku', { ascending: true }),
         supabase.from('store_categories').select('*').order('name', { ascending: true }),
         supabase.from('store_uoms').select('*').order('code', { ascending: true }),
+        supabase
+          .from('store_grn')
+          .select('id, grn_no, grn_date, unit, currency, exchange_rate, status, created_at, approved_at, created_by_name, approved_by_name, supplier_name, store_grn_items(item_id, qty, accepted_qty, rejected_qty, unit_price)'),
+        supabase
+          .from('store_issues')
+          .select('id, issue_no, issue_date, unit, department, purpose, order_id, status, created_at, approved_at, approved_by_name, store_issue_items(id, issue_id, item_id, qty, remarks)'),
+        supabase.from('store_v_stock_status').select('*').order('sku', { ascending: true }),
       ]);
 
-      if (statusRes.error) throw statusRes.error;
       if (itemsRes.error) throw itemsRes.error;
       if (catRes.error) throw catRes.error;
       if (uomRes.error) throw uomRes.error;
+      if (grnRes.error) throw grnRes.error;
 
-      setStatusRows((statusRes.data || []) as StoreStockStatusRow[]);
-      setItems((itemsRes.data || []) as StoreItem[]);
-      setCategories((catRes.data || []) as StoreCategory[]);
-      setUoms((uomRes.data || []) as StoreUom[]);
+      const loadedItems = (itemsRes.data || []) as StoreItem[];
+      const loadedCats = (catRes.data || []) as StoreCategory[];
+      const loadedUoms = (uomRes.data || []) as StoreUom[];
+      const loadedGrns = (grnRes.data || []) as unknown as StoreGrn[];
+      const loadedIssues = issueRes.error ? [] : ((issueRes.data || []) as unknown as StoreIssue[]);
+      const fallbackViewRows = viewRes.error
+        ? []
+        : ((viewRes.data || []) as StoreStockStatusRow[]);
+
+      const computed = computeLiveStoreData({
+        items: loadedItems,
+        categories: loadedCats,
+        uoms: loadedUoms,
+        grns: loadedGrns,
+        issues: loadedIssues,
+        fallbackViewRows,
+      });
+
+      setItems(loadedItems);
+      setCategories(loadedCats);
+      setUoms(loadedUoms);
+      setStatusRows(computed.statusRows);
     } catch (err: any) {
       toast.error(err?.message || 'Failed to load item master.');
     } finally {
@@ -215,23 +258,43 @@ export const StoreItemsPage: React.FC = () => {
         if (!matchesCatId && !matchesCatName) return false;
       }
 
+      if (unitFilter !== 'all') {
+        const itemUnit = normalizeItemOperationUnit(item?.extra_fields?.unit);
+        const hasUnitStock =
+          unitFilter === 'knit'
+            ? Number(statusRow.knit_qty || 0) > 0
+            : Number(statusRow.woven_qty || 0) > 0;
+        if (itemUnit !== 'both' && itemUnit !== unitFilter && !hasUnitStock) {
+          return false;
+        }
+      }
+
       if (statusFilter !== 'all' && statusRow.status !== statusFilter) {
         return false;
       }
 
       return true;
     });
-  }, [combinedRows, search, categoryFilter, statusFilter, categoryMap]);
+  }, [combinedRows, search, categoryFilter, unitFilter, statusFilter, categoryMap]);
 
   useEffect(() => {
     setPage(1);
-  }, [search, categoryFilter, statusFilter]);
+  }, [search, categoryFilter, unitFilter, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const paginatedRows = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
     return filteredRows.slice(start, start + PAGE_SIZE);
   }, [filteredRows, page]);
+
+  // Summary counters
+  const summaryStats = useMemo(() => {
+    const total = combinedRows.length;
+    const inStock = combinedRows.filter((r) => r.statusRow.status === 'in_stock').length;
+    const lowStock = combinedRows.filter((r) => r.statusRow.status === 'low').length;
+    const outOfStock = combinedRows.filter((r) => r.statusRow.status === 'out').length;
+    return { total, inStock, lowStock, outOfStock };
+  }, [combinedRows]);
 
   // Selected category type for dynamic extra_fields
   const selectedCategoryKind = useMemo(() => {
@@ -251,6 +314,9 @@ export const StoreItemsPage: React.FC = () => {
     setCategoryId(defaultCat?.id || '');
     setUomId(uoms.find((u) => u.is_active)?.id || uoms[0]?.id || '');
     setItemType(suggestItemTypeFromCategory(defaultCat?.name));
+    setOperationUnit(
+      activeUnit === 'woven' ? 'woven' : activeUnit === 'knit' ? 'knit' : 'both'
+    );
     setMinimumStock('0');
     setDefaultUnitCost('0');
     setDefaultCurrency('BDT');
@@ -273,6 +339,7 @@ export const StoreItemsPage: React.FC = () => {
     setCategoryId(item.category_id || '');
     setUomId(item.uom_id || '');
     setItemType(normalizeItemType(item.item_type));
+    setOperationUnit(normalizeItemOperationUnit(item.extra_fields?.unit));
     setMinimumStock(String(item.minimum_stock ?? 0));
     setDefaultUnitCost(String(item.default_unit_cost ?? 0));
     setDefaultCurrency(item.default_currency === 'USD' ? 'USD' : 'BDT');
@@ -303,30 +370,33 @@ export const StoreItemsPage: React.FC = () => {
 
     setSaving(true);
     try {
-      let extraFields: StoreItemExtraFields = {};
-      if (selectedCategoryKind === 'fabric') {
-        extraFields = {
-          ...(gsm.trim() ? { gsm: gsm.trim() } : {}),
-          ...(width.trim() ? { width: width.trim() } : {}),
-          ...(composition.trim() ? { composition: composition.trim() } : {}),
-        };
-      } else if (selectedCategoryKind === 'yarn') {
-        extraFields = {
-          ...(yarnCount.trim() ? { count: yarnCount.trim() } : {}),
-          ...(yarnType.trim() ? { type: yarnType.trim() } : {}),
-          ...(yarnLot.trim() ? { lot: yarnLot.trim() } : {}),
-        };
-      }
+      const extraFields: StoreItemExtraFields = {
+        unit: operationUnit,
+        ...(selectedCategoryKind === 'fabric'
+          ? {
+              ...(gsm.trim() ? { gsm: gsm.trim() } : {}),
+              ...(width.trim() ? { width: width.trim() } : {}),
+              ...(composition.trim() ? { composition: composition.trim() } : {}),
+            }
+          : {}),
+        ...(selectedCategoryKind === 'yarn'
+          ? {
+              ...(yarnCount.trim() ? { count: yarnCount.trim() } : {}),
+              ...(yarnType.trim() ? { type: yarnType.trim() } : {}),
+              ...(yarnLot.trim() ? { lot: yarnLot.trim() } : {}),
+            }
+          : {}),
+      };
 
       const payload = {
-        sku: sku.trim(),
+        sku: sku.trim().toUpperCase(),
         name: name.trim(),
         name_bn: nameBn.trim() || null,
         category_id: categoryId || null,
         uom_id: uomId || null,
         item_type: normalizeItemType(itemType),
-        minimum_stock: Number(minimumStock || 0),
-        default_unit_cost: Number(defaultUnitCost || 0),
+        minimum_stock: Math.max(0, Number(minimumStock || 0)),
+        default_unit_cost: Math.max(0, Number(defaultUnitCost || 0)),
         default_currency: defaultCurrency,
         description: description.trim() || null,
         extra_fields: extraFields,
@@ -341,7 +411,10 @@ export const StoreItemsPage: React.FC = () => {
         if (error) throw error;
         toast.success('Item updated successfully.');
       } else {
-        const { error } = await supabase.from('store_items').insert(payload);
+        const { error } = await supabase.from('store_items').insert({
+          ...payload,
+          ...(currentUserId ? { created_by: currentUserId } : {}),
+        });
         if (error) throw error;
         toast.success('Item added successfully.');
       }
@@ -512,13 +585,63 @@ export const StoreItemsPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Live Summary Strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div
+            className={`rounded-2xl border p-3.5 ${
+              isDark ? 'bg-[#103A40]/85 border-white/10' : 'glass-card bg-white border-slate-200'
+            }`}
+          >
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+              Total Items <span className="font-bangla opacity-70">(মোট পণ্য)</span>
+            </p>
+            <p className="text-xl font-extrabold mt-1">{formatNumberBD(summaryStats.total)}</p>
+          </div>
+          <div
+            className={`rounded-2xl border p-3.5 ${
+              isDark ? 'bg-[#103A40]/85 border-white/10' : 'glass-card bg-white border-slate-200'
+            }`}
+          >
+            <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+              In Stock <span className="font-bangla opacity-70">(মজুদ আছে)</span>
+            </p>
+            <p className="text-xl font-extrabold mt-1 text-emerald-600 dark:text-emerald-400">
+              {formatNumberBD(summaryStats.inStock)}
+            </p>
+          </div>
+          <div
+            className={`rounded-2xl border p-3.5 ${
+              isDark ? 'bg-[#103A40]/85 border-white/10' : 'glass-card bg-white border-slate-200'
+            }`}
+          >
+            <p className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+              Low Stock <span className="font-bangla opacity-70">(স্বল্প মজুদ)</span>
+            </p>
+            <p className="text-xl font-extrabold mt-1 text-amber-600 dark:text-amber-400">
+              {formatNumberBD(summaryStats.lowStock)}
+            </p>
+          </div>
+          <div
+            className={`rounded-2xl border p-3.5 ${
+              isDark ? 'bg-[#103A40]/85 border-white/10' : 'glass-card bg-white border-slate-200'
+            }`}
+          >
+            <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+              Out of Stock <span className="font-bangla opacity-70">(মজুদ শূন্য)</span>
+            </p>
+            <p className="text-xl font-extrabold mt-1 text-rose-600 dark:text-rose-400">
+              {formatNumberBD(summaryStats.outOfStock)}
+            </p>
+          </div>
+        </div>
+
         {/* Filters */}
         <div
           className={`rounded-2xl border p-4 grid grid-cols-1 md:grid-cols-12 gap-3 ${
             isDark ? 'bg-[#103A40]/85 border-white/10' : 'glass-card bg-white border-slate-200'
           }`}
         >
-          <div className="md:col-span-6 relative">
+          <div className="md:col-span-5 relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -544,7 +667,19 @@ export const StoreItemsPage: React.FC = () => {
             </select>
           </div>
 
-          <div className="md:col-span-3">
+          <div className="md:col-span-2">
+            <select
+              value={unitFilter}
+              onChange={(e) => setUnitFilter(e.target.value as any)}
+              className={inputClass}
+            >
+              <option value="all">All Units (সব ইউনিট)</option>
+              <option value="woven">Woven (উভেন)</option>
+              <option value="knit">Knit (নিট)</option>
+            </select>
+          </div>
+
+          <div className="md:col-span-2">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
@@ -658,6 +793,18 @@ export const StoreItemsPage: React.FC = () => {
                             {statusRow.item_name_bn || item?.name_bn}
                           </span>
                         )}
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-[#2BA5B5]/10 text-[#0F8B8D] dark:text-[#2BA5B5]">
+                            {normalizeItemOperationUnit(item?.extra_fields?.unit) === 'both'
+                              ? 'Woven & Knit'
+                              : normalizeItemOperationUnit(item?.extra_fields?.unit)}
+                          </span>
+                          {item?.item_type && (
+                            <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-white/10 opacity-80">
+                              {item.item_type}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-3">{statusRow.category_name}</td>
                       <td className="py-3 px-3 font-semibold">{statusRow.uom}</td>
@@ -774,7 +921,7 @@ export const StoreItemsPage: React.FC = () => {
               </div>
 
               <form onSubmit={handleSaveItem} className="p-5 space-y-4 flex-1">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                   <div>
                     <label className="block text-xs font-bold mb-1">
                       SKU * <span className="font-bangla opacity-70 font-normal">(কোড)</span>
@@ -787,6 +934,25 @@ export const StoreItemsPage: React.FC = () => {
                       placeholder="e.g. FAB-SJ-160"
                       className={inputClass}
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold mb-1">
+                      Operation Unit *{' '}
+                      <span className="font-bangla opacity-70 font-normal">(উভেন/নিট)</span>
+                    </label>
+                    <select
+                      required
+                      value={operationUnit}
+                      onChange={(e) =>
+                        setOperationUnit(normalizeItemOperationUnit(e.target.value))
+                      }
+                      className={inputClass}
+                    >
+                      <option value="both">Shared (Woven &amp; Knit)</option>
+                      <option value="woven">Woven (উভেন)</option>
+                      <option value="knit">Knit (নিট)</option>
+                    </select>
                   </div>
 
                   <div>
