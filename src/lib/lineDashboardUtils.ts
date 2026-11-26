@@ -522,3 +522,110 @@ export function playShortAlertBeep(): void {
     // Ignore Web Audio autoplay/browser restrictions silently
   }
 }
+
+const BN_DIGITS: Record<string, string> = {
+  '0': '০',
+  '1': '১',
+  '2': '২',
+  '3': '৩',
+  '4': '৪',
+  '5': '৫',
+  '6': '৬',
+  '7': '৭',
+  '8': '৮',
+  '9': '৯',
+};
+
+function formatBanglaNumber(num: number): string {
+  return String(Math.abs(Math.round(num))).replace(/[0-9]/g, (d) => BN_DIGITS[d] ?? d);
+}
+
+/**
+ * Computes net cumulative variance across entered Q.C.P hours:
+ * sum(achieved - hourlyTarget) for all entered hours.
+ * Negative value indicates net shortage (e.g. -20 + 10 = -10).
+ */
+export function computeLineNetVariance(metrics: LineBoardMetrics | undefined): number | null {
+  if (!metrics || !metrics.hasReport || metrics.hourlyTarget === null || metrics.enteredQcpHours <= 0) {
+    return null;
+  }
+  const qcpRow =
+    metrics.rows.find((r) => r.key === 'output') || metrics.rows[metrics.rows.length - 1];
+  let totalNet = 0;
+  let hasEntered = false;
+  for (const cell of qcpRow.cells) {
+    if (cell.value !== null) {
+      totalNet += cell.value - metrics.hourlyTarget;
+      hasEntered = true;
+    }
+  }
+  return hasEntered ? totalNet : null;
+}
+
+export function stopBanglaSpeech(): void {
+  try {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+  } catch {
+    // Ignore speechSynthesis cleanup errors
+  }
+}
+
+/**
+ * Plays an attention chime and speaks a clear Bangla voice announcement when a line has a shortage:
+ * "লাইন ১, মোট ঘাটতি ১০ পিস। সবাই দ্রুত কাজ করুন এবং প্রোডাকশন ঘাটতি পূরণ করুন।"
+ */
+export function speakBanglaShortageAlert(
+  shortEntries: Array<{ lineNo: number; shortQty: number }>
+): void {
+  const valid = shortEntries.filter((e) => e.shortQty > 0);
+  if (valid.length === 0) return;
+
+  playShortAlertBeep();
+
+  try {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    const synth = window.speechSynthesis;
+
+    const lineParts = valid
+      .map(
+        (e) =>
+          `লাইন ${formatBanglaNumber(e.lineNo)}, মোট ঘাটতি ${formatBanglaNumber(e.shortQty)} পিস`
+      )
+      .join('। ');
+    const message = `${lineParts}। সবাই দ্রুত কাজ করুন এবং প্রোডাকশন ঘাটতি পূরণ করুন।`;
+
+    const speakNow = () => {
+      try {
+        synth.cancel();
+        const utterance = new SpeechSynthesisUtterance(message);
+        const voices = synth.getVoices();
+        const bnVoice =
+          voices.find((v) => v.lang.toLowerCase() === 'bn-bd') ||
+          voices.find((v) => v.lang.toLowerCase().startsWith('bn')) ||
+          voices.find(
+            (v) =>
+              v.name.toLowerCase().includes('bengali') ||
+              v.name.toLowerCase().includes('bangla')
+          );
+        if (bnVoice) {
+          utterance.voice = bnVoice;
+        }
+        utterance.lang = bnVoice?.lang || 'bn-BD';
+        utterance.rate = 0.94;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+        synth.speak(utterance);
+      } catch {
+        // Ignore TTS restrictions
+      }
+    };
+
+    // Trigger speech shortly after the chime so audio doesn't overlap
+    setTimeout(speakNow, 380);
+  } catch {
+    // Ignore speechSynthesis errors
+  }
+}
+

@@ -138,7 +138,11 @@ export const LineDashStyleControls: React.FC<LineDashStyleControlsProps> = ({
               ? 'bg-emerald-500/25 text-emerald-200 border border-emerald-400/40'
               : 'bg-white/10 hover:bg-white/20 text-slate-200'
           }`}
-          title={soundEnabled ? 'Mute short alert sound' : 'Enable short alert sound'}
+          title={
+            soundEnabled
+              ? 'Mute sound & 5-min Bangla shortage voice alert'
+              : 'Turn on sound & 5-min Bangla shortage voice alert'
+          }
         >
           {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
           <span className="hidden sm:inline">{soundEnabled ? 'Sound On' : 'Muted'}</span>

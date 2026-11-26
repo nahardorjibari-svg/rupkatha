@@ -18,6 +18,7 @@ import {
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { useLineDashboardData } from '../../hooks/useLineDashboardData';
 import { useLineDashStyle } from '../../hooks/useLineDashStyle';
+import { useShortageVoiceAlert } from '../../hooks/useShortageVoiceAlert';
 import { LineDashStyleControls } from '../../components/linedash/LineDashStyleControls';
 import { LineAllOptionB } from '../../components/linedash/LineAllOptionB';
 import { getLineTheme, type CellVisualState } from '../../lib/lineDashboardUtils';
@@ -48,6 +49,27 @@ export const LineDashboardAll: React.FC = () => {
     linesMetrics,
     flashingKeys,
   } = useLineDashboardData(soundEnabled);
+
+  useShortageVoiceAlert(soundEnabled, linesMetrics, loading);
+
+  const handleToggleSound = useCallback(() => {
+    setSoundEnabled((prev) => {
+      const next = !prev;
+      if (next) {
+        try {
+          if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const unlock = new SpeechSynthesisUtterance('');
+            unlock.volume = 0;
+            window.speechSynthesis.speak(unlock);
+          }
+        } catch {
+          // Ignore unlock errors
+        }
+      }
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     const onFsChange = () => {
@@ -167,7 +189,7 @@ export const LineDashboardAll: React.FC = () => {
         effectiveUnit={effectiveUnit}
         setManualUnit={setManualUnit}
         soundEnabled={soundEnabled}
-        onToggleSound={() => setSoundEnabled((prev) => !prev)}
+        onToggleSound={handleToggleSound}
         onToggleFullscreen={toggleFullscreen}
         searchQuery={location.search}
       />
