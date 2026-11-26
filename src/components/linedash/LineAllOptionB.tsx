@@ -132,11 +132,11 @@ export const LineAllOptionB: React.FC<LineAllOptionBProps> = ({
           const isBehindTargetSoFar =
             m.targetSoFar !== null && m.enteredQcpHours > 0 && m.done < m.targetSoFar;
 
-          let totalShort = 0;
+          let totalNetVariance = 0;
           if (m.hourlyTarget !== null) {
             for (const cell of qcpRow.cells) {
-              if (cell.value !== null && cell.value < m.hourlyTarget) {
-                totalShort += cell.value - m.hourlyTarget;
+              if (cell.value !== null) {
+                totalNetVariance += cell.value - m.hourlyTarget;
               }
             }
           }
@@ -382,13 +382,13 @@ export const LineAllOptionB: React.FC<LineAllOptionBProps> = ({
                         {m.manpowerTotal ?? '-'}
                       </span>
 
-                      {totalShort < 0 ? (
+                      {totalNetVariance < 0 ? (
                         <span
                           className="inline-flex items-center gap-1 font-bangla font-bold text-[#F09595]"
                           style={{ fontSize: 'clamp(1.125rem, 1.25vw, 1.35rem)' }}
                         >
                           <AlertTriangle className="w-4 h-4 shrink-0" />
-                          <span>ঘাটতি {totalShort.toLocaleString()}</span>
+                          <span>ঘাটতি {totalNetVariance.toLocaleString()}</span>
                         </span>
                       ) : (
                         <span

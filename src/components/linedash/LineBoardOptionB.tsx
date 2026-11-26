@@ -78,20 +78,25 @@ export const LineBoardOptionB: React.FC<LineBoardOptionBProps> = ({
   // First not-yet-entered hour in Q.C.P
   const firstUnenteredHour = qcpRow.cells.find((c) => c.value === null)?.hourNo ?? null;
 
-  // Hour short = hour achieved - hour target (for short hours); Total short = sum of short hours
-  const shortHoursList: Array<{ hourNo: number; diff: number }> = [];
+  // Net variance across all entered hours = sum(hour achieved - hour target)
+  // Surplus hours (e.g. +10) offset earlier short hours (e.g. -20 => net -10)
+  const varianceHoursList: Array<{ hourNo: number; diff: number }> = [];
+  let totalNetVariance = 0;
   if (metrics.hourlyTarget !== null) {
     for (const cell of qcpRow.cells) {
-      if (cell.value !== null && cell.value < metrics.hourlyTarget) {
-        shortHoursList.push({
-          hourNo: cell.hourNo,
-          diff: cell.value - metrics.hourlyTarget, // negative, e.g. -20
-        });
+      if (cell.value !== null) {
+        const diff = cell.value - metrics.hourlyTarget;
+        totalNetVariance += diff;
+        if (diff !== 0) {
+          varianceHoursList.push({
+            hourNo: cell.hourNo,
+            diff,
+          });
+        }
       }
     }
   }
-  const totalShort = shortHoursList.reduce((sum, item) => sum + item.diff, 0);
-  const hasShort = totalShort < 0;
+  const hasShort = totalNetVariance < 0;
 
   // Progress bar color & clamped width
   const progressClamped = Math.max(0, Math.min(100, metrics.progressPct));
@@ -121,16 +126,16 @@ export const LineBoardOptionB: React.FC<LineBoardOptionBProps> = ({
       ? 'text-[#FAC775]'
       : 'text-[#F09595]';
 
-  // Giant number scale: 14-18vh in standalone TV mode, slightly tuned in embedded mode to guarantee zero scroll
+  // Giant number scale tuned so the Hero Shortage Spotlight Box + 4 KPI rows + Hour tiles fit 16:9 zero-scroll
   const giantNumFontSize = standaloneMode
-    ? 'clamp(3.8rem, 13.8vh, 17.5vh)'
-    : 'clamp(3.1rem, 11.4vh, 14.5vh)';
+    ? 'clamp(2.6rem, 10.2vh, 12.6vh)'
+    : 'clamp(2.2rem, 8.4vh, 10.6vh)';
 
   const flashGlowClass =
     'ring-2 ring-white shadow-[0_0_28px_rgba(255,255,255,0.85)]';
 
   return (
-    <div className="relative z-10 flex flex-col justify-between h-full min-h-0 gap-[clamp(0.35rem,0.72vh,0.65rem)]">
+    <div className="relative z-10 flex flex-col justify-between h-full min-h-0 gap-[clamp(0.32rem,0.65vh,0.58rem)]">
       {/* 1. HEADER */}
       <header className="shrink-0 rounded-xl bg-[#13151A] border border-white/10 px-[clamp(0.75rem,1.25vw,1.35rem)] py-[clamp(0.35rem,0.65vh,0.6rem)] flex items-center justify-between gap-3">
         <div className="flex items-center gap-[clamp(0.6rem,1vw,1rem)] min-w-0">
@@ -346,8 +351,146 @@ export const LineBoardOptionB: React.FC<LineBoardOptionBProps> = ({
             </div>
           ) : (
             <>
+              {/* HERO SPOTLIGHT ROUNDED BOX: মোট ঘাটতি / সব ঠিক আছে (Brightest & Largest Highlight with Rotating 4-Side Light) */}
+              <section className="shrink-0 w-full flex justify-center py-[clamp(0.1rem,0.35vh,0.3rem)]">
+                {hasShort ? (
+                  <div
+                    className={`relative w-[97%] max-w-[96rem] rounded-[2rem] md:rounded-full p-[4px] overflow-hidden transition-all duration-300 ${
+                      flashingKeys.has(`L${lineNo}:done`)
+                        ? 'ring-4 ring-white shadow-[0_0_46px_rgba(255,255,255,0.95)]'
+                        : 'shadow-[0_0_32px_rgba(239,68,68,0.85),0_0_72px_rgba(220,38,38,0.45)]'
+                    }`}
+                  >
+                    {/* Rotating 4-side border light */}
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute top-1/2 left-1/2 w-[130%] aspect-square animate-border-light-spin"
+                      style={{
+                        background:
+                          'conic-gradient(from 0deg, #EF4444 0deg, #FFFFFF 36deg, #FCA5A5 76deg, #991B1B 140deg, #EF4444 180deg, #FFFFFF 216deg, #FCA5A5 256deg, #991B1B 320deg, #EF4444 360deg)',
+                      }}
+                    />
+
+                    {/* Full-light bright inner capsule */}
+                    <div className="relative z-10 rounded-[calc(2rem-4px)] md:rounded-full bg-gradient-to-r from-[#7F1D1D] via-[#B91C1C] to-[#7F1D1D] border border-white/35 px-[clamp(1.25rem,2.8vw,3rem)] py-[clamp(0.45rem,1vh,0.95rem)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-5 shadow-[inset_0_0_28px_rgba(255,255,255,0.22)]">
+                      <div className="flex items-center gap-[clamp(0.65rem,1.25vw,1.25rem)] min-w-0">
+                        <div className="w-[clamp(2.5rem,4.4vh,3.8rem)] h-[clamp(2.5rem,4.4vh,3.8rem)] rounded-full bg-white/18 border border-white/45 flex items-center justify-center shrink-0 shadow-[0_0_18px_rgba(255,255,255,0.5)]">
+                          <AlertTriangle className="w-[clamp(1.4rem,2.4vh,2.15rem)] h-[clamp(1.4rem,2.4vh,2.15rem)] text-white animate-pulse" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span
+                            className="font-bangla font-bold text-white leading-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]"
+                            style={{ fontSize: 'clamp(1.5rem, 3.2vh, 2.9rem)' }}
+                          >
+                            মোট ঘাটতি
+                          </span>
+                          <div
+                            className="font-bangla font-bold leading-snug truncate flex items-center flex-wrap gap-x-2"
+                            style={{ fontSize: 'clamp(1.125rem, 1.45vw, 1.55rem)' }}
+                          >
+                            {varianceHoursList.map((item, idx) => (
+                              <React.Fragment key={item.hourNo}>
+                                {idx > 0 && <span className="text-white/55">·</span>}
+                                <span
+                                  className={
+                                    item.diff > 0
+                                      ? 'text-[#BBF7D0] drop-shadow-[0_0_8px_rgba(134,239,172,0.55)]'
+                                      : 'text-[#FFE4E6]'
+                                  }
+                                >
+                                  ঘণ্টা {toBanglaDigits(item.hourNo)}:{' '}
+                                  {item.diff > 0
+                                    ? `+${item.diff.toLocaleString()}`
+                                    : item.diff.toLocaleString()}
+                                </span>
+                              </React.Fragment>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-baseline gap-2.5 shrink-0 self-end sm:self-center">
+                        <span
+                          className="font-sans font-black text-white tabular-nums leading-[0.88]"
+                          style={{
+                            fontSize: standaloneMode
+                              ? 'clamp(2.8rem, 7.6vh, 6.4rem)'
+                              : 'clamp(2.45rem, 6.4vh, 5.2rem)',
+                            textShadow:
+                              '0 0 22px rgba(255, 255, 255, 0.95), 0 0 42px rgba(254, 202, 202, 0.85)',
+                          }}
+                        >
+                          {totalNetVariance.toLocaleString()}
+                        </span>
+                        <span
+                          className="font-sans font-black text-white/95 uppercase"
+                          style={{ fontSize: 'clamp(1.15rem, 1.65vw, 1.9rem)' }}
+                        >
+                          PCS
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className={`relative w-[97%] max-w-[96rem] rounded-[2rem] md:rounded-full p-[4px] overflow-hidden transition-all duration-300 ${
+                      flashingKeys.has(`L${lineNo}:done`)
+                        ? 'ring-4 ring-white shadow-[0_0_46px_rgba(255,255,255,0.95)]'
+                        : 'shadow-[0_0_26px_rgba(34,197,94,0.65),0_0_54px_rgba(22,163,74,0.35)]'
+                    }`}
+                  >
+                    {/* Rotating 4-side green-white border light */}
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute top-1/2 left-1/2 w-[130%] aspect-square animate-border-light-spin"
+                      style={{
+                        background:
+                          'conic-gradient(from 0deg, #22C55E 0deg, #FFFFFF 36deg, #86EFAC 76deg, #14532D 140deg, #22C55E 180deg, #FFFFFF 216deg, #86EFAC 256deg, #14532D 320deg, #22C55E 360deg)',
+                      }}
+                    />
+
+                    {/* Full-light bright emerald inner capsule */}
+                    <div className="relative z-10 rounded-[calc(2rem-4px)] md:rounded-full bg-gradient-to-r from-[#14532D] via-[#15803D] to-[#14532D] border border-white/30 px-[clamp(1.25rem,2.8vw,3rem)] py-[clamp(0.45rem,1vh,0.95rem)] flex items-center justify-between gap-4 shadow-[inset_0_0_24px_rgba(255,255,255,0.16)]">
+                      <div className="flex items-center gap-[clamp(0.65rem,1.25vw,1.25rem)] min-w-0">
+                        <div className="w-[clamp(2.5rem,4.4vh,3.8rem)] h-[clamp(2.5rem,4.4vh,3.8rem)] rounded-full bg-white/18 border border-white/40 flex items-center justify-center shrink-0 shadow-[0_0_16px_rgba(187,247,208,0.5)]">
+                          <CheckCircle2 className="w-[clamp(1.45rem,2.5vh,2.2rem)] h-[clamp(1.45rem,2.5vh,2.2rem)] text-white" />
+                        </div>
+                        <span
+                          className="font-bangla font-bold text-white leading-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
+                          style={{ fontSize: 'clamp(1.5rem, 3.2vh, 2.9rem)' }}
+                        >
+                          সব ঠিক আছে
+                        </span>
+                      </div>
+
+                      <div className="flex items-baseline gap-2.5 shrink-0">
+                        <span
+                          className="font-sans font-black text-white tabular-nums leading-[0.88]"
+                          style={{
+                            fontSize: standaloneMode
+                              ? 'clamp(2.5rem, 6.6vh, 5.4rem)'
+                              : 'clamp(2.2rem, 5.6vh, 4.5rem)',
+                            textShadow: '0 0 22px rgba(187, 247, 208, 0.85)',
+                          }}
+                        >
+                          {totalNetVariance > 0
+                            ? `+${totalNetVariance.toLocaleString()}`
+                            : '0'}
+                        </span>
+                        <span
+                          className="font-sans font-black text-[#DCFCE7] uppercase"
+                          style={{ fontSize: 'clamp(1.15rem, 1.55vw, 1.75rem)' }}
+                        >
+                          {totalNetVariance > 0 ? 'PCS' : 'SHORT'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </section>
+
               {/* 3. FOUR GIANT NUMBER ROWS STACKED */}
-              <section className="flex-1 min-h-0 grid grid-rows-4 gap-[clamp(0.3rem,0.58vh,0.55rem)]">
+              <section className="flex-1 min-h-0 grid grid-rows-4 gap-[clamp(0.28rem,0.52vh,0.48rem)]">
                 {/* Row 1: আজকের লক্ষ্য = Day Target (Yellow #FAC775) */}
                 <div
                   className={`rounded-2xl bg-[#13151A] border border-white/10 px-[clamp(0.9rem,1.8vw,2rem)] flex items-center justify-between gap-4 min-h-0 transition-all duration-300 ${
@@ -634,74 +777,6 @@ export const LineBoardOptionB: React.FC<LineBoardOptionBProps> = ({
                   );
                 })}
               </section>
-
-              {/* 5. BOTTOM ALERT STRIP */}
-              {hasShort ? (
-                <footer className="shrink-0 rounded-xl bg-[#2A0F0F] border border-[#791F1F] px-[clamp(0.85rem,1.5vw,1.5rem)] py-[clamp(0.38rem,0.7vh,0.65rem)] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <AlertTriangle className="w-6 h-6 text-[#F09595] shrink-0" />
-                    <div className="flex flex-col min-w-0">
-                      <div className="flex items-baseline gap-3 flex-wrap">
-                        <span
-                          className="font-bangla font-bold text-[#F7C1C1] leading-tight"
-                          style={{ fontSize: 'clamp(1.2rem, 1.65vw, 1.9rem)' }}
-                        >
-                          মোট ঘাটতি
-                        </span>
-                        <span
-                          className="font-sans font-bold text-[#F09595] tabular-nums leading-tight"
-                          style={{ fontSize: 'clamp(1.35rem, 2.05vw, 2.4rem)' }}
-                        >
-                          {totalShort.toLocaleString()} PCS
-                        </span>
-                      </div>
-                      <p
-                        className="font-bangla font-bold text-[#F7C1C1]/90 leading-snug truncate"
-                        style={{ fontSize: 'clamp(1.125rem, 1.35vw, 1.5rem)' }}
-                      >
-                        {shortHoursList
-                          .map(
-                            (item) =>
-                              `ঘণ্টা ${toBanglaDigits(item.hourNo)}: ${item.diff.toLocaleString()}`
-                          )
-                          .join(' · ')}
-                      </p>
-                    </div>
-                  </div>
-                </footer>
-              ) : (
-                <footer className="shrink-0 rounded-xl bg-[#132A09] border border-[#27500A] px-[clamp(0.85rem,1.5vw,1.5rem)] py-[clamp(0.45rem,0.85vh,0.75rem)] flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="w-[clamp(1.5rem,2.1vw,2.25rem)] h-[clamp(1.5rem,2.1vw,2.25rem)] text-[#97C459] shrink-0" />
-                    <span
-                      className="font-bangla font-bold text-[#97C459] leading-none"
-                      style={{ fontSize: 'clamp(1.35rem, 1.9vw, 2.2rem)' }}
-                    >
-                      সব ঠিক আছে
-                    </span>
-                  </div>
-
-                  <div
-                    className="flex items-center gap-2 font-semibold whitespace-nowrap xl:hidden"
-                    style={{ fontSize: 'clamp(1.125rem, 1.3vw, 1.35rem)' }}
-                  >
-                    <span
-                      className={`w-2.5 h-2.5 rounded-full ${
-                        connectionState === 'connected'
-                          ? 'bg-[#22C55E]'
-                          : 'bg-[#FAC775] animate-pulse'
-                      }`}
-                    />
-                    <span
-                      className={
-                        connectionState === 'connected' ? 'text-[#97C459]' : 'text-[#FAC775]'
-                      }
-                    >
-                      {connectionState === 'connected' ? 'Live connected' : 'Reconnecting...'}
-                    </span>
-                  </div>
-                </footer>
-              )}
             </>
           )}
         </>

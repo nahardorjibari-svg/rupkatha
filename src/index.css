@@ -224,3 +224,16 @@ input[type="number"] {
   }
 }
 
+/* Line Dashboard Option B rotating spotlight border light */
+@keyframes border-light-spin {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.animate-border-light-spin {
+  animation: border-light-spin 2.8s linear infinite;
+}
