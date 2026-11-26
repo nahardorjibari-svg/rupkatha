@@ -3,27 +3,25 @@
  * Deep navy gradient + light-blue enterprise cards, Q.C.P-only hourly view, 16:9 no-scroll layout
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
+import { Navigate, useLocation, useParams } from 'react-router-dom';
 import {
   AlertTriangle,
-  ArrowLeft,
   BarChart3,
   Calendar,
   CheckCircle2,
   Clock,
   Hourglass,
-  Maximize2,
-  Minimize2,
   Radio,
   Star,
   Target,
   TrendingUp,
   Users,
-  Volume2,
-  VolumeX,
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { useLineDashboardData } from '../../hooks/useLineDashboardData';
+import { useLineDashStyle } from '../../hooks/useLineDashStyle';
+import { LineDashStyleControls } from '../../components/linedash/LineDashStyleControls';
+import { LineBoardOptionB } from '../../components/linedash/LineBoardOptionB';
 import { getLineTheme } from '../../lib/lineDashboardUtils';
 
 const SewingMachineIcon: React.FC<{ className?: string }> = ({ className = 'w-8 h-8' }) => (
@@ -82,6 +80,8 @@ export const LineDashboardBoard: React.FC = () => {
   const [controlsVisible, setControlsVisible] = useState<boolean>(true);
   const boardRef = useRef<HTMLDivElement>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { activeStyle, setLineDashStyle } = useLineDashStyle();
 
   const {
     clock,
@@ -196,97 +196,66 @@ export const LineDashboardBoard: React.FC = () => {
   const totalDiff =
     qcpRow.total !== null && totalExpectedSoFar !== null ? qcpRow.total - totalExpectedSoFar : null;
 
+  const isOptionB = activeStyle === 'b';
+
   const boardContent = (
     <div
       ref={boardRef}
       onMouseMove={bumpControls}
       onTouchStart={bumpControls}
-      className={`flex flex-col justify-between overflow-hidden select-none text-white bg-gradient-to-br from-[#030E24] via-[#071D47] to-[#0B2D6E] ${
+      className={`flex flex-col justify-between overflow-hidden select-none text-white ${
+        isOptionB
+          ? 'bg-[#0A0A0A]'
+          : 'bg-gradient-to-br from-[#030E24] via-[#071D47] to-[#0B2D6E]'
+      } ${
         standaloneMode
           ? 'fixed inset-0 z-[9999] w-screen h-screen p-[clamp(0.45rem,0.95vw,0.85rem)]'
           : 'relative -m-4 sm:-m-6 lg:-m-8 h-[calc(100vh-5rem)] p-[clamp(0.4rem,0.8vw,0.75rem)]'
-      }`}
+      } ${!isOptionB ? 'gap-[clamp(0.35rem,0.65vh,0.55rem)]' : 'gap-[clamp(0.3rem,0.55vh,0.5rem)]'}`}
     >
-      {/* Rich glowing neon-navy enterprise backdrop */}
+      {/* Background Vignette */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
-          background:
-            'radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.24), transparent 44%), radial-gradient(circle at 82% 88%, rgba(37, 99, 235, 0.24), transparent 48%)',
+          background: isOptionB
+            ? 'radial-gradient(ellipse at center, rgba(16, 36, 80, 0.24) 0%, rgba(10, 10, 10, 0.96) 72%, #0A0A0A 100%)'
+            : 'radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.24), transparent 44%), radial-gradient(circle at 82% 88%, rgba(37, 99, 235, 0.24), transparent 48%)',
         }}
       />
 
-      {/* Floating TV Controls (hidden in kiosk=1, auto-hides after 3s idle) */}
-      {!isKiosk && (
-        <div
-          className={`fixed z-[10000] flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#071633]/95 border border-sky-400/40 shadow-2xl backdrop-blur-md transition-opacity duration-300 ${
-            standaloneMode ? 'top-3 right-3' : 'bottom-4 right-4'
-          } ${controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        >
-          <Link
-            to="/linedash/all"
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold text-sky-100 transition-colors"
-            title="All Lines Overview"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>All Lines</span>
-          </Link>
+      {/* Top-Right Style Switch & TV Controls (hidden in kiosk=1, auto-hides after 3s idle in fullscreen) */}
+      <LineDashStyleControls
+        activeStyle={activeStyle}
+        onChangeStyle={setLineDashStyle}
+        showAllLinesLink
+        isKiosk={isKiosk}
+        standaloneMode={standaloneMode}
+        controlsVisible={controlsVisible}
+        showUnitSwitch={showUnitSwitch}
+        effectiveUnit={effectiveUnit}
+        setManualUnit={setManualUnit}
+        soundEnabled={soundEnabled}
+        onToggleSound={() => setSoundEnabled((prev) => !prev)}
+        onToggleFullscreen={toggleFullscreen}
+        searchQuery={location.search}
+      />
 
-          {showUnitSwitch && (
-            <div className="flex items-center bg-slate-900/80 border border-white/15 rounded-lg p-0.5">
-              <button
-                type="button"
-                onClick={() => setManualUnit('knit')}
-                className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-colors cursor-pointer ${
-                  effectiveUnit === 'knit'
-                    ? 'bg-sky-500 text-white'
-                    : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                Knit
-              </button>
-              <button
-                type="button"
-                onClick={() => setManualUnit('woven')}
-                className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-colors cursor-pointer ${
-                  effectiveUnit === 'woven'
-                    ? 'bg-sky-500 text-white'
-                    : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                Woven
-              </button>
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setSoundEnabled((prev) => !prev)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-              soundEnabled
-                ? 'bg-emerald-500/25 text-emerald-200 border border-emerald-400/40'
-                : 'bg-white/10 hover:bg-white/20 text-slate-200'
-            }`}
-            title={soundEnabled ? 'Mute short alert sound' : 'Enable short alert sound'}
-          >
-            {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">{soundEnabled ? 'Sound On' : 'Muted'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold transition-colors cursor-pointer"
-            title="Toggle Fullscreen (F)"
-          >
-            {standaloneMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">{standaloneMode ? 'Exit' : 'Fullscreen'}</span>
-          </button>
+      {isOptionB ? (
+        <div className="relative z-10 flex-1 min-h-0 flex flex-col">
+          <LineBoardOptionB
+            lineNo={targetLine}
+            metrics={metrics}
+            clock={clock}
+            effectiveUnit={effectiveUnit}
+            loading={loading}
+            connectionState={connectionState}
+            flashingKeys={flashingKeys}
+            standaloneMode={standaloneMode}
+          />
         </div>
-      )}
-
-      {/* MAIN VERTICAL TV STACK */}
-      <div className="relative z-10 flex flex-col justify-between h-full gap-[clamp(0.42rem,0.85vh,0.72rem)] min-h-0">
+      ) : (
+      /* MAIN VERTICAL TV STACK (OPTION A - UNCHANGED) */
+      <div className="relative z-10 flex flex-col justify-between flex-1 gap-[clamp(0.42rem,0.85vh,0.72rem)] min-h-0">
         {/* 1. HEADER BAR */}
         <header
           className="shrink-0 rounded-xl bg-gradient-to-r from-[#061A42]/95 via-[#0B2B68]/95 to-[#061A42]/95 px-[clamp(0.85rem,1.4vw,1.5rem)] py-[clamp(0.36rem,0.72vh,0.62rem)] flex items-center justify-between gap-3 border border-sky-400/45 shadow-[0_0_24px_rgba(56,189,248,0.2)]"
@@ -1305,6 +1274,7 @@ export const LineDashboardBoard: React.FC = () => {
           </div>
         </footer>
       </div>
+      )}
     </div>
   );
 

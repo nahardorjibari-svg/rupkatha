@@ -58,11 +58,17 @@ The **Sewing Hourly Production Report** (`/sewing/report`) includes production t
 ---
 
 ## Line Dashboard: Enterprise Factory TV Boards (`/linedash/all`, `/linedash/:line`)
-Dedicated 16:9 zero-scroll floor TV displays governed by the `sewing` permission (also accessible to `admin`):
+Dedicated 16:9 zero-scroll floor TV displays governed by the `sewing` permission (also accessible to `admin`, with `/linedash` redirecting to `/linedash/all`):
 
-1. **Routes & Access**:
-   - `/linedash/all` — **All Lines 2×2 Overview**: Live cards for Line 1–4 showing traffic-light status, Buyer/Style, Today Target, Done, Remaining, SVG progress ring, and per-line mini Q.C.P hour dots (`H1–H{working_hours}`). Clicking any card opens that line's full TV board.
-   - `/linedash/:line` (`/linedash/1` – `/linedash/4`) — **Single-Line TV Board**: Deep navy gradient (`#071633` → `#0D2D63`) with light-blue enterprise cards, line-colored header accent (`blue`, `purple`, `orange`, `teal`), live Dhaka clock (`Asia/Dhaka`), Info Strip, 4 Bangla/English KPI cards (`আজকের লক্ষ্য`, `উৎপাদন হয়েছে`, `এখনো বাকি` / `লক্ষ্য পূরণ`, progress ring + `বাকি সময়`), per-line Q.C.P hourly production & `SHORT / +/-` grid (`H1–H{working_hours}`), Q.C.P Final Status, Efficiency %, Manpower, and Attention Required / On Track panels.
+1. **Display Styles (`Option A | Option B`)**:
+   - A top-right segmented toggle (`Option A | Option B`) lets supervisors switch board styles live (auto-hides after 3s idle in fullscreen, hidden completely with `?kiosk=1`).
+   - Style preference persists in `localStorage` under `"linedash_style"` (defaults to `Option A`) and can be forced per screen via URL query `?style=a` or `?style=b` (URL parameter takes priority).
+   - **Option A (Enterprise Blue Board)**: Deep navy gradient (`#071633` → `#0D2D63`) with light-blue enterprise cards, line-colored header accent (`blue`, `purple`, `orange`, `teal`), live Dhaka clock (`Asia/Dhaka`), Info Strip, 4 Bangla/English KPI cards (`আজকের লক্ষ্য`, `উৎপাদন হয়েছে`, `এখনো বাকি` / `লক্ষ্য পূরণ`, progress ring + `বাকি সময়`), per-line Q.C.P hourly production & `SHORT / +/-` grid (`H1–H{working_hours}`), Q.C.P Final Status, Efficiency %, Manpower, and Attention Required / On Track panels.
+   - **Option B (Big Number Floor Board)**: High-contrast near-black (`#0A0A0A`) 16:9 worker-friendly board designed for instant legibility across the sewing floor (`1366x768` & `1920x1080`, zero scroll). Features giant `LINE 1–4` badges (`#185FA5`, `#534AB7`, `#C2410C`, `#0F766E`), traffic-light pace circle (green on target, yellow ≤10% behind target-so-far, red >10% behind), 4 oversized Bangla number rows (`আজকের লক্ষ্য`, `এখন পর্যন্ত হয়েছে`, `এখনো বাকি` / `লক্ষ্য পূরণ`, `এই ঘণ্টায় টার্গেট`), proportional progress bar, `H1–H{working_hours}` color-coded hour tiles (with pulsing yellow current-hour tile `"এখন"`), and a bottom short-hours alert strip (`মোট ঘাটতি` / `সব ঠিক আছে`).
+
+2. **Routes & Realtime Controls**:
+   - `/linedash/all` — **All Lines 2×2 Overview**: Live 2×2 cards for Line 1–4 honoring the active style (`Option A` or `Option B`) with traffic-light pace status, Buyer/Style, Today Target, Done, Remaining, and per-line mini Q.C.P hour dots (`H1–H{working_hours}`). Clicking any card opens that line's full TV board (preserving query parameters).
+   - `/linedash/:line` (`/linedash/1` – `/linedash/4`) — **Single-Line TV Board** (`Option A` or `Option B`).
    - **Kiosk & Fullscreen**: Press `F` or click Fullscreen (auto-hides after 3s idle) to hide Sidebar/TopBar, or open with `?kiosk=1` for unattended factory TV screens.
    - **Realtime + Sound**: Subscribes to Supabase Realtime (`400ms` debounce) with `15s` polling fallback, 1.5s highlight flash on changed numbers, and optional Web Audio short-hour alert beep (muted by default).
 

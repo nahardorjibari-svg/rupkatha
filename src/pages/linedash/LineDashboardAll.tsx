@@ -10,17 +10,16 @@ import {
   CheckCircle2,
   Clock,
   Hourglass,
-  Maximize2,
-  Minimize2,
   Radio,
   Target,
   Tv,
   Users,
-  Volume2,
-  VolumeX,
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { useLineDashboardData } from '../../hooks/useLineDashboardData';
+import { useLineDashStyle } from '../../hooks/useLineDashStyle';
+import { LineDashStyleControls } from '../../components/linedash/LineDashStyleControls';
+import { LineAllOptionB } from '../../components/linedash/LineAllOptionB';
 import { getLineTheme, type CellVisualState } from '../../lib/lineDashboardUtils';
 
 export const LineDashboardAll: React.FC = () => {
@@ -36,6 +35,8 @@ export const LineDashboardAll: React.FC = () => {
   const [controlsVisible, setControlsVisible] = useState<boolean>(true);
   const boardRef = useRef<HTMLDivElement>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { activeStyle, setLineDashStyle } = useLineDashStyle();
 
   const {
     clock,
@@ -116,7 +117,7 @@ export const LineDashboardAll: React.FC = () => {
   const standaloneMode = isKiosk || isFullscreen || isExpanded;
 
   const openLineBoard = (ln: number) => {
-    navigate(isKiosk ? `/linedash/${ln}?kiosk=1` : `/linedash/${ln}`);
+    navigate(`/linedash/${ln}${location.search}`);
   };
 
   const getDotClass = (state: CellVisualState) => {
@@ -128,88 +129,64 @@ export const LineDashboardAll: React.FC = () => {
     return 'bg-slate-300 ring-slate-100';
   };
 
+  const isOptionB = activeStyle === 'b';
+
   const boardContent = (
     <div
       ref={boardRef}
       onMouseMove={bumpControls}
       onTouchStart={bumpControls}
-      className={`flex flex-col justify-between overflow-hidden select-none text-white bg-gradient-to-br from-[#030E24] via-[#071D47] to-[#0B2D6E] ${
+      className={`flex flex-col justify-between overflow-hidden select-none text-white ${
+        isOptionB
+          ? 'bg-[#0A0A0A]'
+          : 'bg-gradient-to-br from-[#030E24] via-[#071D47] to-[#0B2D6E]'
+      } ${
         standaloneMode
           ? 'fixed inset-0 z-[9999] w-screen h-screen p-[clamp(0.45rem,0.95vw,0.85rem)]'
           : 'relative -m-4 sm:-m-6 lg:-m-8 h-[calc(100vh-5rem)] p-[clamp(0.4rem,0.85vw,0.75rem)]'
-      }`}
+      } gap-[clamp(0.3rem,0.58vh,0.5rem)]`}
     >
-      {/* Rich glowing neon-navy enterprise backdrop */}
+      {/* Background Vignette */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
-          background:
-            'radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.24), transparent 44%), radial-gradient(circle at 82% 88%, rgba(37, 99, 235, 0.24), transparent 48%)',
+          background: isOptionB
+            ? 'radial-gradient(ellipse at center, rgba(16, 36, 80, 0.24) 0%, rgba(10, 10, 10, 0.96) 72%, #0A0A0A 100%)'
+            : 'radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.24), transparent 44%), radial-gradient(circle at 82% 88%, rgba(37, 99, 235, 0.24), transparent 48%)',
         }}
       />
 
-      {/* Floating TV Controls (hidden in kiosk=1, auto-hides after 3s idle) */}
-      {!isKiosk && (
-        <div
-          className={`fixed z-[10000] flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#071633]/92 border border-sky-400/35 shadow-2xl backdrop-blur-md transition-opacity duration-300 ${
-            standaloneMode ? 'top-3 right-3' : 'bottom-4 right-4'
-          } ${controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        >
-          {showUnitSwitch && (
-            <div className="flex items-center bg-slate-900/80 border border-white/15 rounded-lg p-0.5">
-              <button
-                type="button"
-                onClick={() => setManualUnit('knit')}
-                className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-colors cursor-pointer ${
-                  effectiveUnit === 'knit'
-                    ? 'bg-sky-500 text-white'
-                    : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                Knit
-              </button>
-              <button
-                type="button"
-                onClick={() => setManualUnit('woven')}
-                className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-colors cursor-pointer ${
-                  effectiveUnit === 'woven'
-                    ? 'bg-sky-500 text-white'
-                    : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                Woven
-              </button>
-            </div>
-          )}
+      {/* Top-Right Style Switch & TV Controls */}
+      <LineDashStyleControls
+        activeStyle={activeStyle}
+        onChangeStyle={setLineDashStyle}
+        isKiosk={isKiosk}
+        standaloneMode={standaloneMode}
+        controlsVisible={controlsVisible}
+        showUnitSwitch={showUnitSwitch}
+        effectiveUnit={effectiveUnit}
+        setManualUnit={setManualUnit}
+        soundEnabled={soundEnabled}
+        onToggleSound={() => setSoundEnabled((prev) => !prev)}
+        onToggleFullscreen={toggleFullscreen}
+        searchQuery={location.search}
+      />
 
-          <button
-            type="button"
-            onClick={() => setSoundEnabled((prev) => !prev)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-              soundEnabled
-                ? 'bg-emerald-500/25 text-emerald-200 border border-emerald-400/40'
-                : 'bg-white/10 hover:bg-white/20 text-slate-200'
-            }`}
-            title={soundEnabled ? 'Mute short alert sound' : 'Enable short alert sound'}
-          >
-            {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">{soundEnabled ? 'Sound On' : 'Muted'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold transition-colors cursor-pointer"
-            title="Toggle Fullscreen (F)"
-          >
-            {standaloneMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">{standaloneMode ? 'Exit' : 'Fullscreen'}</span>
-          </button>
+      {isOptionB ? (
+        <div className="relative z-10 flex-1 min-h-0 flex flex-col">
+          <LineAllOptionB
+            linesMetrics={linesMetrics}
+            clock={clock}
+            effectiveUnit={effectiveUnit}
+            loading={loading}
+            connectionState={connectionState}
+            flashingKeys={flashingKeys}
+            onOpenLine={openLineBoard}
+          />
         </div>
-      )}
-
-      {/* MAIN VERTICAL TV STACK */}
-      <div className="relative z-10 flex flex-col justify-between h-full gap-[clamp(0.4rem,0.8vh,0.7rem)] min-h-0">
+      ) : (
+      /* MAIN VERTICAL TV STACK (OPTION A - UNCHANGED) */
+      <div className="relative z-10 flex flex-col justify-between flex-1 gap-[clamp(0.4rem,0.8vh,0.7rem)] min-h-0">
         {/* HEADER BAR */}
         <header className="shrink-0 rounded-xl bg-gradient-to-r from-[#061A42]/95 via-[#0B2B68]/95 to-[#061A42]/95 border border-sky-400/45 border-t-4 border-t-sky-400 px-[clamp(0.75rem,1.4vw,1.5rem)] py-[clamp(0.35rem,0.68vh,0.58rem)] flex items-center justify-between gap-3 shadow-[0_0_24px_rgba(56,189,248,0.2)]">
           <div className="flex items-center gap-3 min-w-0 shrink-0">
@@ -576,6 +553,7 @@ export const LineDashboardAll: React.FC = () => {
           </div>
         </footer>
       </div>
+      )}
     </div>
   );
 
