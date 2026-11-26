@@ -21,6 +21,7 @@ import { useLineDashStyle } from '../../hooks/useLineDashStyle';
 import { useShortageVoiceAlert } from '../../hooks/useShortageVoiceAlert';
 import { LineDashStyleControls } from '../../components/linedash/LineDashStyleControls';
 import { LineAllOptionB } from '../../components/linedash/LineAllOptionB';
+import { ShortageSpeechOverlay } from '../../components/linedash/ShortageSpeechOverlay';
 import { getLineTheme, type CellVisualState } from '../../lib/lineDashboardUtils';
 
 export const LineDashboardAll: React.FC = () => {
@@ -50,7 +51,7 @@ export const LineDashboardAll: React.FC = () => {
     flashingKeys,
   } = useLineDashboardData(soundEnabled);
 
-  useShortageVoiceAlert(soundEnabled, linesMetrics, loading);
+  const { activeAnnouncement } = useShortageVoiceAlert(soundEnabled, linesMetrics, loading);
 
   const handleToggleSound = useCallback(() => {
     setSoundEnabled((prev) => {
@@ -177,6 +178,9 @@ export const LineDashboardAll: React.FC = () => {
             : 'radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.24), transparent 44%), radial-gradient(circle at 82% 88%, rgba(37, 99, 235, 0.24), transparent 48%)',
         }}
       />
+
+      {/* Full-Display Giant Floating Bangla Voice Announcement Overlay */}
+      <ShortageSpeechOverlay announcement={activeAnnouncement} />
 
       {/* Top-Right Style Switch & TV Controls */}
       <LineDashStyleControls

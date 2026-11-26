@@ -23,6 +23,7 @@ import { useLineDashStyle } from '../../hooks/useLineDashStyle';
 import { useShortageVoiceAlert } from '../../hooks/useShortageVoiceAlert';
 import { LineDashStyleControls } from '../../components/linedash/LineDashStyleControls';
 import { LineBoardOptionB } from '../../components/linedash/LineBoardOptionB';
+import { ShortageSpeechOverlay } from '../../components/linedash/ShortageSpeechOverlay';
 import { getLineTheme } from '../../lib/lineDashboardUtils';
 
 const SewingMachineIcon: React.FC<{ className?: string }> = ({ className = 'w-8 h-8' }) => (
@@ -95,7 +96,12 @@ export const LineDashboardBoard: React.FC = () => {
     flashingKeys,
   } = useLineDashboardData(soundEnabled, targetLine);
 
-  useShortageVoiceAlert(soundEnabled, linesMetrics, loading, targetLine);
+  const { activeAnnouncement } = useShortageVoiceAlert(
+    soundEnabled,
+    linesMetrics,
+    loading,
+    targetLine
+  );
 
   const handleToggleSound = useCallback(() => {
     setSoundEnabled((prev) => {
@@ -244,6 +250,9 @@ export const LineDashboardBoard: React.FC = () => {
             : 'radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.24), transparent 44%), radial-gradient(circle at 82% 88%, rgba(37, 99, 235, 0.24), transparent 48%)',
         }}
       />
+
+      {/* Full-Display Giant Floating Bangla Voice Announcement Overlay */}
+      <ShortageSpeechOverlay announcement={activeAnnouncement} />
 
       {/* Top-Right Style Switch & TV Controls (hidden in kiosk=1, auto-hides after 3s idle in fullscreen) */}
       <LineDashStyleControls

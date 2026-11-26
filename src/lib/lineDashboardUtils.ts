@@ -572,29 +572,40 @@ export function stopBanglaSpeech(): void {
   }
 }
 
+export function buildBanglaShortageMessage(
+  shortEntries: Array<{ lineNo: number; shortQty: number }>
+): string {
+  const valid = shortEntries.filter((e) => e.shortQty > 0);
+  if (valid.length === 0) return '';
+  const lineParts = valid
+    .map(
+      (e) =>
+        `লাইন ${formatBanglaNumber(e.lineNo)}, মোট ঘাটতি ${formatBanglaNumber(e.shortQty)} পিস`
+    )
+    .join('। ');
+  return `${lineParts}। সবাই দ্রুত কাজ করুন এবং প্রোডাকশন ঘাটতি পূরণ করুন।`;
+}
+
 /**
  * Plays an attention chime and speaks a clear Bangla voice announcement when a line has a shortage:
  * "লাইন ১, মোট ঘাটতি ১০ পিস। সবাই দ্রুত কাজ করুন এবং প্রোডাকশন ঘাটতি পূরণ করুন।"
  */
 export function speakBanglaShortageAlert(
-  shortEntries: Array<{ lineNo: number; shortQty: number }>
-): void {
+  shortEntries: Array<{ lineNo: number; shortQty: number }>,
+  onSpeechEnd?: () => void
+): string {
   const valid = shortEntries.filter((e) => e.shortQty > 0);
-  if (valid.length === 0) return;
+  if (valid.length === 0) return '';
 
+  const message = buildBanglaShortageMessage(valid);
   playShortAlertBeep();
 
   try {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      onSpeechEnd?.();
+      return message;
+    }
     const synth = window.speechSynthesis;
-
-    const lineParts = valid
-      .map(
-        (e) =>
-          `লাইন ${formatBanglaNumber(e.lineNo)}, মোট ঘাটতি ${formatBanglaNumber(e.shortQty)} পিস`
-      )
-      .join('। ');
-    const message = `${lineParts}। সবাই দ্রুত কাজ করুন এবং প্রোডাকশন ঘাটতি পূরণ করুন।`;
 
     const speakNow = () => {
       try {
@@ -616,16 +627,20 @@ export function speakBanglaShortageAlert(
         utterance.rate = 0.94;
         utterance.pitch = 1.0;
         utterance.volume = 1.0;
+        utterance.onend = () => onSpeechEnd?.();
+        utterance.onerror = () => onSpeechEnd?.();
         synth.speak(utterance);
       } catch {
-        // Ignore TTS restrictions
+        onSpeechEnd?.();
       }
     };
 
     // Trigger speech shortly after the chime so audio doesn't overlap
     setTimeout(speakNow, 380);
   } catch {
-    // Ignore speechSynthesis errors
+    onSpeechEnd?.();
   }
+
+  return message;
 }
 
